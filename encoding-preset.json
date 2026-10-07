@@ -1,0 +1,11 @@
+{
+  "preset": "1080p-60fps",
+  "resolution": "1080p",
+  "label": "1080p Full HD (1920x1080)",
+  "width": 1920,
+  "height": 1080,
+  "fps": 60,
+  "bitrateKbps": 10000,
+  "bitrate": "10000k",
+  "updatedAt": "2026-10-07T22:38:15.651Z"
+}

@@ -1,0 +1,63 @@
+IntelliStar Simulator (Quebec / Canadian Broadcast Edition)
+Copyright (C) 2025-2026 NoID1290 and Project Contributors
+
+This project is a fork of and contains code from:
+IntelliStar Simulator
+Copyright (C) 2025 Mist Weather Media and Contributors
+https://github.com/MistWeatherMedia/intellistar-1
+
+Original Development Credits (Mist Weather Media):
+- JensonWX - Lead Developer
+- Miceoroni - Developer (Advanced Settings)
+- zachNet - README & Documentation
+- Mist Creative Team
+
+--------------------------------------------------------------------------------
+MODIFICATIONS AND EXTENSIONS IN THIS FORK
+--------------------------------------------------------------------------------
+In accordance with Section 5(a) of the GNU General Public License, Version 3,
+the following prominent modifications and additions have been made to this work:
+
+1. Canadian & Quebec Localization (2025-2026):
+   - Added regional forecast presentation for Quebec and Canadian cities (Montréal,
+     Québec, Laval, Gatineau, Longueuil, Sherbrooke, Saguenay, Lévis, Trois-Rivières).
+   - Localized bilingual slides, Canadian weather metrics, and Doppler radar coverage.
+   - Added Canadian cloud cover and week-ahead presentation slides.
+
+2. Public Safety & Alert Simulation System (2026):
+   - Implemented "En Alerte" Quebec emergency alert crawls and test triggers.
+   - Created CLI and REST API alert test dispatchers (`alert.js`).
+   - Integrated bilingual alert bulletins and warning audio triggers.
+
+3. Linux & Steam Deck Hardware Acceleration (2026):
+   - Integrated AMD VAAPI hardware-accelerated video encoding (H.264/HEVC).
+   - Implemented optimized display presets for Steam Deck and Linux desktop environments.
+   - Added zero-copy DRM KMS screen capture (`kmsgrab`) and PipeWire audio/video capture.
+
+4. Headless IPTV Broadcast Pipeline & Streaming Engine (2026):
+   - Engineered headless Chromium IPTV broadcast server (`start-iptv.js`).
+   - Added low-latency HLS streaming engine with atomic playlist generation and RAM caching.
+   - Added NDI (Network Device Interface) C++ bridge and transcoder pipeline (`scripts/ndi-bridge.cpp`).
+   - Added OBS Studio integration with automated HLS and YouTube RTMP stream profiles.
+
+5. Studio Broadcast Editor & Launcher (2026):
+   - Visual broadcast configuration editor and preset library (`editor-store.js`).
+   - Interactive CLI and Web Launcher interface (`launcher.js`, `launcher-ui.js`).
+   - Modernized 2026 graphic asset pipeline with high-resolution vector icons.
+
+--------------------------------------------------------------------------------
+LICENSING
+--------------------------------------------------------------------------------
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+

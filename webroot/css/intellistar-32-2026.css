@@ -1,0 +1,2449 @@
+/* ==========================================================================
+   INTELLISTAR 3.2 - 2026 HD BROADCAST GRAPHICS PACKAGE
+   Modern High-Definition Remaster: Sapphire Glass, Electric Cyan Accents,
+   High-Contrast Broadcast Typography & 1080p Vector Assets.
+   ========================================================================== */
+
+body, html {
+    background-color: #030a16 !important;
+}
+
+#main, 
+#background,
+#settings-menu,
+#colorbar-screen,
+.colorbar-container {
+    width: 1620px;
+    height: 1080px;
+}
+
+#settings-menu .bg {
+    width: 1620px;
+    height: 1080px;
+}
+
+#background {
+    background-image: url(../images/2026/domestic.png) !important;
+    background-size: 100% 100% !important;
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    overflow: hidden;
+}
+
+#background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 35%, rgba(0, 180, 255, 0.08) 0%, rgba(3, 10, 22, 0) 65%);
+    pointer-events: none;
+    animation: bgAmbientPulse 9s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   2026 BROADCAST ANIMATION ENGINE: KEYFRAMES & MOTION PHYSICS
+   ========================================================================== */
+
+@keyframes bgAmbientPulse {
+    0% { opacity: 0.45; transform: scale(1); }
+    100% { opacity: 0.95; transform: scale(1.06); }
+}
+
+/* Specular Light Beam Traveling Across Top Border of Glass Boxes */
+@keyframes borderShineSweep {
+    0% {
+        left: -45%;
+        opacity: 0;
+    }
+    4% {
+        opacity: 0.95;
+    }
+    26% {
+        left: 115%;
+        opacity: 0.95;
+    }
+    27%, 100% {
+        left: 115%;
+        opacity: 0;
+    }
+}
+
+/* Ambient Neon Edge Glow Breathing for Glass Boxes */
+@keyframes boxPerimeterGlow {
+    0% {
+        border-color: rgba(0, 210, 255, 0.18);
+        box-shadow: inset 0 0 25px rgba(0, 210, 255, 0.1), 0 0 15px rgba(0, 160, 255, 0.08);
+    }
+    100% {
+        border-color: rgba(0, 229, 255, 0.45);
+        box-shadow: inset 0 0 32px rgba(0, 229, 255, 0.22), 0 0 28px rgba(0, 210, 255, 0.28);
+    }
+}
+
+/* Header Text Radiance Breathing */
+@keyframes headerGlowPulse {
+    0% {
+        text-shadow: 
+            0 2px 4px rgba(0, 0, 0, 0.9),
+            0 4px 18px rgba(0, 150, 255, 0.5),
+            0 0 25px rgba(0, 220, 255, 0.35);
+    }
+    100% {
+        text-shadow: 
+            0 2px 4px rgba(0, 0, 0, 0.9),
+            0 4px 24px rgba(0, 180, 255, 0.8),
+            0 0 35px rgba(0, 240, 255, 0.65),
+            0 0 52px rgba(0, 170, 255, 0.35);
+    }
+}
+
+/* Hero Weather Icon Atmospheric Luminescence (Stationary anchored) */
+@keyframes iconHeroFloat {
+    0% {
+        filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.72)) drop-shadow(0 0 16px rgba(0, 210, 255, 0.3)) brightness(1);
+    }
+    100% {
+        filter: drop-shadow(0 14px 26px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 28px rgba(0, 229, 255, 0.55)) brightness(1.04);
+    }
+}
+
+/* Multi-Day & Forecast Icon Atmospheric Aura (Stationary anchored) */
+@keyframes iconFloat {
+    0% {
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 10px rgba(0, 210, 255, 0.2)) brightness(1);
+    }
+    100% {
+        filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 18px rgba(0, 229, 255, 0.45)) brightness(1.04);
+    }
+}
+
+/* 8 Cities Row Icon Preserving Centering */
+@keyframes iconLocFloat {
+    0% {
+        transform: translateY(-50%);
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 8px rgba(0, 210, 255, 0.2));
+    }
+    100% {
+        transform: translateY(-50%);
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.45));
+    }
+}
+
+/* 6-Grid City Forecast Cards Icon */
+@keyframes iconGridFloat {
+    0% {
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 8px rgba(0, 210, 255, 0.2));
+    }
+    100% {
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 16px rgba(0, 229, 255, 0.45));
+    }
+}
+
+/* Hourly Daypart Icon Preserving Centering */
+@keyframes iconHourFloat {
+    0% {
+        transform: translateX(-50%);
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 10px rgba(0, 210, 255, 0.22));
+    }
+    100% {
+        transform: translateX(-50%);
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 18px rgba(0, 229, 255, 0.5));
+    }
+}
+
+/* Map City Pin Weather Icon */
+@keyframes iconMapFloat {
+    0% {
+        filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 8px rgba(0, 210, 255, 0.25));
+    }
+    100% {
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.55));
+    }
+}
+
+/* Lower Display Line (LDL) Observation Icon Breathing */
+@keyframes iconLdlPulse {
+    0% {
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px rgba(0, 210, 255, 0.3));
+    }
+    100% {
+        filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.88)) drop-shadow(0 0 12px rgba(0, 229, 255, 0.6));
+    }
+}
+
+/* Local Forecast Movie Loop Container Glow */
+@keyframes descMovBorderGlow {
+    0% {
+        border-color: rgba(0, 200, 255, 0.4);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 210, 255, 0.2);
+    }
+    100% {
+        border-color: rgba(0, 229, 255, 0.85);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), 0 0 32px rgba(0, 229, 255, 0.55), inset 0 0 16px rgba(0, 210, 255, 0.25);
+    }
+}
+
+/* Daypart Hourly Temperature Bar Shimmer & Glow */
+@keyframes barEnergyPulse {
+    0% {
+        border-color: rgba(255, 255, 255, 0.85);
+        box-shadow: 0 0 18px rgba(0, 229, 255, 0.4);
+    }
+    100% {
+        border-color: #ffffff;
+        box-shadow: 0 0 32px rgba(0, 229, 255, 0.85), 0 0 14px rgba(255, 255, 255, 0.65);
+    }
+}
+
+/* Air Quality Laser Beacon Pulse */
+@keyframes arrowGlowPulse {
+    0% {
+        filter: drop-shadow(0 0 10px #00e5ff);
+    }
+    100% {
+        filter: drop-shadow(0 0 22px #00e5ff) drop-shadow(0 0 36px #38bdf8);
+    }
+}
+
+@keyframes qualityBarBorderShine {
+    0% {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 210, 255, 0.15);
+    }
+    100% {
+        border-color: rgba(0, 229, 255, 0.55);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 32px rgba(0, 229, 255, 0.45);
+    }
+}
+
+/* Severe Alert Emergency Pulsing */
+@keyframes severeBoxPulse {
+    0% {
+        filter: drop-shadow(0 0 15px rgba(239, 68, 68, 0.3));
+    }
+    100% {
+        filter: drop-shadow(0 0 38px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 60px rgba(220, 38, 38, 0.45));
+    }
+}
+
+@keyframes severeTextPulse {
+    0% {
+        text-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
+    }
+    100% {
+        text-shadow: 0 0 26px rgba(239, 68, 68, 1), 0 0 42px rgba(255, 120, 120, 0.85);
+    }
+}
+
+/* Doppler Radar Station Dot Pulse Beacon */
+@keyframes radarDotBeacon {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 229, 255, 0.85);
+    }
+    70% {
+        box-shadow: 0 0 0 14px rgba(0, 229, 255, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 229, 255, 0);
+    }
+}
+
+/* Environment Canada Slide Shimmers */
+@keyframes ecBadgeGlow {
+    0% {
+        border-color: rgba(56, 189, 248, 0.5);
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+    }
+    100% {
+        border-color: #00e5ff;
+        box-shadow: 0 0 28px rgba(0, 229, 255, 0.7), inset 0 0 12px rgba(0, 229, 255, 0.3);
+    }
+}
+
+@keyframes ecDividerGlow {
+    0% {
+        filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+        opacity: 0.8;
+    }
+    100% {
+        filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.95)) drop-shadow(0 0 30px rgba(0, 229, 255, 0.65));
+        opacity: 1;
+    }
+}
+
+/* ==========================================================================
+   BORDER SHINING & GLASS REFLECTION SPECULAR ENGINE FOR SLIDE BOXES
+   ========================================================================== */
+
+.slides .box,
+.bulletin .box,
+.map .box {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 18px;
+}
+
+/* Top Border Traveling Specular Beam Glint */
+.slides .box::before,
+.bulletin .box::before,
+.map .box::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -45%;
+    width: 40%;
+    height: 3.5px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.2) 20%, rgba(255, 255, 255, 0.95) 50%, rgba(0, 229, 255, 0.8) 80%, transparent 100%);
+    filter: drop-shadow(0 0 8px #00e5ff) drop-shadow(0 0 18px #00d2ff);
+    animation: borderShineSweep 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+    z-index: 3;
+}
+
+/* Ambient Neon Edge Glow Breathing */
+.slides .box::after,
+.bulletin .box::after,
+.map .box::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    border: 1.5px solid rgba(0, 210, 255, 0.18);
+    box-shadow: inset 0 0 25px rgba(0, 210, 255, 0.1), 0 0 15px rgba(0, 160, 255, 0.08);
+    pointer-events: none;
+    animation: boxPerimeterGlow 6s ease-in-out infinite alternate;
+    z-index: 2;
+}
+
+/* Base Box Positioning & Geometry */
+.current-conditions .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/current_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.eight-cities .box {
+    width: 1397.25px;
+    height: 726.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/local_obs_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.local-forecast .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/text_forecast_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.environment-canada .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/environment_canada_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.week-ahead .box, .quebec-week-ahead .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/7_day_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.air-quality .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/aq_1_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.almanac .box {
+    width: 1397.25px;
+    height: 688.5px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/alm_climo_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.daypart-forecast .box {
+    width: 1393.25px;
+    height: 688.5px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/daypart_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.outdoor-activity .box {
+    width: 1028.25px;
+    height: 677.25px;
+    left: 6.7%;
+    top: 17%;
+    background-image: url(../images/boxes/2026/outdoor_activity_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.regional-forecast .box, 
+.canada-forecast .box, 
+.quebec-cities .box, 
+.resort-forecast .box {
+    width: 1397.25px;
+    height: 681.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/regional_box.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.map .box {
+    width: 1505.25px;
+    height: 105px;
+    left: 7.25%;
+    top: 5.75%;
+    z-index: 1;
+    background-image: url(../images/boxes/2026/map_banner.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.radar .banner,
+.satellite .banner {
+    position: absolute;
+    height: 160px;
+    width: 1512px;
+    right: 0;
+    top: 68px;
+    z-index: 10;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.radar .banner {
+    background-image: url(../images/boxes/2026/radar_banner.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.satellite .banner {
+    background-image: url(../images/boxes/2026/radar_satellite_banner.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.radar .banner::before,
+.satellite .banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -45%;
+    width: 40%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, rgba(0, 229, 255, 0.2) 20%, rgba(255, 255, 255, 0.95) 50%, rgba(0, 229, 255, 0.8) 80%, transparent 100%);
+    filter: drop-shadow(0 0 8px #00e5ff) drop-shadow(0 0 16px #00d2ff);
+    animation: borderShineSweep 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    pointer-events: none;
+    z-index: 12;
+}
+
+.bulletin {
+    width: 1620px;
+    height: 1080px;
+    background-image: url(../images/2026/domesticBulletin.png) !important;
+    background-size: 100% 100% !important;
+}
+
+.bulletin .box {
+    width: 1397.25px;
+    height: 726.75px;
+    left: 7%;
+    top: 16%;
+    background-image: url(../images/boxes/2026/nws_headlines_box.png) !important;
+    background-size: 100% 100% !important;
+    animation: severeBoxPulse 2.5s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   2026 BROADCAST HEADER & TYPOGRAPHY
+   ========================================================================== */
+
+.header {
+    position: absolute;
+    font-size: 68px;
+    font-family: "Interstate Bold", "Helvetica Neue", sans-serif;
+    color: #ffffff !important;
+    margin-left: 144px;
+    margin-top: 78px;
+    transform: scaleX(1.05);
+    letter-spacing: 1.5px;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.9),
+        0 4px 18px rgba(0, 150, 255, 0.5),
+        0 0 25px rgba(0, 220, 255, 0.35);
+    animation: headerGlowPulse 5s ease-in-out infinite alternate;
+    z-index: 5;
+}
+
+/* ==========================================================================
+   LOWER DISPLAY LINE (LDL) - 2026 HD
+   ========================================================================== */
+
+.ldl-blue {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.ldl-blue .template {
+    position: absolute;
+    width: 1620px;
+    bottom: 0;
+    height: 135px;
+    background: linear-gradient(180deg, rgba(10, 26, 58, 0.98) 0%, rgba(6, 15, 33, 0.99) 100%) !important;
+    border-top: 2.5px solid #00d2ff !important;
+    box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.25) !important;
+    overflow: hidden;
+    z-index: 6;
+}
+
+.ldl-blue .logo {
+    display: none !important;
+    background-image: none !important;
+}
+
+.ldl-blue .logo.has-spotify {
+    display: flex !important;
+    position: absolute;
+    width: 76px;
+    height: 76px;
+    bottom: 28px;
+    right: 35px;
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 10;
+}
+
+.ldl-blue .weathercomlogo {
+    display: none !important;
+}
+
+/* Hide 2009 floating LDL artifacts */
+.ldl-blue .top-bar,
+.ldl-blue .crawl-tab,
+.ldl-blue .time-padding,
+.ldl-blue .flare,
+.ldl-blue .upnext-tabs {
+    display: none !important;
+}
+
+/* Emergency Alert / Warning Crawl on LDL (2026 HD) */
+.ldl-black {
+    position: absolute;
+    width: 1620px;
+    bottom: 0;
+    left: 0;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.ldl-black .alertinfo {
+    position: absolute;
+    height: 170px;
+    bottom: 0;
+    left: 0;
+    width: 1620px;
+    z-index: 11;
+    font-family: "Interstate Bold", sans-serif;
+}
+
+.ldl-black .alertinfo .name {
+    position: absolute;
+    transform: scaleY(0.92);
+    font-family: "Interstate Black", sans-serif;
+    font-size: 38px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.85);
+    left: 139px;
+    white-space: nowrap;
+    top: 6px;
+    letter-spacing: 0.8px;
+    color: #ffffff;
+    max-width: 1450px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ldl-black .alertinfo .alertcrawl {
+    position: absolute;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.85);
+    transform: scaleY(0.92) translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    font-size: 56px;
+    bottom: 24px;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 1620px;
+    color: #ffffff;
+}
+
+.ldl-black .template.alert {
+    position: absolute;
+    width: 1620px;
+    height: 278px;
+    bottom: 0;
+    left: 0;
+    background-size: 100% 100%;
+    z-index: 10;
+}
+
+.ldl-black .time {
+    position: absolute;
+    color: #e7e7e7;
+    bottom: 126px;
+    font-size: 38px;
+    font-family: "Interstate Bold", sans-serif;
+    transform: scaleY(0.85);
+    left: 1120px;
+    z-index: 12;
+    letter-spacing: -1px;
+}
+
+.ldl-black .time .ampm {
+    font-size: 28px;
+    margin-left: 4px;
+}
+
+@keyframes tempTabInit {
+    from { right: 285px; opacity: 0; transform: translateY(10px); }
+    to { right: 285px; opacity: 1; transform: translateY(0); }
+}
+
+@keyframes timeTabInit {
+    from { right: 430px; opacity: 0; transform: translateY(10px); }
+    to { right: 430px; opacity: 1; transform: translateY(0); }
+}
+
+/* Temperature Tab - Flush atop LDL bar with Shining Cyan Border */
+.ldl-blue .temptab {
+    position: absolute !important;
+    bottom: 135px !important;
+    width: 135px !important;
+    height: 38px !important;
+    right: 285px !important;
+    background: linear-gradient(180deg, rgba(13, 39, 82, 0.88) 0%, rgba(6, 19, 39, 0.95) 100%) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1.5px solid #00d2ff !important;
+    border-bottom: none !important;
+    border-radius: 6px 6px 0 0 !important;
+    box-shadow: 0 -4px 12px rgba(0, 210, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    transform: none !important;
+    animation: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 8 !important;
+}
+
+.ldl-blue .temptab span,
+.ldl-blue .temptab span.temp {
+    position: static !important;
+    font-family: "Interstate Black Cn", sans-serif !important;
+    font-size: 28px !important;
+    color: #ffffff !important;
+    transform: none !important;
+    left: 0 !important;
+    top: 0 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+}
+
+.ldl-blue .temptab span.degree {
+    position: static !important;
+    font-size: 28px !important;
+    color: #00e5ff !important;
+    top: 0 !important;
+    margin-left: 2px !important;
+}
+
+/* Clock / Time Tab - Flush atop LDL bar with Cyan Border */
+.ldl-blue .time {
+    position: absolute !important;
+    bottom: 135px !important;
+    width: 165px !important;
+    height: 38px !important;
+    right: 430px !important;
+    background: linear-gradient(180deg, rgba(13, 39, 82, 0.88) 0%, rgba(6, 19, 39, 0.95) 100%) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1.5px solid #00d2ff !important;
+    border-bottom: none !important;
+    border-radius: 6px 6px 0 0 !important;
+    box-shadow: 0 -4px 12px rgba(0, 210, 255, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+    transform: none !important;
+    animation: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    z-index: 8 !important;
+}
+
+.ldl-blue .time span {
+    position: static !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 24px !important;
+    color: #ffffff !important;
+    transform: none !important;
+    margin: 0 !important;
+    top: 0 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+}
+
+.ldl-blue .time span .ampm {
+    font-size: 16px !important;
+    color: #38bdf8 !important;
+    margin-left: 4px !important;
+    position: static !important;
+}
+
+/* Weather Data Update Timestamp - Clean unboxed text floating above LDL */
+.ldl-blue .data-updated,
+.data-updated {
+    position: absolute !important;
+    bottom: 135px !important;
+    right: 610px !important;
+    max-width: 750px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    text-align: right !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    animation: none !important;
+    font-family: "Interstate", sans-serif !important;
+    font-size: 15px !important;
+    letter-spacing: 0.5px !important;
+    color: #cbd5e1 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    pointer-events: none !important;
+    z-index: 7 !important;
+}
+
+.ldl-blue .data-updated.error,
+.data-updated.error {
+    color: #fca5a5 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    animation: none !important;
+}
+
+.ldl-blue .crawl {
+    position: absolute;
+    bottom: 22px;
+    left: 40px;
+    width: calc(100% - 80px);
+    max-width: 1540px;
+    height: 52px;
+    font-size: 42px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+    white-space: nowrap;
+    overflow: hidden;
+    z-index: 7;
+}
+
+.ldl-blue .crawl .scroll {
+    position: absolute;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 42px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95);
+}
+
+.ldl-blue .observations {
+    position: absolute;
+    bottom: 14px;
+    left: 40px;
+    right: 40px;
+    width: calc(100% - 80px);
+    max-width: 1540px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    z-index: 7;
+    overflow: hidden;
+}
+
+.ldl-blue .observations .city-name {
+    font-size: 38px;
+    font-family: "Interstate Black", sans-serif;
+    color: #00e5ff;
+    text-shadow: 0 1px 2px #000000, 0 2px 4px rgba(0, 0, 0, 0.85), 0 0 5px rgba(0, 229, 255, 0.35);
+    margin-right: 18px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.8px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ldl-blue .observations .obs {
+    display: flex;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+}
+
+.ldl-blue .observations .obs-primary {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 16px;
+    padding-right: 16px;
+    border-right: 1.5px solid rgba(0, 210, 255, 0.45);
+    height: 60px;
+}
+
+.ldl-blue .observations .obs .icon {
+    width: 58px;
+    height: 58px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    margin-right: 10px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+    flex-shrink: 0;
+    will-change: auto;
+}
+
+.ldl-blue .observations .tempobs {
+    font-size: 46px;
+    font-family: "Interstate Black Cn", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 1px 2px #000000;
+    margin-right: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.ldl-blue .observations .tempobs .degree {
+    font-size: 36px;
+    color: #00e5ff;
+}
+
+.ldl-blue .observations .condtext {
+    font-size: 19px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #e2e8f0;
+    text-transform: uppercase;
+    line-height: 1.15;
+    max-width: 170px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95), 0 1px 1px #000000;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.ldl-blue .observations .obs-metrics {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    gap: 14px;
+    height: 60px;
+}
+
+.ldl-blue .observations .obs-metrics > div {
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    padding-left: 14px;
+    border-left: 1.5px solid rgba(0, 210, 255, 0.35);
+    flex-shrink: 0;
+}
+
+.ldl-blue .observations .obs-metrics > div.is-first-visible,
+.ldl-blue .observations .obs-metrics > div:first-child {
+    border-left: none !important;
+    padding-left: 0 !important;
+}
+
+.ldl-blue .observations .obsheader {
+    position: static !important;
+    font-size: 21px !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    color: #38bdf8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95) !important;
+    margin: 0 8px 0 0 !important;
+    transform: none !important;
+    white-space: nowrap !important;
+}
+
+.ldl-blue .observations .info {
+    position: static !important;
+    font-size: 27px !important;
+    font-family: "Interstate Black Cn", sans-serif !important;
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 1px 1px #000000 !important;
+    margin: 0 !important;
+    transform: none !important;
+    white-space: nowrap !important;
+    word-spacing: normal !important;
+}
+
+.ldl-blue .observations .info span,
+.ldl-blue .observations .info span.degree {
+    font-family: "Interstate Black Cn", sans-serif !important;
+    font-size: 23px !important;
+    color: #00e5ff !important;
+    padding-left: 2px !important;
+    position: static !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95) !important;
+}
+
+.ldl-blue .observations .info .unit {
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 18px !important;
+    color: #94a3b8 !important;
+    padding-left: 4px !important;
+}
+
+.ldl-blue .observations .info .gust-label {
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 19px !important;
+    color: #38bdf8 !important;
+    padding-left: 6px !important;
+}
+
+/* ==========================================================================
+   SLIDE 1: CURRENT CONDITIONS (ACTUELLEMENT)
+   ========================================================================== */
+
+.current-conditions .city-name {
+    position: absolute;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 58px;
+    letter-spacing: 2px;
+    margin-top: 184px;
+    margin-left: 142px;
+    text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 210, 255, 0.3);
+    text-transform: uppercase;
+}
+
+.current-conditions .left-pane {
+    position: absolute;
+    left: 142px;
+    top: 275px;
+    width: 460px;
+}
+
+.current-conditions .icon {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    left: 20px;
+    top: 0px;
+    background-size: contain !important;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.7));
+    animation: iconHeroFloat 4.5s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+/* Radiant atmospheric aura disk behind hero icon */
+.current-conditions .icon::before {
+    content: '';
+    position: absolute;
+    inset: -15px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.18) 0%, rgba(0, 150, 255, 0.08) 45%, transparent 75%);
+    pointer-events: none;
+    z-index: -1;
+    animation: bgAmbientPulse 6s ease-in-out infinite alternate;
+}
+
+.current-conditions .temp {
+    position: absolute;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 135px;
+    left: 285px;
+    top: 45px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.4);
+    animation: headerGlowPulse 6s ease-in-out 0.5s infinite alternate;
+}
+
+.current-conditions .cond {
+    position: absolute;
+    color: #7dd3fc;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 46px;
+    top: 270px;
+    left: 10px;
+    width: 440px;
+    line-height: 52px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.current-conditions .right-pane {
+    position: absolute;
+    left: 685px;
+    top: 270px;
+    width: 780px;
+}
+
+.current-conditions .labels {
+    position: absolute;
+    font-family: "Interstate Bold", sans-serif;
+    color: #38bdf8;
+    font-size: 40px;
+    line-height: 60px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.current-conditions .humidity, 
+.current-conditions .dewpoint, 
+.current-conditions .visibility,
+.current-conditions .wind, 
+.current-conditions .gusts, 
+.current-conditions .feelslike,
+.current-conditions .pressure {
+    position: absolute;
+    left: 380px;
+    font-family: "Interstate Black Cn", sans-serif;
+    color: #ffffff;
+    font-size: 46px;
+    line-height: 60px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.current-conditions .humidity   { top: 0px; }
+.current-conditions .dewpoint   { top: 60px; }
+.current-conditions .pressure   { top: 120px; display: flex; align-items: baseline; }
+.current-conditions .visibility { top: 180px; display: flex; align-items: baseline; }
+.current-conditions .wind       { top: 240px; }
+.current-conditions .gusts      { top: 300px; display: flex; align-items: baseline; }
+.current-conditions .feelslike  { top: 360px; color: #ffd15c; }
+
+.current-conditions .pressure .inches,
+.current-conditions .visibility .miles,
+.current-conditions .gusts .miles {
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 32px;
+    color: #94a3b8;
+    margin-left: 10px;
+}
+
+/* ==========================================================================
+   SLIDE 2: 8 CITIES OBSERVATIONS (HUIT VILLES)
+   ========================================================================== */
+
+.eight-cities .header {
+    position: absolute !important;
+    color: #ffffff !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 68px !important;
+    margin-left: 144px !important;
+    margin-top: 78px !important;
+    transform: scaleX(1.05) !important;
+    letter-spacing: 1.5px !important;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.9),
+        0 4px 18px rgba(0, 150, 255, 0.5),
+        0 0 25px rgba(0, 220, 255, 0.35) !important;
+    z-index: 5 !important;
+}
+
+.eight-cities .top {
+    position: absolute !important;
+    color: #38bdf8 !important;
+    left: 125px !important;
+    top: 188px !important;
+    width: 1370px !important;
+    height: 45px !important;
+    margin: 0 !important;
+    font-size: 36px !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    letter-spacing: 1px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+    z-index: 5 !important;
+}
+
+.eight-cities .top .temp {
+    position: absolute !important;
+    left: 850px !important;
+    width: 140px !important;
+    text-align: center !important;
+    color: inherit !important;
+}
+
+.eight-cities .top .wind {
+    position: absolute !important;
+    left: 1060px !important;
+    width: 280px !important;
+    text-align: left !important;
+    color: inherit !important;
+}
+
+.eight-cities .information {
+    margin-top: 245px;
+    position: absolute;
+}
+
+.eight-cities .information .extra-loc {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    width: 1370px !important;
+    height: 157px !important;
+    margin-left: 125px !important;
+    border-bottom: 1px solid rgba(0, 200, 255, 0.15) !important;
+    animation: dividerShine 5s ease-in-out infinite alternate;
+}
+
+.extra-loc .name {
+    position: absolute !important;
+    left: 20px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 580px !important;
+    margin: 0 !important;
+    color: #ffffff !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 56px !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.extra-loc .icon {
+    position: absolute !important;
+    left: 650px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 130px !important;
+    height: 130px !important;
+    margin: 0 !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8)) !important;
+    animation: iconLocFloat 4s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+.extra-loc.i .icon   { animation-delay: 0s; }
+.extra-loc.ii .icon  { animation-delay: 0.35s; }
+.extra-loc.iii .icon { animation-delay: 0.7s; }
+.extra-loc.iv .icon  { animation-delay: 1.05s; }
+
+.extra-loc .temp {
+    position: absolute !important;
+    left: 850px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 140px !important;
+    margin: 0 !important;
+    text-align: center !important;
+    color: #ffffff !important;
+    font-family: "Interstate Black Cn", sans-serif !important;
+    font-size: 78px !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 229, 255, 0.35) !important;
+}
+
+.extra-loc .wind {
+    position: absolute !important;
+    left: 1060px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 280px !important;
+    margin: 0 !important;
+    color: #e2e8f0 !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8) !important;
+}
+
+.extra-loc .wind .speed {
+    font-family: "Interstate Black Cn", sans-serif !important;
+    color: #38bdf8 !important;
+    padding-left: 14px !important;
+}
+
+/* ==========================================================================
+   SLIDE 3: LOCAL FORECAST (PRÉVISIONS LOCALES)
+   ========================================================================== */
+
+.local-forecast .city-name {
+    position: absolute;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 56px;
+    margin-top: 184px;
+    margin-left: 140px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.local-forecast .information {
+    position: absolute;
+    margin-top: 260px;
+    margin-left: 140px;
+    color: #ffffff;
+}
+
+.local-forecast .period {
+    color: #38bdf8;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 56px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 15px rgba(56, 189, 248, 0.3);
+    text-transform: uppercase;
+    margin-bottom: 25px;
+}
+
+.local-forecast .description {
+    position: absolute;
+    color: #f8fafc;
+    width: 820px;
+    font-size: 58px;
+    top: 75px;
+    line-height: 72px;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+}
+
+.local-forecast .desc-mov {
+    position: absolute;
+    right: 120px;
+    top: 260px;
+    width: 480px;
+    height: 480px;
+    border-radius: 16px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(0, 200, 255, 0.4);
+    overflow: hidden;
+    animation: descMovBorderGlow 4s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   SLIDE 4 & 5: WEEK AHEAD & QUEBEC WEEK AHEAD (7 JOURS)
+   ========================================================================== */
+
+.week-ahead .city-name, .quebec-week-ahead .city-name {
+    position: absolute;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 56px;
+    margin-top: 184px;
+    margin-left: 140px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.week-ahead .information, .quebec-week-ahead .information {
+    position: absolute;
+    margin-left: 130px;
+    margin-top: 250px;
+}
+
+.week-ahead .day, .quebec-week-ahead .day {
+    position: absolute;
+    width: 190px;
+    height: 540px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.week-ahead .weekend, .quebec-week-ahead .weekend {
+    position: absolute;
+    width: 175px;
+    height: 46px;
+    background-image: url(../images/2026/weekend_rectangle.png) !important;
+    background-size: 100% 100% !important;
+    margin-top: 5px;
+    filter: drop-shadow(0 0 8px rgba(255, 209, 92, 0.35));
+    animation: weekendGlow 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes weekendGlow {
+    0% { filter: drop-shadow(0 0 6px rgba(255, 209, 92, 0.25)); }
+    100% { filter: drop-shadow(0 0 16px rgba(255, 209, 92, 0.75)); }
+}
+
+.week-ahead .name, .quebec-week-ahead .name {
+    text-align: center;
+    font-size: 46px;
+    font-family: "Interstate Black", sans-serif;
+    color: #38bdf8;
+    margin-top: 55px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.week-ahead .name.wk, .quebec-week-ahead .name.wk {
+    color: #ffd15c;
+}
+
+.week-ahead .icon, .quebec-week-ahead .icon {
+    width: 155px;
+    height: 155px;
+    margin-top: 15px;
+    background-size: contain !important;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
+    animation: iconFloat 4s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+.week-ahead .day.i .icon, .quebec-week-ahead .day.i .icon     { animation-delay: 0s; }
+.week-ahead .day.ii .icon, .quebec-week-ahead .day.ii .icon   { animation-delay: 0.35s; }
+.week-ahead .day.iii .icon, .quebec-week-ahead .day.iii .icon { animation-delay: 0.7s; }
+.week-ahead .day.iv .icon, .quebec-week-ahead .day.iv .icon   { animation-delay: 1.05s; }
+.week-ahead .day.v .icon, .quebec-week-ahead .day.v .icon     { animation-delay: 1.4s; }
+.week-ahead .day.vi .icon, .quebec-week-ahead .day.vi .icon   { animation-delay: 1.75s; }
+.week-ahead .day.vii .icon, .quebec-week-ahead .day.vii .icon { animation-delay: 2.1s; }
+
+.week-ahead .cond, .quebec-week-ahead .cond {
+    position: absolute;
+    color: #e2e8f0;
+    font-size: 34px;
+    font-family: "Interstate Bold", sans-serif;
+    text-align: center;
+    margin-top: 300px;
+    width: 180px;
+    line-height: 40px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.week-ahead .high, .quebec-week-ahead .high {
+    position: absolute;
+    color: #ffffff;
+    font-size: 82px;
+    font-family: "Interstate Black Cn", sans-serif;
+    text-align: center;
+    width: 190px;
+    margin-top: 385px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 229, 255, 0.3);
+    animation: headerGlowPulse 5s ease-in-out infinite alternate;
+}
+
+.week-ahead .low, .quebec-week-ahead .low {
+    position: absolute;
+    color: #94a3b8;
+    font-size: 68px;
+    font-family: "Interstate Black Cn", sans-serif;
+    text-align: center;
+    width: 190px;
+    margin-top: 470px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.week-ahead .day.ii, .quebec-week-ahead .day.ii   { margin-left: 196px; }
+.week-ahead .day.iii, .quebec-week-ahead .day.iii { margin-left: 395px; }
+.week-ahead .day.iv, .quebec-week-ahead .day.iv   { margin-left: 593px; }
+.week-ahead .day.v, .quebec-week-ahead .day.v     { margin-left: 790px; }
+.week-ahead .day.vi, .quebec-week-ahead .day.vi   { margin-left: 988px; }
+.week-ahead .day.vii, .quebec-week-ahead .day.vii { margin-left: 1186px; }
+
+/* ==========================================================================
+   SLIDE 6: AIR QUALITY (QUALITÉ DE L'AIR)
+   ========================================================================== */
+
+.air-quality .city-name {
+    position: absolute;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 56px;
+    margin-top: 184px;
+    margin-left: 140px;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.air-quality .day {
+    position: absolute;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 64px;
+    margin-left: 140px;
+    margin-top: 270px;
+}
+
+.air-quality .primpollut {
+    position: absolute;
+    color: #ffffff;
+    font-size: 46px;
+    margin-left: 140px;
+    margin-top: 420px;
+}
+
+.air-quality .primpollut .header-text {
+    color: #94a3b8;
+    font-family: "Interstate Bold", sans-serif;
+    margin-bottom: 12px;
+}
+
+.air-quality .primpollut .pollutants {
+    font-size: 64px;
+    font-family: "Interstate Black", sans-serif;
+    color: #ffffff;
+}
+
+.air-quality .qualitybar {
+    position: absolute;
+    width: 510px;
+    right: 150px;
+    top: 285px;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    animation: qualityBarBorderShine 5s ease-in-out infinite alternate;
+}
+
+.qualitybar .extreme,
+.qualitybar .high,
+.qualitybar .unhealthy,
+.qualitybar .moderate,
+.qualitybar .low {
+    width: 100%;
+    height: 95px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.qualitybar .low {
+    border-bottom: none;
+    background: linear-gradient(90deg, #15803d 0%, #16a34a 100%);
+}
+
+.qualitybar .moderate {
+    background: linear-gradient(90deg, #b45309 0%, #d97706 100%);
+}
+
+.qualitybar .unhealthy {
+    background: linear-gradient(90deg, #c2410c 0%, #ea580c 100%);
+}
+
+.qualitybar .high {
+    background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%);
+}
+
+.qualitybar .extreme {
+    background: linear-gradient(90deg, #831843 0%, #9f1239 100%);
+}
+
+.qualitybar span.text {
+    position: absolute;
+    left: 36px;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 48px;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    letter-spacing: 1px;
+}
+
+.qualitybar .unhealthy span.text {
+    font-size: 26px;
+    line-height: 1.15;
+    max-width: 440px;
+}
+
+.air-quality .qualityarrow {
+    position: absolute;
+    height: 101px;
+    width: 77px;
+    background-image: url(../images/2026/aqarrow.png) !important;
+    background-size: 100% 100% !important;
+    bottom: 270px;
+    right: 665px;
+    transform: scaleX(-1);
+    filter: drop-shadow(0 0 12px #00e5ff);
+    animation: arrowGlowPulse 2.5s ease-in-out infinite alternate;
+}
+
+.air-quality .source {
+    position: absolute;
+    font-family: "Interstate Bold", sans-serif;
+    bottom: 215px;
+    margin-left: 140px;
+    font-size: 34px;
+    color: #64748b;
+}
+
+/* ==========================================================================
+   SLIDE 7: ALMANAC (ALMANACH)
+   ========================================================================== */
+
+.almanac .stationname {
+    position: absolute;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 54px;
+    color: #ffffff;
+    margin-top: 184px;
+    margin-left: 140px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .day {
+    position: absolute;
+    font-size: 45px;
+    margin-top: 184px;
+    left: 680px;
+    width: 340px;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .day.ii {
+    left: 1060px;
+}
+
+.almanac .day .almheader {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.almanac .sunrise {
+    position: absolute;
+    top: 76px;
+    left: 0;
+    width: 340px;
+    font-size: 60px;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    line-height: 1;
+}
+
+.almanac .sunset {
+    position: absolute;
+    top: 167px;
+    left: 0;
+    width: 340px;
+    font-size: 60px;
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    line-height: 1;
+}
+
+.almanac .sunrise span, .almanac .sunset span {
+    font-size: 48px;
+    font-family: "Interstate Bold", sans-serif;
+}
+
+.almanac .sunrise-text, .almanac .sunset-text {
+    position: absolute;
+    left: 335px;
+    font-size: 46px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #e2e8f0;
+    margin-top: 260px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .sunset-text {
+    margin-top: 351px;
+}
+
+.almanac .bottomheader {
+    position: absolute;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    margin-left: 140px;
+    margin-top: 480px;
+    font-size: 38px;
+    letter-spacing: 1px;
+    width: 1350px;
+    height: 45px;
+}
+
+.almanac .almdate {
+    position: absolute;
+    left: 20px;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .bottomheader .high {
+    position: absolute;
+    left: 560px;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .bottomheader .low {
+    position: absolute;
+    left: 940px;
+    color: #38bdf8;
+    font-family: "Interstate Bold", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .yesterday, .almanac .average, .almanac .records {
+    position: absolute;
+    color: #ffffff;
+    margin-left: 140px;
+    width: 1350px;
+    height: 65px;
+}
+
+.almanac .y-header, .almanac .a-header, .almanac .r-header {
+    position: absolute;
+    left: 20px;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 46px;
+    color: #e2e8f0;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .yesterday .high,
+.almanac .average .high,
+.almanac .records .high {
+    position: absolute;
+    left: 560px;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 58px;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    line-height: 1;
+}
+
+.almanac .yesterday .low,
+.almanac .average .low,
+.almanac .records .low {
+    position: absolute;
+    left: 940px;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 58px;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    line-height: 1;
+}
+
+.almanac .records .highyear {
+    position: absolute;
+    left: 400px;
+    width: 140px;
+    text-align: right;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 40px;
+    color: #94a3b8;
+    line-height: 58px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .records .lowyear {
+    position: absolute;
+    left: 780px;
+    width: 140px;
+    text-align: right;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 40px;
+    color: #94a3b8;
+    line-height: 58px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.almanac .yesterday { margin-top: 545px; }
+.almanac .average   { margin-top: 625px; }
+.almanac .records   { margin-top: 705px; }
+
+/* ==========================================================================
+   SLIDE 8: DAYPART FORECAST (PRÉVISIONS PAR PÉRIODE)
+   ========================================================================== */
+
+.daypart-forecast .city-name {
+    position: absolute;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 56px;
+    margin-top: 184px;
+    margin-left: 140px;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+    text-transform: uppercase;
+}
+
+.daypart-forecast .forecast-period {
+    position: absolute;
+    color: #38bdf8;
+    right: 140px;
+    top: 184px;
+    font-size: 48px;
+    font-family: "Interstate Black", sans-serif;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.daypart-forecast .information {
+    position: absolute;
+    display: flex;
+    margin-top: 242px;
+    margin-left: 125px;
+}
+
+.daypart-forecast .hour {
+    width: 345px;
+    height: 580px;
+    text-align: center;
+    position: absolute;
+}
+
+.daypart-forecast .hour .time {
+    position: absolute;
+    top: 0px;
+    left: 0;
+    width: 100%;
+    font-size: 50px;
+    font-family: "Interstate Black", sans-serif;
+    color: #38bdf8;
+    text-align: center;
+    line-height: 1;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.daypart-forecast .hour .icon {
+    position: absolute;
+    width: 135px;
+    height: 135px;
+    top: 58px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    background-size: contain !important;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.8));
+    animation: iconHourFloat 4s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+.daypart-forecast .hour:nth-child(1) .icon, .daypart-forecast .hour.i .icon   { animation-delay: 0s; }
+.daypart-forecast .hour:nth-child(2) .icon, .daypart-forecast .hour.ii .icon  { animation-delay: 0.4s; }
+.daypart-forecast .hour:nth-child(3) .icon, .daypart-forecast .hour.iii .icon { animation-delay: 0.8s; }
+.daypart-forecast .hour:nth-child(4) .icon, .daypart-forecast .hour.iv .icon  { animation-delay: 1.2s; }
+
+.daypart-forecast .hour .cond {
+    position: absolute;
+    top: 198px;
+    left: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
+    height: 72px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 28px;
+    line-height: 1.15;
+    font-family: "Interstate Bold", sans-serif;
+    color: #e2e8f0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.daypart-forecast .hour .bar {
+    position: absolute;
+    background: linear-gradient(180deg, #00e5ff 0%, #0066cc 100%) !important;
+    border: 1.5px solid #ffffff;
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+    width: 175px;
+    bottom: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    transition: height 0.6s cubic-bezier(0.1, 0.9, 0.2, 1);
+    animation: barEnergyPulse 3.5s ease-in-out infinite alternate !important;
+}
+
+.hour .bar .temp {
+    font-size: 68px;
+    font-family: "Interstate Black Cn", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+    margin-top: -6px;
+    text-align: center;
+}
+
+.daypart-forecast .hour .wind {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    font-size: 32px;
+    line-height: 1;
+    font-family: "Interstate Bold", sans-serif;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.daypart-forecast .hour.ii  { margin-left: 346px; }
+.daypart-forecast .hour.iii { margin-left: 695px; }
+.daypart-forecast .hour.iv  { margin-left: 1040px; }
+
+/* ==========================================================================
+   SLIDE 9-12: REGIONAL, CANADA, QUEBEC & RESORT FORECAST (6 VILLES)
+   ========================================================================== */
+
+.regional-forecast .region-loc,
+.canada-forecast .canada-loc,
+.quebec-cities .qc-loc,
+.resort-forecast .resort-loc {
+    position: absolute;
+    width: 660px;
+    height: 185px;
+    overflow: hidden;
+}
+
+/* Sub-heading: Region / Province / Subtitle */
+.region-loc .reg-name,
+.canada-loc .province,
+.qc-loc .region-name,
+.resort-loc .resort-region {
+    position: absolute !important;
+    top: 26px !important;
+    left: 26px !important;
+    margin: 0 !important;
+    font-size: 24px !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    color: #38bdf8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.5px !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+    max-width: 370px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    z-index: 2;
+}
+
+/* Primary heading: City / Resort Name */
+.region-loc .city-name,
+.canada-loc .city-name,
+.qc-loc .city-name,
+.resort-loc .resort-name {
+    position: absolute !important;
+    top: 58px !important;
+    left: 26px !important;
+    margin: 0 !important;
+    font-family: "Interstate Black", "Interstate Bold", sans-serif !important;
+    font-size: 40px !important;
+    line-height: 1.1 !important;
+    color: #ffffff !important;
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
+    max-width: 380px !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    padding-bottom: 6px !important;
+    z-index: 2;
+}
+
+/* Current Temperature */
+.region-loc .temp,
+.canada-loc .temp,
+.qc-loc .temp,
+.resort-loc .temp {
+    position: absolute !important;
+    top: 32px !important;
+    right: 140px !important;
+    left: auto !important;
+    width: 115px !important;
+    margin: 0 !important;
+    font-family: "Interstate Black Cn", sans-serif !important;
+    font-size: 72px !important;
+    color: #ffffff !important;
+    text-align: center !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 229, 255, 0.4) !important;
+    z-index: 2;
+}
+
+/* High / Low Forecast Pills */
+.region-loc .high-low,
+.canada-loc .high-low,
+.qc-loc .high-low,
+.resort-loc .high-low {
+    position: absolute !important;
+    top: 112px !important;
+    right: 135px !important;
+    left: auto !important;
+    width: 125px !important;
+    margin: 0 !important;
+    font-family: "Interstate Bold Cn", sans-serif !important;
+    font-size: 24px !important;
+    color: #94a3b8 !important;
+    text-align: center !important;
+    letter-spacing: 0.5px !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9) !important;
+    z-index: 2;
+}
+
+/* Weather Condition Icon */
+.region-loc .icon,
+.canada-loc .icon,
+.qc-loc .icon,
+.resort-loc .icon {
+    position: absolute !important;
+    top: 32px !important;
+    right: 18px !important;
+    left: auto !important;
+    width: 110px !important;
+    height: 110px !important;
+    margin: 0 !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8)) !important;
+    animation: iconGridFloat 4s ease-in-out infinite alternate;
+    will-change: transform, filter;
+    z-index: 2;
+}
+
+.region-loc.i .icon, .canada-loc.i .icon, .qc-loc.i .icon, .resort-loc.i .icon     { animation-delay: 0s; }
+.region-loc.ii .icon, .canada-loc.ii .icon, .qc-loc.ii .icon, .resort-loc.ii .icon   { animation-delay: 0.3s; }
+.region-loc.iii .icon, .canada-loc.iii .icon, .qc-loc.iii .icon, .resort-loc.iii .icon { animation-delay: 0.6s; }
+.region-loc.iv .icon, .canada-loc.iv .icon, .qc-loc.iv .icon, .resort-loc.iv .icon   { animation-delay: 0.9s; }
+.region-loc.v .icon, .canada-loc.v .icon, .qc-loc.v .icon, .resort-loc.v .icon     { animation-delay: 1.2s; }
+.region-loc.vi .icon, .canada-loc.vi .icon, .qc-loc.vi .icon, .resort-loc.vi .icon   { animation-delay: 1.5s; }
+
+/* 6-grid positions */
+.region-loc.i, .canada-loc.i, .qc-loc.i, .resort-loc.i     { top: 252px; left: 138px; }
+.region-loc.ii, .canada-loc.ii, .qc-loc.ii, .resort-loc.ii { top: 252px; left: 832px; }
+.region-loc.iii, .canada-loc.iii, .qc-loc.iii, .resort-loc.iii { top: 452px; left: 138px; }
+.region-loc.iv, .canada-loc.iv, .qc-loc.iv, .resort-loc.iv { top: 452px; left: 832px; }
+.region-loc.v, .canada-loc.v, .qc-loc.v, .resort-loc.v     { top: 652px; left: 138px; }
+.region-loc.vi, .canada-loc.vi, .qc-loc.vi, .resort-loc.vi { top: 652px; left: 832px; }
+
+/* ==========================================================================
+   SLIDE 13: OUTDOOR ACTIVITY (ACTIVITÉS DE PLEIN AIR)
+   ========================================================================== */
+
+.outdoor-activity .outdoor-bg {
+    position: absolute;
+    width: 680px;
+    height: 820px;
+    right: 40px;
+    top: 90px;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center bottom !important;
+    pointer-events: none;
+    filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.7));
+}
+
+.outdoor-activity .time {
+    position: absolute;
+    text-align: center;
+    width: 1028px;
+    font-size: 64px;
+    font-family: "Interstate Black", sans-serif;
+    color: #38bdf8;
+    top: 200px;
+    left: 128px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.outdoor-activity .temp {
+    position: absolute;
+    font-size: 145px;
+    font-family: "Interstate Black", sans-serif;
+    top: 310px;
+    left: 200px;
+    width: 360px;
+    text-align: right;
+    color: #ffffff;
+    text-shadow: 0 4px 14px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 229, 255, 0.4);
+    animation: headerGlowPulse 5s ease-in-out infinite alternate;
+}
+
+.outdoor-activity .icon {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    top: 270px;
+    left: 600px;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.8));
+    animation: iconHeroFloat 4.5s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+/* Radiant atmospheric aura disk behind hero outdoor icon */
+.outdoor-activity .icon::before {
+    content: '';
+    position: absolute;
+    inset: -15px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 210, 255, 0.18) 0%, rgba(0, 150, 255, 0.08) 45%, transparent 75%);
+    pointer-events: none;
+    z-index: -1;
+    animation: bgAmbientPulse 6s ease-in-out infinite alternate;
+}
+
+.outdoor-activity .cond {
+    position: absolute;
+    font-size: 50px;
+    font-family: "Interstate Bold", sans-serif;
+    top: 535px;
+    left: 128px;
+    text-align: center;
+    color: #e2e8f0;
+    width: 1028px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+.outdoor-activity .wind,
+.outdoor-activity .feelslike {
+    position: absolute;
+    width: 880px;
+    height: 76px;
+    left: 202px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1.5px solid rgba(0, 210, 255, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 210, 255, 0.1);
+    animation: descMovBorderGlow 4.5s ease-in-out infinite alternate;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 35px;
+    box-sizing: border-box;
+}
+
+.outdoor-activity .wind {
+    top: 635px;
+}
+
+.outdoor-activity .feelslike {
+    top: 725px;
+}
+
+.outdoor-activity .heading {
+    position: static;
+    font-size: 44px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #38bdf8;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.5px;
+}
+
+.outdoor-activity .val {
+    position: static;
+    font-size: 52px;
+    font-family: "Interstate Black", sans-serif;
+    color: #ffffff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* ==========================================================================
+   SLIDE 14: SEVERE BULLETIN (BULLETIN MÉTÉO)
+   ========================================================================== */
+
+.bulletin .boxheader {
+    position: absolute;
+    font-size: 38px;
+    font-family: "Interstate Black", sans-serif;
+    color: #f87171;
+    left: 256px;
+    top: 193px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+    letter-spacing: 1px;
+    animation: severeTextPulse 1.8s ease-in-out infinite alternate;
+}
+
+.bulletin .alerts {
+    position: absolute;
+    width: 1350px;
+    font-size: 54px;
+    font-family: "Interstate Bold", sans-serif;
+    color: #ffffff;
+    margin-top: 268px;
+    margin-left: 139px;
+    line-height: 68px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+}
+
+.bulletin .alerts .bulletin-title {
+    color: #ef4444;
+    text-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    animation: severeTextPulse 1.8s ease-in-out infinite alternate;
+}
+
+/* ==========================================================================
+   SLIDE 15: REGIONAL MAP (CARTE RÉGIONALE / ACTUELLEMENT & PRÉVISIONS)
+   ========================================================================== */
+
+.map {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+}
+
+.map-regional {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+}
+
+.map-regional .merc {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    scale: 6.733;
+    transform: scaleY(0.793);
+}
+
+.map-regional .borders,
+.map-regional .coastlines {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    scale: 6.733;
+    opacity: 0.91;
+}
+
+.map-cities {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    pointer-events: none;
+}
+
+.map-cities .city {
+    position: absolute;
+    width: 220px;
+    height: 160px;
+    pointer-events: none;
+}
+
+.map-cities .city.selected {
+    background-color: rgba(0, 210, 255, 0.35);
+    border-radius: 8px;
+}
+
+.map-cities .city .city-name,
+.city .city-name {
+    position: absolute;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 34px;
+    color: #ffffff;
+    white-space: nowrap;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.5px;
+    transform: scaleY(0.92);
+}
+
+.map-cities .city .temp,
+.city .temp {
+    position: absolute;
+    color: #ffd15c;
+    font-family: "Interstate Black Cn", sans-serif;
+    font-size: 58px;
+    margin-top: 38px;
+    margin-left: -22px;
+    text-align: right;
+    width: 96px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+    transform: scaleY(0.92);
+}
+
+.map-cities .city .icon,
+.city .icon {
+    position: absolute;
+    width: 116px;
+    height: 112px;
+    margin-top: 36px;
+    margin-left: 74px;
+    background-size: contain !important;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85));
+    animation: iconMapFloat 3.5s ease-in-out infinite alternate;
+    will-change: transform, filter;
+}
+
+/* ==========================================================================
+   SLIDE 16 & 17: RADAR & SATELLITE LOOP
+   ========================================================================== */
+
+#locradar, #regradar, #radarsat {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+    z-index: 6;
+}
+
+.reg-cities, .loc-cities, .sat-cities {
+    position: absolute;
+    z-index: 12;
+    pointer-events: none;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+}
+
+.reg-cities-trans, .loc-cities-trans, .sat-cities-trans {
+    position: absolute;
+    z-index: 13;
+    pointer-events: none;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+}
+
+.dot, .dot-trans, .dot-outline {
+    display: none !important;
+}
+
+.radar-city {
+    position: absolute;
+    pointer-events: none;
+    z-index: 12;
+}
+
+.radar-city-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #ffffff;
+    border: 1.5px solid #000000;
+    border-radius: 2px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+    transform: translate(-50%, -50%);
+    animation: radarDotBeacon 2.2s ease-out infinite;
+}
+
+.radar-city .city-name,
+.radar-city .city-name-trans {
+    font-family: "Interstate Bold", "Interstate", Arial, sans-serif;
+    font-size: 26px;
+    position: absolute;
+    left: 12px;
+    top: -14px;
+    color: #ffffff;
+    transform: scaleY(0.92);
+    white-space: nowrap;
+    text-shadow:
+        -2px -2px 0 #000000,
+         2px -2px 0 #000000,
+        -2px  2px 0 #000000,
+         2px  2px 0 #000000,
+        -2px  0px   0 #000000,
+         2px  0px   0 #000000,
+         0px -2px   0 #000000,
+         0px  2px   0 #000000,
+         0 3px 6px rgba(0, 0, 0, 0.95);
+    letter-spacing: 0.5px;
+}
+
+.radar-city.label-left .city-name,
+.radar-city.label-left .city-name-trans {
+    left: auto;
+    right: 14px;
+    text-align: right;
+}
+
+.radar-city .city-name-trans {
+    opacity: 0.85;
+}
+
+.radar .header, .satellite .header {
+    position: absolute !important;
+    top: 86px !important;
+    left: 180px !important;
+    margin: 0 !important;
+    font-size: 56px !important;
+    line-height: 60px !important;
+    color: #ffffff !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    text-shadow: 0 3px 8px rgba(0, 0, 0, 0.9), 0 0 15px rgba(0, 210, 255, 0.3) !important;
+    transform: none !important;
+    animation: headerGlowPulse 5s ease-in-out infinite alternate;
+    z-index: 15 !important;
+}
+
+.radar .key, .satellite .key {
+    position: absolute !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 24px !important;
+    color: #94a3b8 !important;
+    top: 172px !important;
+    left: 180px !important;
+    right: auto !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    z-index: 15 !important;
+    text-shadow: 0 2px 4px #000000 !important;
+}
+
+.radar .key img, .satellite .key img {
+    width: 220px !important;
+    height: 20px !important;
+    border-radius: 4px !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+.radar .hourloop, .satellite .hourloop {
+    position: absolute !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 26px !important;
+    color: #00e5ff !important;
+    top: 170px !important;
+    right: 80px !important;
+    left: auto !important;
+    margin: 0 !important;
+    letter-spacing: 1px !important;
+    z-index: 15 !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 229, 255, 0.5) !important;
+}
+
+/* ==========================================================================
+   SLIDE 18: ENVIRONMENT CANADA ATTRIBUTION
+   ========================================================================== */
+
+.environment-canada .ec-content {
+    position: absolute;
+    top: 252px;
+    left: 113px;
+    width: 1397px;
+    height: 602px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 10;
+    padding: 0 60px;
+    box-sizing: border-box;
+}
+
+.environment-canada .ec-badge {
+    display: inline-block;
+    background: rgba(14, 165, 233, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 26px;
+    letter-spacing: 2.5px;
+    padding: 8px 30px;
+    border-radius: 9999px;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.3);
+    animation: ecBadgeGlow 3.5s ease-in-out infinite alternate;
+}
+
+.environment-canada .ec-title {
+    color: #ffffff;
+    font-family: "Interstate Black", sans-serif;
+    font-size: 46px;
+    letter-spacing: 1.5px;
+    line-height: 1.25;
+    text-transform: uppercase;
+    max-width: 1200px;
+    margin: 0 auto;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+}
+
+.environment-canada .ec-sub {
+    color: #94a3b8;
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 30px;
+    margin-top: 12px;
+    letter-spacing: 1px;
+}
+
+.environment-canada .ec-divider {
+    width: 320px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+    margin: 28px auto;
+    border-radius: 2px;
+    animation: ecDividerGlow 4s ease-in-out infinite alternate;
+}
+
+.environment-canada .ec-desc {
+    color: #e2e8f0;
+    font-family: "Interstate", sans-serif;
+    font-size: 32px;
+    line-height: 52px;
+    max-width: 1100px;
+    margin: 0 auto;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+
+/* ==========================================================================
+   ACCESSIBILITY: REDUCED MOTION PREFERENCE
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

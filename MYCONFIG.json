@@ -1,0 +1,964 @@
+{
+	"fetchIntervalMinutes": 5,
+	"smoothRadar": true,
+	"mainCity": {
+		"autoFind": false,
+		"displayname": "Montréal",
+		"extraname": "Montréal",
+		"type": "geocode",
+		"val": "45.503,-73.573"
+	},
+	"eightCities": {
+		"autoFind": false,
+		"cities": [
+			{
+				"displayname": "Québec",
+				"type": "geocode",
+				"val": "46.813,-71.211"
+			},
+			{
+				"displayname": "Laval",
+				"type": "geocode",
+				"val": "45.570,-73.753"
+			},
+			{
+				"displayname": "Gatineau",
+				"type": "geocode",
+				"val": "45.476,-75.701"
+			},
+			{
+				"displayname": "Longueuil",
+				"type": "geocode",
+				"val": "45.531,-73.518"
+			},
+			{
+				"displayname": "Sherbrooke",
+				"type": "geocode",
+				"val": "45.401,-71.890"
+			},
+			{
+				"displayname": "Saguenay",
+				"type": "geocode",
+				"val": "48.427,-71.068"
+			},
+			{
+				"displayname": "Lévis",
+				"type": "geocode",
+				"val": "46.800,-71.178"
+			},
+			{
+				"displayname": "Trois-Rivières",
+				"type": "geocode",
+				"val": "46.342,-72.542"
+			}
+		]
+	},
+	"mapCities": {
+		"leftPos": -3650,
+		"topPos": 1640,
+		"zoomScale": 1.12,
+		"citiesPerSlide": 9,
+		"map": [
+			{
+				"name": "Montréal",
+				"lat": 45.503,
+				"lon": -73.573,
+				"left": 3990,
+				"top": -975
+			},
+			{
+				"name": "Saint-Rémi",
+				"lat": 45.261,
+				"lon": -73.618,
+				"left": 4079,
+				"top": -855
+			},
+			{
+				"name": "Sherbrooke",
+				"lat": 45.401,
+				"lon": -71.89,
+				"left": 4370,
+				"top": -940
+			},
+			{
+				"name": "Trois-Rivières",
+				"lat": 46.342,
+				"lon": -72.542,
+				"left": 3970,
+				"top": -1090
+			},
+			{
+				"name": "Drummondville",
+				"lat": 45.88,
+				"lon": -72.484,
+				"left": 4220,
+				"top": -1050
+			},
+			{
+				"name": "Mont-Laurier",
+				"lat": 46.551,
+				"lon": -75.501,
+				"left": 3750,
+				"top": -1140
+			},
+			{
+				"name": "Québec",
+				"lat": 46.813,
+				"lon": -71.211,
+				"left": 4330,
+				"top": -1200
+			},
+			{
+				"name": "Amos",
+				"lat": 48.569,
+				"lon": -78.116,
+				"left": 3510,
+				"top": -1260
+			},
+			{
+				"name": "Montebello",
+				"lat": 45.65,
+				"lon": -74.942,
+				"left": 3660,
+				"top": -995
+			}
+		],
+		"autoFind": false
+	},
+	"radarCities": {
+		"local": [
+			{ "name": "Montréal", "lat": 45.503, "lon": -73.573 },
+			{ "name": "Laval", "lat": 45.570, "lon": -73.753 },
+			{ "name": "Longueuil", "lat": 45.531, "lon": -73.518 },
+			{ "name": "Saint-Jérôme", "lat": 45.780, "lon": -74.004 },
+			{ "name": "Joliette", "lat": 46.024, "lon": -73.452 },
+			{ "name": "Sorel-Tracy", "lat": 46.033, "lon": -73.117 },
+			{ "name": "Saint-Hyacinthe", "lat": 45.631, "lon": -72.957 },
+			{ "name": "Granby", "lat": 45.400, "lon": -72.733 },
+			{ "name": "Saint-Jean-sur-Richelieu", "lat": 45.306, "lon": -73.254 },
+			{ "name": "Salaberry-de-Valleyfield", "lat": 45.257, "lon": -74.132 },
+			{ "name": "Vaudreuil-Dorion", "lat": 45.400, "lon": -74.033 },
+			{ "name": "Lachute", "lat": 45.650, "lon": -74.333 },
+			{ "name": "Cornwall", "lat": 45.017, "lon": -74.733 }
+		],
+		"regional": [
+			{ "name": "Ottawa", "lat": 45.421, "lon": -75.697 },
+			{ "name": "Gatineau", "lat": 45.476, "lon": -75.701 },
+			{ "name": "Montebello", "lat": 45.650, "lon": -74.942 },
+			{ "name": "Lachute", "lat": 45.650, "lon": -74.333 },
+			{ "name": "Valleyfield", "lat": 45.257, "lon": -74.132 },
+			{ "name": "Saint-Jérôme", "lat": 45.780, "lon": -74.004 },
+			{ "name": "Montréal", "lat": 45.503, "lon": -73.573 },
+			{ "name": "Joliette", "lat": 46.024, "lon": -73.452 },
+			{ "name": "Saint-Jean", "lat": 45.306, "lon": -73.254 },
+			{ "name": "Sorel-Tracy", "lat": 46.033, "lon": -73.117 },
+			{ "name": "Saint-Hyacinthe", "lat": 45.631, "lon": -72.957 },
+			{ "name": "Granby", "lat": 45.400, "lon": -72.733 },
+			{ "name": "Drummondville", "lat": 45.880, "lon": -72.484 },
+			{ "name": "Trois-Rivières", "lat": 46.342, "lon": -72.542 },
+			{ "name": "Victoriaville", "lat": 46.058, "lon": -71.956 },
+			{ "name": "Sherbrooke", "lat": 45.401, "lon": -71.890 },
+			{ "name": "Thetford Mines", "lat": 46.083, "lon": -71.300 },
+			{ "name": "Québec", "lat": 46.813, "lon": -71.211 },
+			{ "name": "Lévis", "lat": 46.800, "lon": -71.178 }
+		]
+	},
+	"regionalForecasts": [
+		{
+			"name": "Montérégie",
+			"city": "Saint-Hyacinthe",
+			"type": "geocode",
+			"val": "45.631,-72.957"
+		},
+		{
+			"name": "Laurentides",
+			"city": "Saint-Jérôme",
+			"type": "geocode",
+			"val": "45.780,-74.004"
+		},
+		{
+			"name": "Estrie",
+			"city": "Sherbrooke",
+			"type": "geocode",
+			"val": "45.401,-71.890"
+		},
+		{
+			"name": "Lanaudière",
+			"city": "Joliette",
+			"type": "geocode",
+			"val": "46.024,-73.452"
+		},
+		{
+			"name": "Centre-du-Québec",
+			"city": "Drummondville",
+			"type": "geocode",
+			"val": "45.880,-72.484"
+		},
+		{
+			"name": "Mauricie",
+			"city": "Trois-Rivières",
+			"type": "geocode",
+			"val": "46.342,-72.542"
+		},
+		{
+			"name": "Capitale-Nationale",
+			"city": "Québec",
+			"type": "geocode",
+			"val": "46.813,-71.211"
+		},
+		{
+			"name": "Outaouais",
+			"city": "Gatineau",
+			"type": "geocode",
+			"val": "45.476,-75.701"
+		},
+		{
+			"name": "Abitibi-Témiscamingue",
+			"city": "Amos",
+			"type": "geocode",
+			"val": "48.569,-78.116"
+		},
+		{
+			"name": "Saguenay–Lac-Saint-Jean",
+			"city": "Saguenay",
+			"type": "geocode",
+			"val": "48.427,-71.068"
+		},
+		{
+			"name": "Bas-Saint-Laurent",
+			"city": "Rimouski",
+			"type": "geocode",
+			"val": "48.449,-68.524"
+		},
+		{
+			"name": "Chaudière-Appalaches",
+			"city": "Lévis",
+			"type": "geocode",
+			"val": "46.800,-71.178"
+		},
+		{
+			"name": "Côte-Nord",
+			"city": "Sept-Îles",
+			"type": "geocode",
+			"val": "50.216,-66.381"
+		},
+		{
+			"name": "Gaspésie–Îles-de-la-Madeleine",
+			"city": "Gaspé",
+			"type": "geocode",
+			"val": "48.833,-64.483"
+		},
+		{
+			"name": "Nord-du-Québec",
+			"city": "Chibougamau",
+			"type": "geocode",
+			"val": "49.917,-74.367"
+		},
+		{
+			"name": "Grand Montréal",
+			"city": "Montréal",
+			"type": "geocode",
+			"val": "45.503,-73.573"
+		},
+		{
+			"name": "Laval",
+			"city": "Laval",
+			"type": "geocode",
+			"val": "45.570,-73.753"
+		},
+		{
+			"name": "Cantons-de-l'Est",
+			"city": "Magog",
+			"type": "geocode",
+			"val": "45.267,-72.150"
+		}
+	],
+	"canadaCities": [
+		{
+			"name": "Vancouver",
+			"province": "C.-B.",
+			"val": "49.282,-123.120"
+		},
+		{
+			"name": "Calgary",
+			"province": "Alb.",
+			"val": "51.044,-114.072"
+		},
+		{
+			"name": "Edmonton",
+			"province": "Alb.",
+			"val": "53.546,-113.493"
+		},
+		{
+			"name": "Saskatoon",
+			"province": "Sask.",
+			"val": "52.133,-106.670"
+		},
+		{
+			"name": "Regina",
+			"province": "Sask.",
+			"val": "50.445,-104.618"
+		},
+		{
+			"name": "Winnipeg",
+			"province": "Man.",
+			"val": "49.895,-97.138"
+		},
+		{
+			"name": "Toronto",
+			"province": "Ont.",
+			"val": "43.653,-79.383"
+		},
+		{
+			"name": "Ottawa",
+			"province": "Ont.",
+			"val": "45.421,-75.697"
+		},
+		{
+			"name": "Montréal",
+			"province": "Qc",
+			"val": "45.503,-73.573"
+		},
+		{
+			"name": "Québec",
+			"province": "Qc",
+			"val": "46.813,-71.211"
+		},
+		{
+			"name": "Moncton",
+			"province": "N.-B.",
+			"val": "46.087,-64.778"
+		},
+		{
+			"name": "Halifax",
+			"province": "N.-É.",
+			"val": "44.648,-63.575"
+		},
+		{
+			"name": "Charlottetown",
+			"province": "Î.-P.-É.",
+			"val": "46.238,-63.131"
+		},
+		{
+			"name": "St. John's",
+			"province": "T.-N.-L.",
+			"val": "47.561,-52.712"
+		},
+		{
+			"name": "Fredericton",
+			"province": "N.-B.",
+			"val": "45.963,-66.643"
+		},
+		{
+			"name": "Whitehorse",
+			"province": "Yn",
+			"val": "60.721,-135.056"
+		},
+		{
+			"name": "Yellowknife",
+			"province": "T.N.-O.",
+			"val": "62.454,-114.371"
+		},
+		{
+			"name": "Iqaluit",
+			"province": "Nt",
+			"val": "63.746,-68.517"
+		}
+	],
+	"quebecCities": [
+		{
+			"name": "Montréal",
+			"region": "Grand Montréal",
+			"val": "45.503,-73.573"
+		},
+		{
+			"name": "Québec",
+			"region": "Capitale-Nationale",
+			"val": "46.813,-71.211"
+		},
+		{
+			"name": "Laval",
+			"region": "Laval",
+			"val": "45.570,-73.753"
+		},
+		{
+			"name": "Gatineau",
+			"region": "Outaouais",
+			"val": "45.476,-75.701"
+		},
+		{
+			"name": "Longueuil",
+			"region": "Rive-Sud",
+			"val": "45.531,-73.518"
+		},
+		{
+			"name": "Sherbrooke",
+			"region": "Estrie",
+			"val": "45.401,-71.890"
+		},
+		{
+			"name": "Saguenay",
+			"region": "Saguenay",
+			"val": "48.427,-71.068"
+		},
+		{
+			"name": "Lévis",
+			"region": "Chaudière-Appalaches",
+			"val": "46.800,-71.178"
+		},
+		{
+			"name": "Trois-Rivières",
+			"region": "Mauricie",
+			"val": "46.342,-72.542"
+		},
+		{
+			"name": "Terrebonne",
+			"region": "Lanaudière",
+			"val": "45.693,-73.633"
+		},
+		{
+			"name": "Saint-Jean-sur-Richelieu",
+			"region": "Montérégie",
+			"val": "45.305,-73.253"
+		},
+		{
+			"name": "Drummondville",
+			"region": "Centre-du-Québec",
+			"val": "45.880,-72.484"
+		},
+		{
+			"name": "Rouyn-Noranda",
+			"region": "Abitibi-Témiscamingue",
+			"val": "48.243,-79.019"
+		},
+		{
+			"name": "Rimouski",
+			"region": "Bas-Saint-Laurent",
+			"val": "48.449,-68.524"
+		},
+		{
+			"name": "Saint-Jérôme",
+			"region": "Laurentides",
+			"val": "45.780,-74.004"
+		},
+		{
+			"name": "Granby",
+			"region": "Montérégie",
+			"val": "45.400,-72.733"
+		},
+		{
+			"name": "Victoriaville",
+			"region": "Centre-du-Québec",
+			"val": "46.059,-71.956"
+		},
+		{
+			"name": "Sept-Îles",
+			"region": "Côte-Nord",
+			"val": "50.216,-66.381"
+		},
+		{
+			"name": "Shawinigan",
+			"region": "Mauricie",
+			"val": "46.567,-72.750"
+		},
+		{
+			"name": "Saint-Hyacinthe",
+			"region": "Montérégie",
+			"val": "45.631,-72.957"
+		},
+		{
+			"name": "Val-d'Or",
+			"region": "Abitibi-Témiscamingue",
+			"val": "48.100,-77.783"
+		},
+		{
+			"name": "Baie-Comeau",
+			"region": "Côte-Nord",
+			"val": "49.217,-68.150"
+		},
+		{
+			"name": "Gaspé",
+			"region": "Gaspésie",
+			"val": "48.833,-64.483"
+		},
+		{
+			"name": "Chibougamau",
+			"region": "Nord-du-Québec",
+			"val": "49.917,-74.367"
+		}
+	],
+	"resortCities": [
+		{
+			"name": "Mont-Tremblant",
+			"region": "Laurentides / Ski",
+			"val": "46.118,-74.596"
+		},
+		{
+			"name": "Le Massif",
+			"region": "Charlevoix / Ski",
+			"val": "47.283,-70.583"
+		},
+		{
+			"name": "Mont-Sainte-Anne",
+			"region": "Côte-de-Beaupré / Ski",
+			"val": "47.075,-70.925"
+		},
+		{
+			"name": "Mont Orford",
+			"region": "Estrie / Ski",
+			"val": "45.317,-72.183"
+		},
+		{
+			"name": "Mont Sutton",
+			"region": "Cantons-de-l'Est / Ski",
+			"val": "45.105,-72.562"
+		},
+		{
+			"name": "Bromont",
+			"region": "Montérégie / Ski",
+			"val": "45.317,-72.650"
+		},
+		{
+			"name": "Stoneham",
+			"region": "Québec / Ski",
+			"val": "46.993,-71.367"
+		},
+		{
+			"name": "Gaspé / Percé",
+			"region": "Gaspésie / Tourisme",
+			"val": "48.524,-64.214"
+		},
+		{
+			"name": "Tadoussac",
+			"region": "Côte-Nord / Baleines",
+			"val": "48.143,-69.718"
+		},
+		{
+			"name": "Banff",
+			"region": "Rocheuses / National Park",
+			"val": "51.178,-115.570"
+		},
+		{
+			"name": "Niagara Falls",
+			"region": "Ontario / Tourisme",
+			"val": "43.096,-79.037"
+		},
+		{
+			"name": "Whistler",
+			"region": "C.-B. / Ski & Resort",
+			"val": "50.116,-122.957"
+		}
+	],
+	"localDopplers": [
+		{
+			"name": "Montréal & Environs",
+			"lat": 45.503,
+			"lon": -73.573,
+			"zoom": 9.9,
+			"cities": [
+				{ "name": "Montréal", "lat": 45.503, "lon": -73.573 },
+				{ "name": "Laval", "lat": 45.570, "lon": -73.753 },
+				{ "name": "Longueuil", "lat": 45.531, "lon": -73.518 },
+				{ "name": "Saint-Jérôme", "lat": 45.780, "lon": -74.004 },
+				{ "name": "Joliette", "lat": 46.024, "lon": -73.452 },
+				{ "name": "Sorel-Tracy", "lat": 46.033, "lon": -73.117 },
+				{ "name": "Saint-Hyacinthe", "lat": 45.631, "lon": -72.957 },
+				{ "name": "Granby", "lat": 45.400, "lon": -72.733 },
+				{ "name": "Saint-Jean-sur-Richelieu", "lat": 45.306, "lon": -73.254 },
+				{ "name": "Salaberry-de-Valleyfield", "lat": 45.257, "lon": -74.132 },
+				{ "name": "Vaudreuil-Dorion", "lat": 45.400, "lon": -74.033 },
+				{ "name": "Lachute", "lat": 45.650, "lon": -74.333 },
+				{ "name": "Cornwall", "lat": 45.017, "lon": -74.733 }
+			]
+		},
+		{
+			"name": "Capitale-Nationale & Lévis",
+			"lat": 46.813,
+			"lon": -71.211,
+			"zoom": 9.2,
+			"cities": [
+				{ "name": "Québec", "lat": 46.813, "lon": -71.211 },
+				{ "name": "Lévis", "lat": 46.800, "lon": -71.178 },
+				{ "name": "Stoneham", "lat": 46.994, "lon": -71.365 },
+				{ "name": "Sainte-Anne-de-Beaupré", "lat": 47.025, "lon": -70.928 },
+				{ "name": "Baie-Saint-Paul", "lat": 47.443, "lon": -70.505 },
+				{ "name": "Montmagny", "lat": 46.982, "lon": -70.555 },
+				{ "name": "Saint-Jean-Port-Joli", "lat": 47.217, "lon": -70.267 },
+				{ "name": "Sainte-Marie", "lat": 46.438, "lon": -71.023 },
+				{ "name": "Thetford Mines", "lat": 46.083, "lon": -71.300 },
+				{ "name": "Saint-Georges", "lat": 46.117, "lon": -70.667 },
+				{ "name": "Donnacona", "lat": 46.675, "lon": -71.728 },
+				{ "name": "Saint-Raymond", "lat": 46.900, "lon": -71.833 },
+				{ "name": "Saint-Marc-des-Carrières", "lat": 46.683, "lon": -72.050 }
+			]
+		},
+		{
+			"name": "Estrie & Cantons-de-l'Est",
+			"lat": 45.401,
+			"lon": -71.890,
+			"zoom": 9.0,
+			"cities": [
+				{ "name": "Sherbrooke", "lat": 45.401, "lon": -71.890 },
+				{ "name": "Magog", "lat": 45.267, "lon": -72.150 },
+				{ "name": "Granby", "lat": 45.400, "lon": -72.733 },
+				{ "name": "Cowansville", "lat": 45.200, "lon": -72.750 },
+				{ "name": "Saint-Jean-sur-Richelieu", "lat": 45.306, "lon": -73.254 },
+				{ "name": "Drummondville", "lat": 45.880, "lon": -72.484 },
+				{ "name": "Victoriaville", "lat": 46.058, "lon": -71.956 },
+				{ "name": "Val-des-Sources", "lat": 45.767, "lon": -71.933 },
+				{ "name": "Thetford Mines", "lat": 46.083, "lon": -71.300 },
+				{ "name": "Lac-Mégantic", "lat": 45.577, "lon": -70.883 },
+				{ "name": "Cookshire-Eaton", "lat": 45.333, "lon": -71.633 },
+				{ "name": "Coaticook", "lat": 45.133, "lon": -71.800 },
+				{ "name": "Stanstead", "lat": 45.017, "lon": -72.100 }
+			]
+		},
+		{
+			"name": "Mauricie & Centre-du-Québec",
+			"lat": 46.342,
+			"lon": -72.542,
+			"zoom": 9.0,
+			"cities": [
+				{ "name": "Trois-Rivières", "lat": 46.342, "lon": -72.542 },
+				{ "name": "Shawinigan", "lat": 46.567, "lon": -72.750 },
+				{ "name": "Grand-Mère", "lat": 46.617, "lon": -72.683 },
+				{ "name": "Saint-Tite", "lat": 46.733, "lon": -72.567 },
+				{ "name": "La Tuque", "lat": 47.433, "lon": -72.783 },
+				{ "name": "Berthierville", "lat": 46.233, "lon": -73.183 },
+				{ "name": "Joliette", "lat": 46.024, "lon": -73.452 },
+				{ "name": "Louiseville", "lat": 46.257, "lon": -72.942 },
+				{ "name": "Nicolet", "lat": 46.299, "lon": -72.617 },
+				{ "name": "Bécancour", "lat": 46.333, "lon": -72.433 },
+				{ "name": "Drummondville", "lat": 45.880, "lon": -72.484 },
+				{ "name": "Victoriaville", "lat": 46.058, "lon": -71.956 },
+				{ "name": "Plessisville", "lat": 46.217, "lon": -71.767 },
+				{ "name": "Thetford Mines", "lat": 46.083, "lon": -71.300 },
+				{ "name": "Donnacona", "lat": 46.675, "lon": -71.728 },
+				{ "name": "Sainte-Anne-de-la-Pérade", "lat": 46.567, "lon": -72.200 }
+			]
+		},
+		{
+			"name": "Outaouais & Vallée d'Ottawa",
+			"lat": 45.476,
+			"lon": -75.701,
+			"zoom": 9.0,
+			"cities": [
+				{ "name": "Ottawa", "lat": 45.421, "lon": -75.697 },
+				{ "name": "Gatineau", "lat": 45.476, "lon": -75.701 },
+				{ "name": "Kanata", "lat": 45.309, "lon": -75.900 },
+				{ "name": "Carleton Place", "lat": 45.133, "lon": -76.133 },
+				{ "name": "Arnprior", "lat": 45.433, "lon": -76.350 },
+				{ "name": "Renfrew", "lat": 45.471, "lon": -76.684 },
+				{ "name": "Pembroke", "lat": 45.827, "lon": -77.112 },
+				{ "name": "Shawville", "lat": 45.600, "lon": -76.483 },
+				{ "name": "Wakefield", "lat": 45.633, "lon": -75.933 },
+				{ "name": "Maniwaki", "lat": 46.383, "lon": -75.967 },
+				{ "name": "Rockland", "lat": 45.550, "lon": -75.283 },
+				{ "name": "Montebello", "lat": 45.650, "lon": -74.942 },
+				{ "name": "Hawkesbury", "lat": 45.610, "lon": -74.606 },
+				{ "name": "Cornwall", "lat": 45.017, "lon": -74.733 },
+				{ "name": "Kemptville", "lat": 45.017, "lon": -75.650 }
+			]
+		},
+		{
+			"name": "Saguenay–Lac-Saint-Jean",
+			"lat": 48.427,
+			"lon": -71.068,
+			"zoom": 8.5,
+			"cities": [
+				{ "name": "Saguenay", "lat": 48.427, "lon": -71.068 },
+				{ "name": "Alma", "lat": 48.550, "lon": -71.650 },
+				{ "name": "Roberval", "lat": 48.517, "lon": -72.233 },
+				{ "name": "Saint-Félicien", "lat": 48.650, "lon": -72.450 },
+				{ "name": "Dolbeau-Mistassini", "lat": 48.883, "lon": -72.233 },
+				{ "name": "Hébertville", "lat": 48.383, "lon": -71.683 },
+				{ "name": "Sainte-Rose-du-Nord", "lat": 48.383, "lon": -70.533 },
+				{ "name": "L'Anse-Saint-Jean", "lat": 48.233, "lon": -70.200 },
+				{ "name": "Tadoussac", "lat": 48.147, "lon": -69.717 },
+				{ "name": "Forestville", "lat": 48.733, "lon": -69.083 }
+			]
+		},
+		{
+			"name": "Bas-Saint-Laurent & Gaspésie",
+			"lat": 48.449,
+			"lon": -68.524,
+			"zoom": 7.7,
+			"cities": [
+				{ "name": "Rimouski", "lat": 48.449, "lon": -68.524 },
+				{ "name": "Rivière-du-Loup", "lat": 47.833, "lon": -69.533 },
+				{ "name": "Trois-Pistoles", "lat": 48.124, "lon": -69.176 },
+				{ "name": "Mont-Joli", "lat": 48.583, "lon": -68.183 },
+				{ "name": "Matane", "lat": 48.850, "lon": -67.533 },
+				{ "name": "Amqui", "lat": 48.467, "lon": -67.433 },
+				{ "name": "Sainte-Anne-des-Monts", "lat": 49.133, "lon": -66.500 },
+				{ "name": "Baie-Comeau", "lat": 49.217, "lon": -68.150 },
+				{ "name": "Forestville", "lat": 48.733, "lon": -69.083 },
+				{ "name": "Gaspé", "lat": 48.833, "lon": -64.483 }
+			]
+		},
+		{
+			"name": "Abitibi-Témiscamingue",
+			"lat": 48.569,
+			"lon": -78.116,
+			"zoom": 7.8,
+			"cities": [
+				{ "name": "Amos", "lat": 48.569, "lon": -78.116 },
+				{ "name": "Rouyn-Noranda", "lat": 48.242, "lon": -79.019 },
+				{ "name": "La Sarre", "lat": 48.800, "lon": -79.200 },
+				{ "name": "Val-d'Or", "lat": 48.100, "lon": -77.783 },
+				{ "name": "Senneterre", "lat": 48.383, "lon": -77.233 },
+				{ "name": "Lebel-sur-Quévillon", "lat": 49.050, "lon": -76.983 },
+				{ "name": "Matagami", "lat": 49.750, "lon": -77.633 },
+				{ "name": "Ville-Marie", "lat": 47.333, "lon": -79.433 }
+			]
+		},
+		{
+			"name": "Côte-Nord & Manicouagan",
+			"lat": 50.216,
+			"lon": -66.381,
+			"zoom": 7.4,
+			"cities": [
+				{ "name": "Sept-Îles", "lat": 50.216, "lon": -66.381 },
+				{ "name": "Port-Cartier", "lat": 50.033, "lon": -66.867 },
+				{ "name": "Baie-Comeau", "lat": 49.217, "lon": -68.150 },
+				{ "name": "Godbout", "lat": 49.317, "lon": -67.600 },
+				{ "name": "Rivière-au-Tonnerre", "lat": 50.267, "lon": -64.783 },
+				{ "name": "Havre-Saint-Pierre", "lat": 50.242, "lon": -63.601 },
+				{ "name": "Fermont", "lat": 52.791, "lon": -67.086 }
+			]
+		},
+		{
+			"name": "Radar National Canada",
+			"lat": 51.000,
+			"lon": -85.000,
+			"zoom": 5.0,
+			"cities": [
+				{ "name": "Vancouver", "lat": 49.282, "lon": -123.120 },
+				{ "name": "Calgary", "lat": 51.044, "lon": -114.072 },
+				{ "name": "Edmonton", "lat": 53.546, "lon": -113.493 },
+				{ "name": "Regina", "lat": 50.445, "lon": -104.618 },
+				{ "name": "Winnipeg", "lat": 49.895, "lon": -97.138 },
+				{ "name": "Thunder Bay", "lat": 48.380, "lon": -89.247 },
+				{ "name": "Sudbury", "lat": 46.490, "lon": -80.990 },
+				{ "name": "Toronto", "lat": 43.653, "lon": -79.383 },
+				{ "name": "Ottawa", "lat": 45.421, "lon": -75.697 },
+				{ "name": "Montréal", "lat": 45.503, "lon": -73.573 },
+				{ "name": "Québec", "lat": 46.813, "lon": -71.211 },
+				{ "name": "Halifax", "lat": 44.648, "lon": -63.575 },
+				{ "name": "St. John's", "lat": 47.561, "lon": -52.712 }
+			]
+		},
+		{
+			"name": "Sud de l'Ontario / GTA",
+			"lat": 43.653,
+			"lon": -79.383,
+			"zoom": 9.2,
+			"cities": [
+				{ "name": "Toronto", "lat": 43.653, "lon": -79.383 },
+				{ "name": "Mississauga", "lat": 43.589, "lon": -79.644 },
+				{ "name": "Brampton", "lat": 43.731, "lon": -79.762 },
+				{ "name": "Hamilton", "lat": 43.255, "lon": -79.871 },
+				{ "name": "Burlington", "lat": 43.325, "lon": -79.799 },
+				{ "name": "Oakville", "lat": 43.450, "lon": -79.683 },
+				{ "name": "Guelph", "lat": 43.544, "lon": -80.248 },
+				{ "name": "Kitchener", "lat": 43.451, "lon": -80.493 },
+				{ "name": "Orangeville", "lat": 43.919, "lon": -80.094 },
+				{ "name": "Barrie", "lat": 44.389, "lon": -79.690 },
+				{ "name": "Newmarket", "lat": 44.050, "lon": -79.467 },
+				{ "name": "Markham", "lat": 43.856, "lon": -79.337 },
+				{ "name": "Oshawa", "lat": 43.897, "lon": -78.865 },
+				{ "name": "Cobourg", "lat": 43.959, "lon": -78.167 },
+				{ "name": "Peterborough", "lat": 44.309, "lon": -78.320 },
+				{ "name": "St. Catharines", "lat": 43.159, "lon": -79.246 },
+				{ "name": "Niagara Falls", "lat": 43.089, "lon": -79.084 }
+			]
+		},
+		{
+			"name": "Provinces Maritimes",
+			"lat": 45.500,
+			"lon": -63.500,
+			"zoom": 7.2,
+			"cities": [
+				{ "name": "Halifax", "lat": 44.648, "lon": -63.575 },
+				{ "name": "Truro", "lat": 45.365, "lon": -63.284 },
+				{ "name": "New Glasgow", "lat": 45.583, "lon": -62.650 },
+				{ "name": "Antigonish", "lat": 45.617, "lon": -61.983 },
+				{ "name": "Sydney", "lat": 46.135, "lon": -60.183 },
+				{ "name": "Charlottetown", "lat": 46.238, "lon": -63.131 },
+				{ "name": "Moncton", "lat": 46.087, "lon": -64.778 },
+				{ "name": "Saint John", "lat": 45.273, "lon": -66.063 },
+				{ "name": "Fredericton", "lat": 45.963, "lon": -66.643 },
+				{ "name": "Yarmouth", "lat": 43.837, "lon": -66.117 }
+			]
+		}
+	],
+	"slideSettings": {
+		"flavor": "120",
+		"bulletin": true,
+		"precip": true,
+		"auto": false,
+		"order": [
+        
+            {
+				"function": "mapCurrent",
+				"slideDelay": 8000
+			},
+        
+			{
+				"function": "currentConditions",
+				"slideDelay": 8000
+			},
+			{
+				"function": "localForecast",
+				"slides": 4,
+				"slideDelay": 7500
+			},
+			{
+				"function": "localDoppler",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse",
+				"slideDelay": 8500
+			},
+			{
+				"function": "localDoppler2",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse2",
+				"slideDelay": 8500
+			},
+			{
+				"function": "nearbyCities",
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler3",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse3",
+				"slideDelay": 8500
+			},
+			{
+				"function": "localDoppler4",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse4",
+				"slideDelay": 8500
+			},
+			{
+				"function": "daypartForecast",
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler5",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse5",
+				"slideDelay": 8500
+			},
+			{
+				"function": "regionalForecast",
+				"slides": 8,
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler6",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse6",
+				"slideDelay": 8500
+			},
+			{
+				"function": "quebecCities",
+				"slides": 8,
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler7",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse7",
+				"slideDelay": 8500
+			},
+			{
+				"function": "quebecWeekAhead",
+				"slides": 8,
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler8",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse8",
+				"slideDelay": 8500
+			},
+			{
+				"function": "mapCurrent",
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler9",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse9",
+				"slideDelay": 8500
+			},
+			{
+				"function": "mapForecast",
+				"slides": 2,
+				"slideDelay": 7000
+			},
+			{
+				"function": "localDoppler10",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse10",
+				"slideDelay": 8500
+			},
+			{
+				"function": "canadaForecast",
+				"slides": 8,
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler11",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse11",
+				"slideDelay": 8500
+			},
+			{
+				"function": "resortForecast",
+				"slides": 2,
+				"slideDelay": 8000
+			},
+			{
+				"function": "localDoppler12",
+				"slideDelay": 9000
+			},
+			{
+				"function": "couvertureNuageuse12",
+				"slideDelay": 8500
+			},
+			{
+				"function": "almanac",
+				"slideDelay": 8000
+			},
+			{
+				"function": "airQuality",
+				"slideDelay": 8000
+			}
+		]
+	}
+}

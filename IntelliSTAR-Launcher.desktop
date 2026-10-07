@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=IntelliSTAR Touch Launcher
+Comment=IntelliSTAR 1 Touchscreen Broadcast Control Center
+Exec=/home/deck/app/launch-ui.sh
+Icon=/home/deck/app/webroot/images/istarLogo.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Video;Network;
+StartupNotify=true
+Path=/home/deck/app
+

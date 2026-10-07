@@ -1,0 +1,76 @@
+{
+  "1": {
+    "inputs": {
+      "audio": "CC_INTRO1.wav"
+    },
+    "class_type": "LoadAudio",
+    "_meta": {
+      "title": "1. Load IntelliStar English Audio"
+    }
+  },
+  "2": {
+    "inputs": {
+      "start_time": 0,
+      "duration": 12,
+      "audio": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "TrimAudioDuration",
+    "_meta": {
+      "title": "2. Trim Reference Audio"
+    }
+  },
+  "4": {
+    "inputs": {
+      "model": "base",
+      "language": "auto",
+      "prompt": "",
+      "audio": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "Apply Whisper",
+    "_meta": {
+      "title": "3. Whisper Speech-To-Text"
+    }
+  },
+  "7": {
+    "inputs": {
+      "gen_text": "Actuellement, voici vos conditions météo locales.",
+      "seed": 42,
+      "control_after_generate": "fixed",
+      "model_name": "F5-FR",
+      "vocoder_type": "auto",
+      "speed": 1.0,
+      "model_type": "F5TTS_Base",
+      "sample_audio": [
+        "2",
+        0
+      ],
+      "sample_text": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "F5TTSAudioInputs",
+    "_meta": {
+      "title": "5. F5-TTS French Voice Cloning"
+    }
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "vocallocal_fr/CC_INTRO1",
+      "audio": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "6. Save French Audio"
+    }
+  }
+}

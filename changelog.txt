@@ -1,0 +1,32 @@
+Make sure to report any bugs or issues in the Issues tab!
+= SEPTEMBER 8, 2026 | VERSION 1.2.1 =
+ -  Steam Deck 4K presets: deck-uhd (2160p30, 16/22 Mbps) and deck-uhd-smooth (2160p60, 25/34 Mbps); deck-uhd is now the Deck default
+ -  VAAPI CPU-side frames now colour-convert on the GPU instead of the CPU
+ -  Tab capture (puppeteer-stream) is now the default on every preset; Xvfb is opt-in via STREAM_CAPTURE_MODE. Chromium GL renderer logged at startup
+= JULY 24, 2026 | VERSION 1.2 =
+ -  Blue LDL added
+ -  2010 icons added
+ -  Added versions 2009 and 2010
+ -  LDL type can now be changed in the settings menu
+ -  Added bulletin narrations
+ -  Outdoor Activity slide added
+ -  Other various fixes
+= JUNE 20, 2026 | VERSION 1.1 =
+ -  Advance map settings added, currently in beta mode
+ -  Alert crawl bug fixes
+ -  ExpressJS conversion
+ -  Changed radar cities method
+= MARCH 13, 2026 | VERSION 1.02 =
+ -  Major settings panel fixes/rewrite
+ -  Loading options are now available
+ -  Vocal local improvements
+ -  Extra flavor settings buttons have been removed indefinitely
+ -  Added "s" to end of flavor selection
+ -  Radar accounts for areas outside of CONUS
+ -  Other various fixes
+= MARCH 12, 2026 | VERSION 1.01 =
+ -  Fixed sim hanging after bulletin slide for the 120 second flavor
+ -  More accurate basemaps
+ -  Fixed certain conditions not giving current conditions narration
+ -  Enter key now works main location search
+ -  Other various fixes

@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliStar 2026 - Visual Slide Reviewer</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="main.css">
+    <div id="styles">
+        <link id="active-theme-stylesheet" rel="stylesheet" href="css/intellistar-32-2026.css">
+    </div>
+
+    <style>
+        /* ==========================================================================
+           PREVIEW HARNESS UI
+           ========================================================================== */
+        :root {
+            --hud-bg: rgba(6, 17, 36, 0.96);
+            --hud-border: rgba(0, 200, 255, 0.35);
+            --hud-accent: #00d2ff;
+            --hud-text: #f1f5f9;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #020617;
+            overflow: hidden;
+            font-family: "Interstate Bold", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: var(--hud-text);
+        }
+
+        #preview-layout {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* SIDEBAR NAVIGATOR */
+        #preview-sidebar {
+            width: 360px;
+            height: 100vh;
+            background: var(--hud-bg);
+            border-right: 1.5px solid var(--hud-border);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            z-index: 9999;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px 24px;
+            background: linear-gradient(180deg, rgba(0, 210, 255, 0.12) 0%, transparent 100%);
+            border-bottom: 1px solid var(--hud-border);
+        }
+
+        .sidebar-title {
+            font-size: 20px;
+            font-family: "Interstate Black", sans-serif;
+            color: #ffffff;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge-2026 {
+            background: linear-gradient(90deg, #00d2ff, #0077ff);
+            color: #ffffff;
+            font-size: 13px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: "Interstate Black", sans-serif;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+        }
+
+        .sidebar-sub {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 6px;
+            font-family: -apple-system, sans-serif;
+            line-height: 16px;
+        }
+
+        /* VERSION / THEME PICKER */
+        .version-switcher {
+            padding: 14px 20px;
+            background: rgba(0, 0, 0, 0.35);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .version-label {
+            font-size: 13px;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .version-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ver-btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 5px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ver-btn:hover {
+            color: #ffffff;
+            border-color: var(--hud-accent);
+        }
+
+        .ver-btn.active {
+            background: var(--hud-accent);
+            color: #020617;
+            border-color: #ffffff;
+            box-shadow: 0 0 12px rgba(0, 210, 255, 0.5);
+        }
+
+        /* SLIDE LIST */
+        .slide-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 14px;
+        }
+
+        .slide-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .slide-list-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 210, 255, 0.25);
+            border-radius: 4px;
+        }
+
+        .slide-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            color: #cbd5e1;
+            font-size: 15px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-weight: 600;
+        }
+
+        .slide-nav-item:hover {
+            background: rgba(0, 210, 255, 0.08);
+            border-color: rgba(0, 210, 255, 0.3);
+            color: #ffffff;
+        }
+
+        .slide-nav-item.active {
+            background: linear-gradient(90deg, rgba(0, 210, 255, 0.2) 0%, rgba(0, 119, 255, 0.1) 100%);
+            border-color: var(--hud-accent);
+            color: #ffffff;
+            box-shadow: 0 4px 14px rgba(0, 210, 255, 0.2);
+        }
+
+        .slide-idx {
+            font-size: 12px;
+            background: #1e293b;
+            color: #38bdf8;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .slide-nav-item.active .slide-idx {
+            background: var(--hud-accent);
+            color: #020617;
+        }
+
+        /* VIEWPORT WRAPPER */
+        #preview-stage {
+            flex: 1;
+            height: 100vh;
+            background: #000000;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* TOP CONTROL BAR */
+        #preview-toolbar {
+            height: 58px;
+            background: var(--hud-bg);
+            border-bottom: 1.5px solid var(--hud-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .tb-left, .tb-center, .tb-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .tb-btn {
+            background: #1e293b;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .tb-btn:hover {
+            border-color: var(--hud-accent);
+            background: #28374d;
+        }
+
+        .tb-btn.active {
+            background: #0284c7;
+            border-color: var(--hud-accent);
+        }
+
+        .scale-selector {
+            background: #1e293b;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* CANVAS CONTAINER (1620 x 1080 scaled) */
+        #canvas-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #050b14;
+            overflow: hidden;
+        }
+
+        #viewport-scaler {
+            width: 1620px;
+            height: 1080px;
+            position: absolute;
+            transform-origin: center center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* Override main position inside preview harness */
+        #viewport-scaler #main {
+            position: absolute;
+            top: 0 !important;
+            left: 0 !important;
+            transform: none !important;
+            width: 1620px;
+            height: 1080px;
+            pointer-events: all;
+        }
+
+        /* ICON GALLERY OVERLAY */
+        #icon-gallery-panel {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(6, 17, 36, 0.98);
+            z-index: 5000;
+            padding: 40px;
+            overflow-y: auto;
+            backdrop-filter: blur(12px);
+        }
+
+        .gallery-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            border-bottom: 1.5px solid var(--hud-border);
+            padding-bottom: 20px;
+        }
+
+        .gallery-title {
+            font-size: 32px;
+            font-family: "Interstate Black", sans-serif;
+            color: #ffffff;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+        }
+
+        .gallery-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 200, 255, 0.25);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .gallery-card:hover {
+            background: rgba(0, 200, 255, 0.12);
+            border-color: var(--hud-accent);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0, 210, 255, 0.3);
+        }
+
+        .gallery-icon-img {
+            width: 100px;
+            height: 100px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));
+        }
+
+        .gallery-code {
+            font-size: 15px;
+            font-weight: bold;
+            color: #00d2ff;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        .gallery-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            text-align: center;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="preview-layout">
+        <!-- SIDEBAR -->
+        <div id="preview-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <span>IntelliStar</span>
+                    <span class="badge-2026">2026 HD</span>
+                </div>
+                <div class="sidebar-sub">Revue visuelle complète des diapositives et ressources broadcast.</div>
+            </div>
+
+            <div class="version-switcher">
+                <span class="version-label">Thème Visual :</span>
+                <div class="version-buttons">
+                    <button class="ver-btn active" onclick="switchTheme(2026)">2026</button>
+                    <button class="ver-btn" onclick="switchTheme(2009)">2009</button>
+                    <button class="ver-btn" onclick="switchTheme(2008)">2008</button>
+                    <button class="ver-btn" onclick="switchTheme(2007)">2007</button>
+                </div>
+            </div>
+
+            <div class="slide-list-container" id="slide-nav-list">
+                <!-- Injected by JS -->
+            </div>
+        </div>
+
+        <!-- STAGE -->
+        <div id="preview-stage">
+            <!-- TOOLBAR -->
+            <div id="preview-toolbar">
+                <div class="tb-left">
+                    <a class="tb-btn" href="editor.html" style="text-decoration: none; background: #0369a1;">✎ Open Studio Editor</a>
+                    <button class="tb-btn" onclick="prevSlide()">◀ Diapo Précédente</button>
+                    <button class="tb-btn" onclick="nextSlide()">Diapo Suivante ▶</button>
+                    <button class="tb-btn" id="autoplay-btn" onclick="toggleAutoplay()">▶ Diaporama Auto</button>
+                </div>
+                <div class="tb-center">
+                    <span id="current-slide-badge" style="font-size: 16px; font-weight: bold; color: #00d2ff;">1. Actuellement</span>
+                </div>
+                <div class="tb-right">
+                    <button class="tb-btn" onclick="toggleIconGallery()">🖼 Galerie Icônes HD (82)</button>
+                    <button class="tb-btn" id="ldl-toggle-btn" onclick="toggleLDL()">Bandeau LDL : Activé</button>
+                    <select class="scale-selector" id="scale-selector" onchange="changeScale(this.value)">
+                        <option value="fit" selected>Ajuster à l'écran</option>
+                        <option value="1">100% (1620x1080 Native)</option>
+                        <option value="0.75">75%</option>
+                        <option value="0.5">50%</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- VIEWPORT SCALER -->
+            <div id="canvas-wrapper">
+                <div id="viewport-scaler">
+                    <div id="main">
+                        <div id="background"></div>
+                        <div class="slides">
+                            <!-- 1. Current Conditions -->
+                            <div class="current-conditions" style="display: none;">
+                                <div class="header">Actuellement</div>
+                                <div class="box"></div>
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="left-pane">
+                                    <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    <div class="cond">Ensoleillé</div>
+                                    <div class="temp">24°</div>
+                                </div>
+                                <div class="right-pane">
+                                    <div class="labels">
+                                        HUMIDITÉ<br>PND. ROSÉE<br>PRESSION<br>VISIBILITÉ<br>VENT<br>RAFALES<br>RESSENTI
+                                    </div>
+                                    <div class="humidity">48%</div>
+                                    <div class="dewpoint">12°</div>
+                                    <div class="pressure"><div class="data">101.4</div><div class="inches">kPa</div></div>
+                                    <div class="visibility"><div class="data">16.0</div><div class="miles">KM</div></div>
+                                    <div class="wind">SO 18 km/h</div>
+                                    <div class="gusts"><div class="data">28</div><div class="miles">KM/H</div></div>
+                                    <div class="feelslike">26°</div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Eight Cities -->
+                            <div class="eight-cities" style="display: none;">
+                                <div class="header">Actuellement</div>
+                                <div class="box"></div>
+                                <div class="top">
+                                    <div class="temp">TEMP</div>
+                                    <div class="wind">VENT (km/h)</div>
+                                </div>
+                                <div class="information">
+                                    <div class="extra-loc i">
+                                        <div class="name">Québec</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                        <div class="temp">22°</div>
+                                        <div class="wind"><div class="direction">E</div><div class="speed">15</div></div>
+                                    </div>
+                                    <div class="extra-loc ii">
+                                        <div class="name">Laval</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="temp">24°</div>
+                                        <div class="wind"><div class="direction">SO</div><div class="speed">18</div></div>
+                                    </div>
+                                    <div class="extra-loc iii">
+                                        <div class="name">Gatineau</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                        <div class="temp">23°</div>
+                                        <div class="wind"><div class="direction">O</div><div class="speed">12</div></div>
+                                    </div>
+                                    <div class="extra-loc iv">
+                                        <div class="name">Sherbrooke</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Cld.webp);"></div>
+                                        <div class="temp">21°</div>
+                                        <div class="wind"><div class="direction">S</div><div class="speed">10</div></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Local Forecast -->
+                            <div class="local-forecast" style="display: none;">
+                                <div class="header">Prévisions locales</div>
+                                <div class="box"></div>
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="information">
+                                    <div class="period">CE SOIR ET CETTE NUIT</div>
+                                    <div class="description">
+                                        Ciel généralement dégagé en début de soirée, devenant partiellement nuageux après minuit. Vents légers du sud-ouest à 15 km/h. Minimum agréable de 16°C.
+                                    </div>
+                                </div>
+                                <div class="desc-mov" style="background-image: url(images/localforecast/partly_cloudy.png); background-size: cover;"></div>
+                            </div>
+
+                            <!-- 4. Week Ahead (7 Day) -->
+                            <div class="week-ahead" style="display: none;">
+                                <div class="header">Cette semaine...</div>
+                                <div class="box"></div>
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="information">
+                                    <div class="day i">
+                                        <div class="name">LUN</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Ensoleillé</div>
+                                        <div class="high">25°</div>
+                                        <div class="low">15°</div>
+                                    </div>
+                                    <div class="day ii">
+                                        <div class="name">MAR</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                        <div class="cond">Beau temps</div>
+                                        <div class="high">26°</div>
+                                        <div class="low">16°</div>
+                                    </div>
+                                    <div class="day iii">
+                                        <div class="name">MER</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sh.webp);"></div>
+                                        <div class="cond">Averses</div>
+                                        <div class="high">23°</div>
+                                        <div class="low">17°</div>
+                                    </div>
+                                    <div class="day iv">
+                                        <div class="name">JEU</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Ts.webp);"></div>
+                                        <div class="cond">Orages</div>
+                                        <div class="high">22°</div>
+                                        <div class="low">14°</div>
+                                    </div>
+                                    <div class="day v">
+                                        <div class="name">VEN</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                        <div class="cond">Part. nuageux</div>
+                                        <div class="high">21°</div>
+                                        <div class="low">13°</div>
+                                    </div>
+                                    <div class="day vi">
+                                        <div class="weekend"></div>
+                                        <div class="name wk">SAM</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Ensoleillé</div>
+                                        <div class="high">24°</div>
+                                        <div class="low">15°</div>
+                                    </div>
+                                    <div class="day vii">
+                                        <div class="weekend"></div>
+                                        <div class="name wk">DIM</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                        <div class="cond">Quelques nuages</div>
+                                        <div class="high">25°</div>
+                                        <div class="low">16°</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5. Quebec Week Ahead -->
+                            <div class="quebec-week-ahead" style="display: none;">
+                                <div class="header">Cette semaine au Québec...</div>
+                                <div class="box"></div>
+                                <div class="city-name">QUÉBEC</div>
+                                <div class="information">
+                                    <div class="day i">
+                                        <div class="name">LUN</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Ensoleillé</div>
+                                        <div class="high">22°</div>
+                                        <div class="low">12°</div>
+                                    </div>
+                                    <div class="day ii">
+                                        <div class="name">MAR</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                        <div class="cond">Variables</div>
+                                        <div class="high">23°</div>
+                                        <div class="low">13°</div>
+                                    </div>
+                                    <div class="day iii">
+                                        <div class="name">MER</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Ra.webp);"></div>
+                                        <div class="cond">Pluie</div>
+                                        <div class="high">20°</div>
+                                        <div class="low">14°</div>
+                                    </div>
+                                    <div class="day iv">
+                                        <div class="name">JEU</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sh.webp);"></div>
+                                        <div class="cond">Averses</div>
+                                        <div class="high">21°</div>
+                                        <div class="low">12°</div>
+                                    </div>
+                                    <div class="day v">
+                                        <div class="name">VEN</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                        <div class="cond">Dégagé</div>
+                                        <div class="high">22°</div>
+                                        <div class="low">11°</div>
+                                    </div>
+                                    <div class="day vi">
+                                        <div class="weekend"></div>
+                                        <div class="name wk">SAM</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Superbe</div>
+                                        <div class="high">23°</div>
+                                        <div class="low">13°</div>
+                                    </div>
+                                    <div class="day vii">
+                                        <div class="weekend"></div>
+                                        <div class="name wk">DIM</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Ensoleillé</div>
+                                        <div class="high">24°</div>
+                                        <div class="low">14°</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 6. Air Quality -->
+                            <div class="air-quality" style="display: none;">
+                                <div class="header">Qualité de l'air</div>
+                                <div class="box"></div>
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="day">AUJOURD'HUI :</div>
+                                <div class="primpollut">
+                                    <div class="header-text">Polluant principal :</div>
+                                    <div class="pollutants">Ozone & Particules PM2.5</div>
+                                </div>
+                                <div class="qualitybar">
+                                    <div class="extreme" style="background: rgb(111, 29, 50); height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">EXTRÊME</div>
+                                    <div class="high" style="background: rgb(170, 39, 17); height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">ÉLEVÉ</div>
+                                    <div class="unhealthy" style="background: rgb(224, 122, 67); height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">MAUVAIS</div>
+                                    <div class="moderate" style="background: rgb(207, 170, 49); height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">MODÉRÉ</div>
+                                    <div class="low" style="background: rgb(67, 143, 72); height: 80px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff;">BON (COPA 2)</div>
+                                </div>
+                                <div class="qualityarrow" style="bottom: 300px; display: block;"></div>
+                                <div class="source">SOURCE : Environnement et Changement climatique Canada</div>
+                            </div>
+
+                            <!-- 7. Almanac -->
+                            <div class="almanac" style="display: none;">
+                                <div class="header">Almanach & Données Climatologiques</div>
+                                <div class="box"></div>
+                                <div class="stationname">AÉROPORT DE MONTRÉAL (YUL)</div>
+                                <div class="sunrise-text">Lever du soleil</div>
+                                <div class="sunset-text">Coucher du soleil</div>
+                                <div class="day i">
+                                    <div class="almheader">AUJOURD'HUI</div>
+                                    <div class="sunrise">06:18 <span>HNE</span></div>
+                                    <div class="sunset">19:34 <span>HNE</span></div>
+                                </div>
+                                <div class="day ii">
+                                    <div class="almheader">DEMAIN</div>
+                                    <div class="sunrise">06:19 <span>HNE</span></div>
+                                    <div class="sunset">19:32 <span>HNE</span></div>
+                                </div>
+                                <div class="bottomheader">
+                                    <div class="almdate">TEMPÉRATURES</div>
+                                    <div class="high" style="left: 680px; position: absolute;">MAX</div>
+                                    <div class="low" style="left: 1060px; position: absolute;">MIN</div>
+                                </div>
+                                <div class="yesterday">
+                                    <div class="y-header">Hier</div>
+                                    <div class="high" style="left: 680px; position: absolute;">23°</div>
+                                    <div class="low" style="left: 1060px; position: absolute;">14°</div>
+                                </div>
+                                <div class="average">
+                                    <div class="a-header">Normale de saison</div>
+                                    <div class="high" style="left: 680px; position: absolute;">21°</div>
+                                    <div class="low" style="left: 1060px; position: absolute;">12°</div>
+                                </div>
+                                <div class="records">
+                                    <div class="r-header">Record historique</div>
+                                    <div class="high" style="left: 680px; position: absolute;">32° (1953)</div>
+                                    <div class="low" style="left: 1060px; position: absolute;">4° (1974)</div>
+                                </div>
+                            </div>
+
+                            <!-- 8. Daypart Forecast -->
+                            <div class="daypart-forecast" style="display: none;">
+                                <div class="header">Prévisions par période</div>
+                                <div class="box"></div>
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="forecast-period">PROCHAINES 12 HEURES</div>
+                                <div class="information">
+                                    <div class="hour i">
+                                        <div class="time">18:00</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                        <div class="cond">Ensoleillé</div>
+                                        <div class="bar" style="height: 180px;">
+                                            <div class="temp">24°</div>
+                                        </div>
+                                        <div class="wind">SO 15 km/h</div>
+                                    </div>
+                                    <div class="hour ii">
+                                        <div class="time">21:00</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/NClr.webp);"></div>
+                                        <div class="cond">Dégagé</div>
+                                        <div class="bar" style="height: 155px;">
+                                            <div class="temp">20°</div>
+                                        </div>
+                                        <div class="wind">S 12 km/h</div>
+                                    </div>
+                                    <div class="hour iii">
+                                        <div class="time">00:00</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/NPc.webp);"></div>
+                                        <div class="cond">Part. nuageux</div>
+                                        <div class="bar" style="height: 135px;">
+                                            <div class="temp">17°</div>
+                                        </div>
+                                        <div class="wind">S 10 km/h</div>
+                                    </div>
+                                    <div class="hour iv">
+                                        <div class="time">06:00</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                        <div class="cond">Beau temps</div>
+                                        <div class="bar" style="height: 115px;">
+                                            <div class="temp">15°</div>
+                                        </div>
+                                        <div class="wind">SO 12 km/h</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 9. Regional Forecast -->
+                            <div class="regional-forecast" style="display: none;">
+                                <div class="header">Prévisions régionales</div>
+                                <div class="box"></div>
+                                <div class="information">
+                                    <div class="region-loc i">
+                                        <div class="reg-name">Montérégie</div>
+                                        <div class="city-name">Saint-Hyacinthe</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 13°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="region-loc ii">
+                                        <div class="reg-name">Laurentides</div>
+                                        <div class="city-name">Saint-Jérôme</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 14°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="region-loc iii">
+                                        <div class="reg-name">Estrie</div>
+                                        <div class="city-name">Sherbrooke</div>
+                                        <div class="temp">20°</div>
+                                        <div class="high-low">H 21°  L 13°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="region-loc iv">
+                                        <div class="reg-name">Lanaudière</div>
+                                        <div class="city-name">Joliette</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 21°  L 14°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                    </div>
+                                    <div class="region-loc v">
+                                        <div class="reg-name">Centre-du-Québec</div>
+                                        <div class="city-name">Drummondville</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 12°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="region-loc vi">
+                                        <div class="reg-name">Mauricie</div>
+                                        <div class="city-name">Trois-Rivières</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 15°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 10. Canadian Cities -->
+                            <div class="canada-forecast" style="display: none;">
+                                <div class="header">Grandes Villes Canadiennes</div>
+                                <div class="box"></div>
+                                <div class="information">
+                                    <div class="canada-loc i">
+                                        <div class="province">Ontario</div>
+                                        <div class="city-name">Toronto</div>
+                                        <div class="temp">25°</div>
+                                        <div class="high-low">H 26°  L 16°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="canada-loc ii">
+                                        <div class="province">Ontario</div>
+                                        <div class="city-name">Ottawa</div>
+                                        <div class="temp">23°</div>
+                                        <div class="high-low">H 24°  L 14°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="canada-loc iii">
+                                        <div class="province">Colombie-Britannique</div>
+                                        <div class="city-name">Vancouver</div>
+                                        <div class="temp">19°</div>
+                                        <div class="high-low">H 20°  L 12°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sh.webp);"></div>
+                                    </div>
+                                    <div class="canada-loc iv">
+                                        <div class="province">Alberta</div>
+                                        <div class="city-name">Calgary</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 11°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                    </div>
+                                    <div class="canada-loc v">
+                                        <div class="province">Nouvelle-Écosse</div>
+                                        <div class="city-name">Halifax</div>
+                                        <div class="temp">20°</div>
+                                        <div class="high-low">H 21°  L 13°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Cld.webp);"></div>
+                                    </div>
+                                    <div class="canada-loc vi">
+                                        <div class="province">Manitoba</div>
+                                        <div class="city-name">Winnipeg</div>
+                                        <div class="temp">22°</div>
+                                        <div class="high-low">H 23°  L 12°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 11. Quebec Cities -->
+                            <div class="quebec-cities" style="display: none;">
+                                <div class="header">Grandes Villes du Québec</div>
+                                <div class="box"></div>
+                                <div class="information">
+                                    <div class="qc-loc i">
+                                        <div class="region-name">Capitale-Nationale</div>
+                                        <div class="city-name">Québec</div>
+                                        <div class="temp">22°</div>
+                                        <div class="high-low">H 23°  L 14°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="qc-loc ii">
+                                        <div class="region-name">Outaouais</div>
+                                        <div class="city-name">Gatineau</div>
+                                        <div class="temp">23°</div>
+                                        <div class="high-low">H 24°  L 15°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="qc-loc iii">
+                                        <div class="region-name">Estrie</div>
+                                        <div class="city-name">Sherbrooke</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 13°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                    </div>
+                                    <div class="qc-loc iv">
+                                        <div class="region-name">Saguenay–Lac-St-Jean</div>
+                                        <div class="city-name">Saguenay</div>
+                                        <div class="temp">20°</div>
+                                        <div class="high-low">H 21°  L 11°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="qc-loc v">
+                                        <div class="region-name">Mauricie</div>
+                                        <div class="city-name">Trois-Rivières</div>
+                                        <div class="temp">23°</div>
+                                        <div class="high-low">H 24°  L 14°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="qc-loc vi">
+                                        <div class="region-name">Bas-Saint-Laurent</div>
+                                        <div class="city-name">Rimouski</div>
+                                        <div class="temp">18°</div>
+                                        <div class="high-low">H 19°  L 10°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Cld.webp);"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 12. Ski & Resort Forecast -->
+                            <div class="resort-forecast" style="display: none;">
+                                <div class="header">Villégiature & Stations de Ski</div>
+                                <div class="box"></div>
+                                <div class="information">
+                                    <div class="resort-loc i">
+                                        <div class="resort-region">Laurentides</div>
+                                        <div class="resort-name">Mont-Tremblant</div>
+                                        <div class="temp">19°</div>
+                                        <div class="high-low">H 20°  L 10°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="resort-loc ii">
+                                        <div class="resort-region">Capitale-Nationale</div>
+                                        <div class="resort-name">Mont-Sainte-Anne</div>
+                                        <div class="temp">18°</div>
+                                        <div class="high-low">H 19°  L 9°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="resort-loc iii">
+                                        <div class="resort-region">Charlevoix</div>
+                                        <div class="resort-name">Massif de Charlevoix</div>
+                                        <div class="temp">17°</div>
+                                        <div class="high-low">H 18°  L 8°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/MSun.webp);"></div>
+                                    </div>
+                                    <div class="resort-loc iv">
+                                        <div class="resort-region">Estrie</div>
+                                        <div class="resort-name">Mont Sutton</div>
+                                        <div class="temp">19°</div>
+                                        <div class="high-low">H 20°  L 9°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                    <div class="resort-loc v">
+                                        <div class="resort-region">Estrie</div>
+                                        <div class="resort-name">Bromont</div>
+                                        <div class="temp">21°</div>
+                                        <div class="high-low">H 22°  L 11°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/DPc.webp);"></div>
+                                    </div>
+                                    <div class="resort-loc vi">
+                                        <div class="resort-region">Laurentides</div>
+                                        <div class="resort-name">Saint-Sauveur</div>
+                                        <div class="temp">20°</div>
+                                        <div class="high-low">H 21°  L 10°</div>
+                                        <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 13. Outdoor Activity -->
+                            <div class="outdoor-activity" style="display: none;">
+                                <div class="header">Activités de plein air</div>
+                                <div class="box"></div>
+                                <div class="time">APRÈS-MIDI (14H00)</div>
+                                <div class="temp">24°</div>
+                                <div class="icon" style="background-image: url(images/icons/2026/large/Sun.webp);"></div>
+                                <div class="cond">Conditions Idéales pour la Randonnée et les Sports Extérieurs</div>
+                                <div class="wind">
+                                    <div class="heading">VENT</div>
+                                    <div class="val">SO 16 KM/H</div>
+                                </div>
+                                <div class="feelslike">
+                                    <div class="heading">INDICE UV</div>
+                                    <div class="val">7 (ÉLEVÉ)</div>
+                                </div>
+                            </div>
+
+                            <!-- 14. Bulletin Météo -->
+                            <div class="bulletin" style="display: none;">
+                                <div class="header">Bulletin d'Alerte Météo</div>
+                                <div class="box"></div>
+                                <div class="boxheader">ENVIRONNEMENT ET CHANGEMENT CLIMATIQUE CANADA</div>
+                                <div class="alerts">
+                                    <div class="bulletin-title">AVERTISSEMENT D'ORAGES VIOLENTS</div>
+                                    <div>EN VIGUEUR POUR : MONTRÉAL, LAVAL ET LES ENVIRONS</div>
+                                    <br>
+                                    <div>Des conditions météorologiques propices au développement d'orages violents capables de produire de fortes rafales de vent pouvant atteindre 90 km/h, de la grosse grêle et de la pluie torrentielle sont présentes cet après-midi. Mettez-vous immédiatement à l'abri.</div>
+                                </div>
+                            </div>
+
+                            <!-- 15. Regional Map -->
+                            <div class="map" style="display: none;">
+                                <div class="header">Carte Météo Régionale</div>
+                                <div class="box"></div>
+                                <div class="map-regional" style="position: absolute; width: 1620px; height: 1080px; overflow: hidden;">
+                                    <img class="merc" src="images/maps/regional_map.png" style="width: 1620px; height: 1080px; opacity: 0.9;">
+                                </div>
+                                <div class="map-cities">
+                                    <div class="city" style="top: 350px; left: 620px; display: block;">
+                                        <div class="city-name" style="font-size: 36px; font-weight: bold; color: #fff;">Montréal</div>
+                                        <div class="temp" style="font-size: 58px; font-family: 'Interstate Black Cn'; color: #ffd15c; margin-top: 40px;">24°</div>
+                                        <div class="icon" style="width: 120px; height: 120px; margin-left: 100px; margin-top: 15px; background-image: url(images/icons/2026/large/Sun.webp); background-size: contain;"></div>
+                                    </div>
+                                    <div class="city" style="top: 250px; left: 950px; display: block;">
+                                        <div class="city-name" style="font-size: 36px; font-weight: bold; color: #fff;">Québec</div>
+                                        <div class="temp" style="font-size: 58px; font-family: 'Interstate Black Cn'; color: #ffd15c; margin-top: 40px;">22°</div>
+                                        <div class="icon" style="width: 120px; height: 120px; margin-left: 100px; margin-top: 15px; background-image: url(images/icons/2026/large/MSun.webp); background-size: contain;"></div>
+                                    </div>
+                                    <div class="city" style="top: 480px; left: 820px; display: block;">
+                                        <div class="city-name" style="font-size: 36px; font-weight: bold; color: #fff;">Sherbrooke</div>
+                                        <div class="temp" style="font-size: 58px; font-family: 'Interstate Black Cn'; color: #ffd15c; margin-top: 40px;">21°</div>
+                                        <div class="icon" style="width: 120px; height: 120px; margin-left: 100px; margin-top: 15px; background-image: url(images/icons/2026/large/DPc.webp); background-size: contain;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 16. Radar Doppler -->
+                            <div class="radar" style="display: none;">
+                                <div class="header">Radar Doppler Haute Définition</div>
+                                <div class="hourloop">ÉCHOS EN DIRECT (QC & ENVIRONS)</div>
+                                <div class="key"><span>FAIBLE</span><img src="images/2026/radarLegend.png"><span>FORTE</span></div>
+                                <div class="banner"></div>
+                                <div style="position: absolute; top: 220px; left: 160px; right: 160px; bottom: 180px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0,200,255,0.4); box-shadow: 0 15px 40px rgba(0,0,0,0.8); background: radial-gradient(circle at center, #0a1f3d 0%, #030814 100%);">
+                                    <svg width="100%" height="100%" style="opacity: 0.25;">
+                                        <circle cx="50%" cy="50%" r="150" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,6"/>
+                                        <circle cx="50%" cy="50%" r="300" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,6"/>
+                                        <circle cx="50%" cy="50%" r="450" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-dasharray="6,6"/>
+                                        <line x1="0" y1="50%" x2="100%" y2="50%" stroke="#00e5ff" stroke-width="1"/>
+                                        <line x1="50%" y1="0" x2="50%" y2="100%" stroke="#00e5ff" stroke-width="1"/>
+                                    </svg>
+                                    <!-- Simulated High Definition Radar Echo Cells -->
+                                    <div style="position: absolute; top: 40%; left: 45%; width: 220px; height: 160px; border-radius: 50%; filter: blur(15px); background: radial-gradient(circle, #ff0000 0%, #ffff00 45%, #00ff00 70%, transparent 100%); opacity: 0.85;"></div>
+                                    <div style="position: absolute; top: 32%; left: 52%; width: 140px; height: 110px; border-radius: 50%; filter: blur(12px); background: radial-gradient(circle, #ff00ff 0%, #ff0000 50%, #00ff00 80%, transparent 100%); opacity: 0.85;"></div>
+                                    <div style="position: absolute; top: 48%; left: 38%; width: 280px; height: 140px; border-radius: 50%; filter: blur(18px); background: radial-gradient(circle, #00ff00 0%, #00ffff 60%, transparent 100%); opacity: 0.7;"></div>
+                                    <!-- City Dots -->
+                                    <div style="position: absolute; top: 45%; left: 48%; display: flex; align-items: center; gap: 8px;">
+                                        <div style="width: 10px; height: 10px; background: #fff; border: 2px solid #000; border-radius: 2px;"></div>
+                                        <span style="color: #fff; font-size: 26px; font-weight: bold; text-shadow: 0 2px 4px #000;">Montréal</span>
+                                    </div>
+                                    <div style="position: absolute; top: 25%; left: 68%; display: flex; align-items: center; gap: 8px;">
+                                        <div style="width: 10px; height: 10px; background: #fff; border: 2px solid #000; border-radius: 2px;"></div>
+                                        <span style="color: #fff; font-size: 26px; font-weight: bold; text-shadow: 0 2px 4px #000;">Québec</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 17. Couverture Nuageuse (Satellite) -->
+                            <div class="satellite" style="display: none;">
+                                <div class="header">Couverture Nuageuse</div>
+                                <div class="hourloop">BOUCLE SATELLITE (GOES-EST)</div>
+                                <div class="key"><span>DÉGAGÉ</span><img src="images/2026/cloudLegend.png"><span>COUVERT</span></div>
+                                <div class="banner"></div>
+                                <div style="position: absolute; top: 220px; left: 160px; right: 160px; bottom: 180px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0,200,255,0.4); box-shadow: 0 15px 40px rgba(0,0,0,0.8); background: #030814;">
+                                    <img src="images/maps/regional_map.png" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6) contrast(1.2);">
+                                    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 40%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.15) 40%, transparent 80%); filter: blur(25px);"></div>
+                                </div>
+                            </div>
+
+                            <!-- 18. Environment Canada Attribution -->
+                            <div class="environment-canada" style="display: none;">
+                                <div class="header">Source Officielle des Données</div>
+                                <div class="box"></div>
+                                <div class="ec-content" style="position: absolute; top: 220px; left: 140px; right: 140px; padding: 40px; display: block; text-align: center;">
+                                    <div class="ec-badge" style="font-size: 26px; font-weight: bold; margin-bottom: 12px;">PARTENAIRE MÉTÉOROLOGIQUE OFFICIEL</div>
+                                    <div class="ec-title" style="font-size: 52px; font-weight: 900; margin-bottom: 8px;">ENVIRONNEMENT ET CHANGEMENT CLIMATIQUE CANADA</div>
+                                    <div class="ec-sub" style="font-size: 32px; color: #94a3b8; margin-bottom: 25px;">Environment and Climate Change Canada</div>
+                                    <div class="ec-divider" style="height: 2px; width: 400px; margin: 0 auto 30px auto; background: linear-gradient(90deg, transparent, #00d2ff, transparent);"></div>
+                                    <div class="ec-desc" style="font-size: 38px; line-height: 54px; max-width: 1100px; margin: 0 auto 30px auto;">
+                                        Toutes les observations en direct, alertes météorologiques et prévisions officielles proviennent du Service météorologique du Canada.
+                                    </div>
+                                    <div class="ec-footer" style="font-size: 30px; font-weight: bold; color: #38bdf8;">meteo.gc.ca &bull; weather.gc.ca &bull; Gouvernement du Canada</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2026 Lower Display Line (LDL) -->
+                        <div class="ldl-blue" id="ldl-container">
+                            <div class="logo"></div>
+                            <div class="temptab"></div>
+                            <div class="timetab"></div>
+                            <div class="temp">24°</div>
+                            <div class="time">16:30 <span style="font-size: 22px;">HNE</span></div>
+                            <div class="temptab"><span class="temp">24</span><span class="degree">°</span></div>
+                            <div class="time"><span>16:30 <span class="ampm">HNE</span></span></div>
+                            <div class="template"></div>
+                            <div class="observations">
+                                <div class="city-name">MONTRÉAL</div>
+                                <div class="obs">
+                                    <div class="icon" style="background-image: url(images/icons/2026/stills/Sun.mv.png);"></div>
+                                    <div class="tempobs">24°</div>
+                                    <div class="wind">VENT : SO 18 km/h</div>
+                                    <div class="humidity">HUMIDITÉ : 48%</div>
+                                    <div class="pressure">PRESSION : 101.4 kPa</div>
+                                </div>
+                            </div>
+                            <div class="crawl" style="display: none;">
+                                <div class="scroll">INTELLISTAR 2026 HD &bull; Bienvenue dans la nouvelle ère broadcast haute définition &bull; Prévisions précises 24h/24 &bull; Visitez meteo.gc.ca</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ICON GALLERY MODAL -->
+            <div id="icon-gallery-panel">
+                <div class="gallery-header">
+                    <div>
+                        <div class="gallery-title">Collection Complète des 82 Icônes HD (2026)</div>
+                        <div style="color: #94a3b8; font-size: 16px; margin-top: 6px;">Format vectoriel 512x512 rendu en WebP HD & PNG Stills pour toutes les conditions météorologiques.</div>
+                    </div>
+                    <button class="tb-btn" style="background: #ef4444; font-size: 16px;" onclick="toggleIconGallery()">✕ Fermer la Galerie</button>
+                </div>
+                <div class="gallery-grid" id="gallery-grid-content">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+        // SLIDE DEFINITIONS
+        const SLIDES = [
+            { id: "current-conditions", name: "1. Actuellement (Current Conditions)", selector: ".current-conditions" },
+            { id: "eight-cities", name: "2. Huit Villes (8 Nearby Cities)", selector: ".eight-cities" },
+            { id: "local-forecast", name: "3. Prévisions locales (Local Forecast)", selector: ".local-forecast" },
+            { id: "week-ahead", name: "4. Cette semaine (7-Day Forecast)", selector: ".week-ahead" },
+            { id: "quebec-week-ahead", name: "5. Semaine Québec (Quebec Week Ahead)", selector: ".quebec-week-ahead" },
+            { id: "air-quality", name: "6. Qualité de l'air (Air Quality)", selector: ".air-quality" },
+            { id: "almanac", name: "7. Almanach & Données (Almanac)", selector: ".almanac" },
+            { id: "daypart-forecast", name: "8. Prévisions par période (Daypart / Hourly)", selector: ".daypart-forecast" },
+            { id: "regional-forecast", name: "9. Prévisions régionales (Regional 6-City)", selector: ".regional-forecast" },
+            { id: "canada-forecast", name: "10. Villes Canadiennes (Canada Cities)", selector: ".canada-forecast" },
+            { id: "quebec-cities", name: "11. Villes du Québec (Quebec Cities)", selector: ".quebec-cities" },
+            { id: "resort-forecast", name: "12. Villégiature & Ski (Resort Forecast)", selector: ".resort-forecast" },
+            { id: "outdoor-activity", name: "13. Activités de plein air (Outdoor Activity)", selector: ".outdoor-activity" },
+            { id: "bulletin", name: "14. Bulletin d'Alerte (Severe Alert)", selector: ".bulletin" },
+            { id: "map", name: "15. Carte Régionale (Regional Map)", selector: ".map" },
+            { id: "radar", name: "16. Radar Doppler en Direct (Local Doppler)", selector: ".radar" },
+            { id: "satellite", name: "17. Couverture Nuageuse (Satellite)", selector: ".satellite" },
+            { id: "environment-canada", name: "18. Attribution Environnement Canada", selector: ".environment-canada" }
+        ];
+
+        let currentSlideIdx = 0;
+        let isAutoplay = false;
+        let autoplayTimer = null;
+        let ldlVisible = true;
+
+        // Build Sidebar Items
+        function initSidebar() {
+            const listEl = document.getElementById('slide-nav-list');
+            listEl.innerHTML = '';
+            SLIDES.forEach((slide, idx) => {
+                const item = document.createElement('div');
+                item.className = `slide-nav-item ${idx === 0 ? 'active' : ''}`;
+                item.onclick = () => showSlide(idx);
+                item.innerHTML = `
+                    <span class="slide-idx">${idx + 1 < 10 ? '0' + (idx + 1) : idx + 1}</span>
+                    <span>${slide.name.replace(/^\d+\.\s*/, '')}</span>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        // Show Specific Slide
+        function showSlide(idx) {
+            currentSlideIdx = idx;
+            const target = SLIDES[idx];
+
+            // Hide all slides
+            $('.slides > div').hide();
+            $(target.selector).show();
+
+            // Update badge & sidebar highlights
+            document.getElementById('current-slide-badge').innerText = target.name;
+            $('.slide-nav-item').removeClass('active');
+            $(`.slide-nav-item:nth-child(${idx + 1})`).addClass('active');
+
+            // Handle special backgrounds (e.g. bulletin)
+            if (target.id === 'bulletin') {
+                $('#background').hide();
+            } else {
+                $('#background').show();
+            }
+        }
+
+        function nextSlide() {
+            let next = (currentSlideIdx + 1) % SLIDES.length;
+            showSlide(next);
+        }
+
+        function prevSlide() {
+            let prev = (currentSlideIdx - 1 + SLIDES.length) % SLIDES.length;
+            showSlide(prev);
+        }
+
+        function toggleAutoplay() {
+            isAutoplay = !isAutoplay;
+            const btn = document.getElementById('autoplay-btn');
+            if (isAutoplay) {
+                btn.classList.add('active');
+                btn.innerText = '⏸ Pause Diaporama';
+                autoplayTimer = setInterval(nextSlide, 5000);
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = '▶ Diaporama Auto';
+                clearInterval(autoplayTimer);
+                autoplayTimer = null;
+            }
+        }
+
+        function toggleLDL() {
+            ldlVisible = !ldlVisible;
+            const ldlEl = document.getElementById('ldl-container');
+            const btn = document.getElementById('ldl-toggle-btn');
+            if (ldlVisible) {
+                ldlEl.style.display = 'block';
+                btn.innerText = 'Bandeau LDL : Activé';
+            } else {
+                ldlEl.style.display = 'none';
+                btn.innerText = 'Bandeau LDL : Masqué';
+            }
+        }
+
+        // Responsive Scaling
+        function changeScale(val) {
+            const scaler = document.getElementById('viewport-scaler');
+            const wrapper = document.getElementById('canvas-wrapper');
+
+            if (val === 'fit') {
+                const availW = wrapper.clientWidth - 40;
+                const availH = wrapper.clientHeight - 40;
+                const scaleW = availW / 1620;
+                const scaleH = availH / 1080;
+                const finalScale = Math.min(scaleW, scaleH);
+                scaler.style.transform = `scale(${finalScale})`;
+            } else {
+                scaler.style.transform = `scale(${val})`;
+            }
+        }
+
+        // Switch Theme Stylesheet
+        function switchTheme(year) {
+            const link = document.getElementById('active-theme-stylesheet');
+            link.href = `css/intellistar-32-${year}.css`;
+
+            $('.ver-btn').removeClass('active');
+            $(`.ver-btn:contains('${year}')`).addClass('active');
+
+            // Swap icon paths in slides based on theme
+            const iconDir = year === 2026 ? '2026' : (year >= 2010 ? '2010' : '2007');
+            $('.slides .icon, .map-cities .icon').each(function() {
+                const bg = $(this).css('background-image');
+                if (bg && bg.includes('/icons/')) {
+                    const newBg = bg.replace(/\/icons\/(2026|2010|2007)\//, `/icons/${iconDir}/`);
+                    $(this).css('background-image', newBg);
+                }
+            });
+            console.log(`[Preview] Switched theme to intellistar-32-${year}.css`);
+        }
+
+        // HD Icon Gallery
+        const ICON_NAMES = [
+            'Sun', 'MSun', 'DPc', 'DMc', 'Cld', 'NClr', 'NMClr', 'NPc', 'NMc',
+            'Ra', 'LtRa', 'HvyRa', 'Sh', 'SctSh', 'NSctSh', 'Drz', 'FrzDrz', 'FrzRa', 'RaFrzRa',
+            'Sn', 'LtSn', 'HvySn', 'SnFl', 'SctFl', 'NSctFl', 'SnSh', 'SctSnSh', 'NSctSnSh',
+            'BlowSn', 'Blizz', 'Frigid', 'Slt', 'SltFrzRa', 'SnSlt', 'LtSnSlt', 'SnFrzRa',
+            'LtSnFrzRa', 'RaSn', 'RaSlt', 'Mix', 'LtMix', 'SnToRa', 'Ts', 'SctTs', 'NSctTs',
+            'SctStrTs', 'NSctStrTs', 'Thun', 'TsMix', 'TsSlt', 'TsSn', 'Fog', 'DrzFog', 'Haze',
+            'Smoke', 'Dust', 'Wnd', 'SunWnd', 'PcWnd', 'CldWnd', 'NClrWnd', 'NPcWnd', 'WndRa',
+            'WndSn', 'AMDrz', 'PMDrz', 'AMRa', 'PMRa', 'AMSh', 'PMSh', 'AMSn', 'PMSn',
+            'AMSnSh', 'PMSnSh', 'AMMix', 'PMMix', 'AMTs', 'PMTs', 'AMRaSn', 'PMRaSn', 'AMFgPMSu'
+        ];
+
+        function toggleIconGallery() {
+            const panel = document.getElementById('icon-gallery-panel');
+            if (panel.style.display === 'block') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'block';
+                if ($('#gallery-grid-content').children().length === 0) {
+                    const grid = document.getElementById('gallery-grid-content');
+                    ICON_NAMES.forEach(name => {
+                        const card = document.createElement('div');
+                        card.className = 'gallery-card';
+                        card.innerHTML = `
+                            <div class="gallery-icon-img" style="background-image: url('images/icons/2026/large/${name}.webp');"></div>
+                            <div class="gallery-code">${name}</div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            }
+        }
+
+        // Keyboard Navigation
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            } else if (e.key === 'Escape') {
+                document.getElementById('icon-gallery-panel').style.display = 'none';
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (document.getElementById('scale-selector').value === 'fit') {
+                changeScale('fit');
+            }
+        });
+
+        // Initialize on load
+        $(document).ready(() => {
+            initSidebar();
+            showSlide(0);
+            changeScale('fit');
+        });
+    </script>
+</body>
+</html>
