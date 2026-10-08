@@ -57,8 +57,8 @@ A high-performance broadcast simulator of The Weather Channel's legendary **Inte
 ### Installation
 ```bash
 # 1. Clone the repository
-git clone https://github.com/NoID1290/intellistar-1.git
-cd intellistar-1
+git clone https://github.com/NoID1290/intellistar-quebec.git
+cd intellistar-quebec
 
 # 2. Install dependencies
 npm install
