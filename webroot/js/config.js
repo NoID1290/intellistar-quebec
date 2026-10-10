@@ -9,10 +9,11 @@ var appearanceSettings = {
     iconSet: "2026", //Choices are 2007, 2010, or 2026 (Ultra-HD vector icon set).
     ldlType: 'observations', //what you want to see on ldl. 'observations' = only observations / 'both' = both / if anything else is put here, the sim will default to only observations
     ldlVisible: true, // Studio: show the lower display line during broadcast.
-    smoothRadar: true, // Smooth frame interpolation for local Doppler and cloud animations
+    smoothRadar: false, // Smooth frame interpolation for local Doppler and cloud animations
     startupTime: 4000, //How long you want to wait for it to start up.
     graphicsPackage: 2026, //the package for graphics: 2007, 2008, 2009, 2010, or 2026 (Modern HD broadcast remaster with sapphire glass and 1080p assets).
     units: "metric", // "auto" (metric for Canada, imperial for US), "metric", or "imperial"
+    vocalLanguage: "fr",
     version: "1.2"
 }
 
@@ -59,7 +60,6 @@ var slideSettings = {
         { function: "daypartForecast", slideDelay: 8000 },
         { function: "mapForecast", slides: 2, slideDelay: 7000 },
         { function: "localForecast", slides: 4, slideDelay: 7500 },
-        { function: "weekAhead", slideDelay: 8000 },
         { function: "almanac", slideDelay: 8000 },
         { function: "airQuality", slideDelay: 8000 },
         { function: "outdoorActivity", slideDelay: 8000 }
@@ -72,7 +72,8 @@ var audioSettings = {
     shuffle: true, //Self-explanatory. Default is true.
     randomStart: true, //Also should be self-explanatory. Default is true.
     narrations: true, //Also should be self-explanatory. Default is true.
-    vocallocal: false, //Only affects local forecast vocal local, changes the phrase from naming the exact date to just "your local forecast"
+    vocallocal: true, //Only affects local forecast vocal local, changes the phrase from naming the exact date to just "your local forecast"
+    vocalLanguage: "fr", // Vocal narration language: "fr" or "en"
     musicVolume: (typeof window !== 'undefined' && window.__iptvAudioConfig && window.__iptvAudioConfig.musicVolume !== undefined) ? window.__iptvAudioConfig.musicVolume : 0.8, // Music volume level (0.0 to 1.0+)
     vocalVolume: (typeof window !== 'undefined' && window.__iptvAudioConfig && window.__iptvAudioConfig.vocalVolume !== undefined) ? window.__iptvAudioConfig.vocalVolume : 1.0, // Vocal narration volume level (0.0 to 1.0+)
     musicDuckedVolume: (typeof window !== 'undefined' && window.__iptvAudioConfig && window.__iptvAudioConfig.musicDuckedVolume !== undefined) ? window.__iptvAudioConfig.musicDuckedVolume : 0.3, // Background music volume when vocal is active

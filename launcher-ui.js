@@ -105,6 +105,16 @@ function createLauncherRouter(targetObsPort = obsPort) {
       fetchLocal('/api/message'),
     ]);
 
+    let interpolation = true;
+    try {
+      const myCfgPath = path.join(__dirname, 'MYCONFIG.json');
+      if (fs.existsSync(myCfgPath)) {
+        const raw = JSON.parse(fs.readFileSync(myCfgPath, 'utf8'));
+        if (raw.smoothRadar !== undefined) interpolation = !!raw.smoothRadar;
+        else if (raw.appearanceSettings && raw.appearanceSettings.smoothRadar !== undefined) interpolation = !!raw.appearanceSettings.smoothRadar;
+      }
+    } catch (e) {}
+
     res.json({
       obs: obs || { phase: 'stopped', error: null, processAlive: false },
       app: { health: isAppAlive ? 'ready' : 'unavailable', port: targetObsPort },
@@ -113,6 +123,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
       message: message || { action: 'none' },
       system: getSystemStats(__dirname),
       encoding: getEncodingPreset(__dirname),
+      interpolation,
       displays: getDisplayStatus(),
       ips: getLanIps(),
       launcherPort: port,
@@ -121,7 +132,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
 
   // Action Dispatcher
   router.post('/action', async (req, res) => {
-    const { action, output, text, type, duration, script, resolution, fps } = req.body || {};
+    const { action, output, text, type, duration, script, resolution, fps, enabled } = req.body || {};
     const options = obsOptions();
 
     try {
@@ -132,6 +143,29 @@ function createLauncherRouter(targetObsPort = obsPort) {
             success: true,
             message: `Encoding set to ${formatEncodingText(result)}.`,
             encoding: result,
+          });
+        }
+
+        case 'set-interpolation': {
+          const isEnabled = enabled === true || enabled === 'true';
+          const myCfgPath = path.join(__dirname, 'MYCONFIG.json');
+          try {
+            if (fs.existsSync(myCfgPath)) {
+              const raw = JSON.parse(fs.readFileSync(myCfgPath, 'utf8'));
+              raw.smoothRadar = isEnabled;
+              if (raw.appearanceSettings) raw.appearanceSettings.smoothRadar = isEnabled;
+              fs.writeFileSync(myCfgPath, JSON.stringify(raw, null, '\t'), 'utf8');
+            }
+          } catch (e) {}
+
+          try {
+            await fetchLocal(`/api/interpolation?enabled=${isEnabled}`);
+          } catch (e) {}
+
+          return res.json({
+            success: true,
+            message: `Radar/satellite interpolation ${isEnabled ? 'enabled' : 'disabled'}.`,
+            interpolation: isEnabled,
           });
         }
 

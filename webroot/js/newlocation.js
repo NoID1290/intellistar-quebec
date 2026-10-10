@@ -82,6 +82,7 @@ async function loadLocationSettingsFromConfig() {
             Object.assign(appearanceSettings, json.appearanceSettings);
         }
         if (json.units !== undefined) appearanceSettings.units = json.units;
+        if (json.vocalLanguage !== undefined) appearanceSettings.vocalLanguage = json.vocalLanguage;
         if (json.graphicsPackage !== undefined) appearanceSettings.graphicsPackage = json.graphicsPackage;
         if (json.ldlType !== undefined) appearanceSettings.ldlType = json.ldlType;
         if (json.iconSet !== undefined) appearanceSettings.iconSet = json.iconSet;
@@ -112,6 +113,7 @@ async function loadLocationSettingsFromConfig() {
         if (json.randomStart !== undefined) audioSettings.randomStart = json.randomStart;
         if (json.narrations !== undefined) audioSettings.narrations = json.narrations;
         if (json.vocallocal !== undefined) audioSettings.vocallocal = json.vocallocal;
+        if (json.vocalLanguage !== undefined) audioSettings.vocalLanguage = json.vocalLanguage;
         if (json.musicVolume !== undefined) audioSettings.musicVolume = json.musicVolume;
         if (json.vocalVolume !== undefined) audioSettings.vocalVolume = json.vocalVolume;
         if (json.musicDuckedVolume !== undefined) audioSettings.musicDuckedVolume = json.musicDuckedVolume;
@@ -123,6 +125,10 @@ async function loadLocationSettingsFromConfig() {
         // Merge alert test settings if provided
         if (json.alertTestSettings && typeof json.alertTestSettings === 'object') {
             Object.assign(alertTestSettings, json.alertTestSettings);
+        }
+
+        if (typeof getVocallocalPath === 'function') {
+            vocallocalPath = getVocallocalPath();
         }
 
         if (typeof window.applyEditorPreset === 'function') {

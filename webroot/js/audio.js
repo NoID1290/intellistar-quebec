@@ -107,6 +107,16 @@ class AudioManager {
         this.playlist = [...secondHalf, ...firstHalf];
     }
 
+    getVocalBasePath() {
+        if (typeof getVocallocalPath === 'function') {
+            return getVocallocalPath();
+        }
+        if (typeof vocallocalPath !== 'undefined') {
+            return vocallocalPath;
+        }
+        return '/vocallocal/';
+    }
+
     playCC(vl) {
         if (vl) {
             this.startPlaying(this.vocallocal.cc, false);
@@ -116,7 +126,8 @@ class AudioManager {
     }
 
     playRadar() {
-        this.startPlaying([`/vocallocal/doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`], false);
+        const base = this.getVocalBasePath();
+        this.startPlaying([`${base}doppler/LRADAR_DEFAULT${Math.floor(Math.random()) + 1}.wav`], false);
     }
 
     playBulletin() {
@@ -124,22 +135,34 @@ class AudioManager {
     }
 
     playLF() {
-        this.startPlaying(this.vocallocal.lf, false);
+        const base = this.getVocalBasePath();
+        const queue = (Array.isArray(this.vocallocal.lf) && this.vocallocal.lf.length > 0)
+            ? this.vocallocal.lf
+            : [`${base}DAYPART_DEFAULT1.wav`];
+        this.startPlaying(queue, false);
     }
 
     playEF() {
-        this.startPlaying([`/vocallocal/weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3) + 1}.wav`], false);
+        const base = this.getVocalBasePath();
+        this.startPlaying([`${base}weekahead/7DAY_DEFAULT${Math.floor(Math.random() * 3) + 1}.wav`], false);
     }
 
     playSevere(name) {
-        if (name == "Flash Flood Warning") {
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/FFLOOD_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if (name == "Tornado Warning") {
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TORNADO_DEFAULT.wav', '/vocallocal/beep.wav'], false);
-        } else if (name == "Severe Thunderstorm Warning") {
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/TSTORM_DEFAULT.wav', '/vocallocal/beep.wav'], false);
+        const base = this.getVocalBasePath();
+        const alertName = String(name || '').toLowerCase();
+
+        const isFlood = alertName.includes('flood') || alertName.includes('crue') || alertName.includes('inondation');
+        const isTornado = alertName.includes('tornado') || alertName.includes('tornade');
+        const isTstorm = alertName.includes('thunderstorm') || alertName.includes('orage');
+
+        if (isFlood) {
+            this.startPlaying([`${base}beep.wav`, `${base}FFLOOD_DEFAULT.wav`, `${base}beep.wav`], false);
+        } else if (isTornado) {
+            this.startPlaying([`${base}beep.wav`, `${base}TORNADO_DEFAULT.wav`, `${base}beep.wav`], false);
+        } else if (isTstorm) {
+            this.startPlaying([`${base}beep.wav`, `${base}TSTORM_DEFAULT.wav`, `${base}beep.wav`], false);
         } else {
-            this.startPlaying(['/vocallocal/beep.wav', '/vocallocal/beep.wav', '/vocallocal/beep.wav', '/vocallocal/beep.wav'], false);
+            this.startPlaying([`${base}beep.wav`, `${base}BULLETIN_DEFAULT.wav`, `${base}beep.wav`], false);
         }
     }
 

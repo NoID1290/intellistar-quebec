@@ -72,6 +72,8 @@ test('Touchscreen UI launcher API and static assets', async (t) => {
     assert.match(res.body, /GPU USAGE/);
     assert.match(res.body, /RAM/);
     assert.match(res.body, /DISK/);
+    assert.match(res.body, /btn-interpolation-on/);
+    assert.match(res.body, /btn-interpolation-off/);
   });
 
   await t.test('serves launcher CSS and JS client', async () => {
@@ -114,6 +116,7 @@ test('Touchscreen UI launcher API and static assets', async (t) => {
     assert.ok(typeof json.encoding === 'object');
     assert.ok(['720p', '1080p', '4k'].includes(json.encoding.resolution));
     assert.ok([24, 30, 60].includes(json.encoding.fps));
+    assert.equal(typeof json.interpolation, 'boolean');
     assert.ok(typeof json.displays === 'object');
     assert.ok(Array.isArray(json.displays.outputs));
     assert.equal(typeof json.displays.allAsleep, 'boolean');
@@ -134,6 +137,20 @@ test('Touchscreen UI launcher API and static assets', async (t) => {
     assert.equal(json.encoding.width, 1920);
     assert.equal(json.encoding.height, 1080);
     assert.equal(typeof json.encoding.iconsSynced, 'boolean');
+  });
+
+  await t.test('POST /api/launcher/action set-interpolation updates smoothRadar', async () => {
+    const res = await request('/api/launcher/action', {
+      port: testPort,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: { action: 'set-interpolation', enabled: true },
+    });
+    assert.equal(res.statusCode, 200);
+    const json = res.json();
+    assert.equal(json.success, true);
+    assert.equal(json.interpolation, true);
+    assert.match(json.message, /interpolation/i);
   });
 
   await t.test('POST /api/launcher/action sleep-monitors triggers display sleep', async () => {

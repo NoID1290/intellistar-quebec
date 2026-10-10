@@ -3174,6 +3174,8 @@ async function grabLocalForecast() {
             var dayDescToAdd = {
                 name: translatedName,
                 desc: translatedNarrative,
+                rawName: rawName,
+                rawDesc: rawNarrative,
                 narrQualiCode: data.daypart[0].qualifierCode[i] == null ? "" : data.daypart[0].qualifierCode[i].replace("Q",""),
                 iconCode: data.daypart[0].iconCodeExtend[i],
                 cond: { name: codetoFcst[data.daypart[0].iconCodeExtend[i]].mov, time: data.daypart[0].daypartName[i].endsWith("night") ? "_night" : "_day" }

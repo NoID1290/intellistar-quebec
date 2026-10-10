@@ -148,6 +148,14 @@
       });
     }
 
+    // Interpolation UI sync
+    if (data.interpolation !== undefined) {
+      document.querySelectorAll('.interpolation-btn').forEach(btn => {
+        const isEnabled = btn.getAttribute('data-enabled') === 'true';
+        btn.classList.toggle('active', isEnabled === !!data.interpolation);
+      });
+    }
+
     // Update PC hardware stats
     updateSystemStatsUI(data.system, data);
   }
@@ -389,6 +397,18 @@
         const res = await apiAction('set-encoding', { resolution, fps });
         if (res && res.success) {
           showToast(`Preset: ${res.encoding.resolution.toUpperCase()} @ ${res.encoding.fps}fps (${res.encoding.bitrate})`);
+          refreshStatus();
+        }
+      });
+    });
+
+    // Image Interpolation
+    document.querySelectorAll('.interpolation-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const enabled = btn.getAttribute('data-enabled') === 'true';
+        const res = await apiAction('set-interpolation', { enabled });
+        if (res && res.success) {
+          showToast(`Interpolation: ${enabled ? 'Enabled' : 'Disabled'}`);
           refreshStatus();
         }
       });

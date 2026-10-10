@@ -123,6 +123,8 @@
         if (![2007, 2008, 2009, 2010, 2026].includes(Number(appearance.graphicsPackage))) fail('Unknown graphics package');
         if (!['2007', '2010', '2026'].includes(String(appearance.iconSet))) fail('Unknown icon set');
         if (!['auto', 'metric', 'imperial'].includes(appearance.units)) fail('Unknown unit system');
+        if (appearance.vocalLanguage !== undefined && !['auto', 'fr', 'en'].includes(appearance.vocalLanguage)) fail('Unknown vocal language');
+        if (config.audioSettings.vocalLanguage !== undefined && !['auto', 'fr', 'en'].includes(config.audioSettings.vocalLanguage)) fail('Unknown vocal language');
         const loc = config.locationSettings;
         for (const key of ['eightCities', 'mapCities', 'radarCities']) if (!object(loc[key])) fail(`${key} must be an object`);
         for (const list of [loc.eightCities.cities, loc.mapCities.map, loc.radarCities.local, loc.radarCities.regional, loc.regionalForecasts, loc.canadaCities, loc.quebecCities, loc.resortCities, loc.localDopplers]) {

@@ -382,14 +382,21 @@ var slidePrograms = {
             return;
         }
 
-        if (audioSettings.vocallocal) audioPlayer.vocallocal.lf = vocallocalLF(lidx, slideLength);
+        if (audioSettings.narrations !== false) {
+            audioPlayer.vocallocal.lf = vocallocalLF(lidx, slideLength);
+            audioPlayer.playLF();
+        }
+
         $('.local-forecast').show();
-        $('.local-forecast .box').fadeIn(167, 'linear');
-        $('.local-forecast .header').fadeIn(333, 'linear');
+        if (lidx === 0) {
+            $('.local-forecast .box').fadeIn(167, 'linear');
+            $('.local-forecast .header').fadeIn(333, 'linear');
+        }
         $('.local-forecast .information').fadeIn(167, 'linear');
         $('.local-forecast .desc-mov').fadeIn(167, 'linear');
 
-        $('.local-forecast .city-name').text(locationConfig.mainCity.extraname.toUpperCase());
+        var cityName = (locationConfig.mainCity.extraname || locationConfig.mainCity.displayname || "").toUpperCase();
+        $('.local-forecast .city-name').text(cityName);
         $('.local-forecast .period').text(currentDay.name || "");
         $('.local-forecast .description').text(currentDay.desc || "");
         var condName = currentDay.cond ? currentDay.cond.name : "cloudy";
@@ -397,11 +404,6 @@ var slidePrograms = {
         $('.local-forecast .desc-mov').css({
             'background-image': `url(images/localforecast/${condName}${condTime}.png)`
         });
-        if (!audioSettings.vocallocal) {
-            if (lidx == 0) { audioPlayer.playLF(); }
-        } else {
-            audioPlayer.playLF();
-        }
         if (lidx >= allowedSlides - 1) {
             setTimeout(() => {
                 $('.local-forecast .box').fadeOut(167, 'linear');
@@ -423,6 +425,14 @@ var slidePrograms = {
         }
     },
     weekAhead() {
+        // If quebecWeekAhead is present in order, skip single-city weekAhead to avoid duplicating Montreal's 7-day outlook
+        var hasQuebecWeekAhead = slideFlavor && Array.isArray(slideFlavor.order) && slideFlavor.order.some(s => s && s.function === 'quebecWeekAhead');
+        if (hasQuebecWeekAhead) {
+            $('.week-ahead').hide();
+            slideCallBack();
+            return;
+        }
+
         audioPlayer.playEF();
         $('.week-ahead').show();
         $('.week-ahead .box').fadeIn(167, 'linear');
@@ -628,6 +638,10 @@ var slidePrograms = {
     },
     async localDoppler(dopplerIdx = 0) {
         var dConfig = (locationConfig.localDopplers && locationConfig.localDopplers[dopplerIdx]) ? locationConfig.localDopplers[dopplerIdx] : null;
+
+        if (dopplerIdx === 0 && audioSettings.narrations !== false) {
+            audioPlayer.playRadar();
+        }
 
         $('.radar').show();
         $('#locradar').show();

@@ -57,6 +57,27 @@ app.get('/api/config', (req, res) => {
     catch (error) { res.status(500).json({ error: 'Could not load broadcast configuration' }); }
 });
 
+// Toggle or set radar/satellite frame interpolation
+app.all('/api/interpolation', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const enabledQuery = req.query.enabled ?? req.body?.enabled;
+    const enabled = (enabledQuery === 'true' || enabledQuery === true || enabledQuery === '1');
+    const targetFile = cachedConfigPath || resolveConfigPath() || path.join(__dirname, 'MYCONFIG.json');
+    try {
+        if (fs.existsSync(targetFile)) {
+            const raw = JSON.parse(fs.readFileSync(targetFile, 'utf8'));
+            raw.smoothRadar = enabled;
+            if (raw.appearanceSettings) {
+                raw.appearanceSettings.smoothRadar = enabled;
+            }
+            fs.writeFileSync(targetFile, JSON.stringify(raw, null, '\t'), 'utf8');
+        }
+        res.json({ success: true, enabled, message: `Interpolation ${enabled ? 'enabled' : 'disabled'}` });
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // Scan and return all custom music files from webroot/music/custom (or webroot/music)
 app.get('/api/music', (req, res) => {
     const customDir = path.join(__dirname, 'webroot', 'music', 'custom');
