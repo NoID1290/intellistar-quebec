@@ -136,6 +136,11 @@
       if (activeAlertBanner) activeAlertBanner.style.display = 'none';
     }
 
+    // Active fetched alerts sync
+    if (data.activeAlerts) {
+      renderActiveAlertsUI(data.activeAlerts);
+    }
+
     // Encoding preset UI sync
     if (data.encoding) {
       const encPill = document.getElementById('current-encoding-pill');
@@ -158,6 +163,270 @@
 
     // Update PC hardware stats
     updateSystemStatsUI(data.system, data);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Active Fetched Weather Alerts & Suppression Controls
+  // ---------------------------------------------------------------------------
+  let lastActiveAlertsData = { alerts: [], rules: [] };
+  let selectedAlertForSuppression = null;
+
+  function getAlertIcon(name) {
+    const s = String(name || '').toLowerCase();
+    if (s.includes('tornad')) return '🌪️';
+    if (s.includes('orage') || s.includes('thunderstorm') || s.includes('severe')) return '⛈️';
+    if (s.includes('flood') || s.includes('inondation')) return '🌊';
+    if (s.includes('blizzard') || s.includes('hiver') || s.includes('winter') || s.includes('snow') || s.includes('neige') || s.includes('verglas')) return '❄️';
+    if (s.includes('amber') || s.includes('urgence')) return '🚨';
+    return '⚠️';
+  }
+
+  function formatRuleMode(mode, until) {
+    switch (mode) {
+      case 'instance': return 'Current Alert Only';
+      case 'type-active': return 'Current Storm Event';
+      case 'type-always': return 'Always Blocked';
+      case 'type-timed': {
+        if (!until) return 'Temporarily Muted';
+        const mins = Math.max(1, Math.round((until - Date.now()) / 60000));
+        if (mins < 60) return `Muted for ${mins}m`;
+        const hours = (mins / 60).toFixed(1);
+        return `Muted (${hours}h remaining)`;
+      }
+      default: return mode || 'Blocked';
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderActiveAlertsUI(data) {
+    if (!data) return;
+    lastActiveAlertsData = data;
+    const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+    const rules = Array.isArray(data.rules) ? data.rules : [];
+
+    const countEl = document.getElementById('active-alerts-count');
+    const dotEl = document.getElementById('active-alerts-indicator');
+    const container = document.getElementById('active-alerts-container');
+    const rulesBadge = document.getElementById('rules-count-badge');
+
+    if (rulesBadge) rulesBadge.textContent = `(${rules.length})`;
+
+    const liveAlerts = alerts.filter(a => !a.blockedBy);
+
+    if (countEl) {
+      countEl.textContent = `${alerts.length} Detected (${liveAlerts.length} broadcasting)`;
+    }
+
+    if (dotEl) {
+      if (liveAlerts.length > 0) {
+        dotEl.classList.add('has-active');
+      } else {
+        dotEl.classList.remove('has-active');
+      }
+    }
+
+    if (!container) return;
+
+    if (alerts.length === 0) {
+      container.innerHTML = `
+        <div class="empty-alerts-placeholder">
+          <span>🟢 No active weather alerts detected for monitored locations.</span>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = '';
+    alerts.forEach(alert => {
+      const isBlocked = !!alert.blockedBy;
+      const item = document.createElement('div');
+      item.className = `active-alert-item ${isBlocked ? 'alert-suppressed' : 'alert-broadcasting'}`;
+
+      const icon = getAlertIcon(alert.name);
+      const badgeHtml = isBlocked
+        ? `<span class="alert-badge-suppressed">SUPPRESSED (${formatRuleMode(alert.blockedBy.mode, alert.blockedBy.until)})</span>`
+        : `<span class="alert-badge-live">BROADCASTING LIVE</span>`;
+
+      const safeKey = encodeURIComponent(alert.key || '');
+      const safeName = encodeURIComponent(alert.name || '');
+
+      const actionBtnHtml = isBlocked
+        ? `<button class="touch-btn btn-subtle btn-sm btn-action-unblock" data-rule-id="${alert.blockedBy.id || ''}" style="white-space: nowrap;">Unblock / Restore</button>`
+        : `<button class="touch-btn btn-danger btn-sm btn-action-dismiss" data-key="${safeKey}" data-name="${safeName}" style="white-space: nowrap;">Remove / Filter ▾</button>`;
+
+      item.innerHTML = `
+        <div class="active-alert-meta">
+          <div class="active-alert-title-row">
+            <span style="font-size: 16px;">${icon}</span>
+            <span class="alert-event-name">${escapeHtml(alert.name)}</span>
+            ${badgeHtml}
+          </div>
+          ${alert.cityName ? `<div class="alert-city-text">📍 Sectors: ${escapeHtml(alert.cityName)}</div>` : ''}
+          ${alert.description ? `<div class="alert-desc-snippet">${escapeHtml(alert.description)}</div>` : ''}
+        </div>
+        <div style="flex-shrink: 0;">
+          ${actionBtnHtml}
+        </div>
+      `;
+
+      container.appendChild(item);
+    });
+
+    // Wire up buttons
+    container.querySelectorAll('.btn-action-dismiss').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        touchFeedback();
+        const key = decodeURIComponent(btn.getAttribute('data-key') || '');
+        const target = alerts.find(a => a.key === key) || { key, name: decodeURIComponent(btn.getAttribute('data-name') || '') };
+        openAlertRemoveModal(target);
+      });
+    });
+
+    container.querySelectorAll('.btn-action-unblock').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        touchFeedback();
+        const ruleId = btn.getAttribute('data-rule-id');
+        if (ruleId) unblockRule(ruleId);
+      });
+    });
+  }
+
+  function openAlertRemoveModal(alert) {
+    selectedAlertForSuppression = alert;
+    const modal = document.getElementById('alert-remove-modal');
+    if (!modal) return;
+
+    const nameEl = document.getElementById('modal-alert-name');
+    const cityEl = document.getElementById('modal-alert-city');
+    const descEl = document.getElementById('modal-alert-desc');
+    const badgeEl = document.getElementById('modal-alert-badge');
+
+    if (nameEl) nameEl.textContent = alert.name || 'Weather Alert';
+    if (cityEl) cityEl.textContent = alert.cityName ? `📍 Sectors: ${alert.cityName}` : '';
+    if (descEl) descEl.textContent = alert.description || alert.headline || 'No description provided';
+    if (badgeEl) badgeEl.textContent = alert.severe ? 'SEVERE ALERT' : 'ACTIVE ALERT';
+
+    modal.showModal();
+  }
+
+  async function applyAlertSuppression(choice) {
+    if (!selectedAlertForSuppression) return;
+    touchFeedback();
+
+    let payload = {
+      mode: 'instance',
+      key: selectedAlertForSuppression.key,
+      name: selectedAlertForSuppression.name
+    };
+
+    if (choice === 'type-active') {
+      payload = { mode: 'type-active', name: selectedAlertForSuppression.name };
+    } else if (choice === 'type-always') {
+      payload = { mode: 'type-always', name: selectedAlertForSuppression.name };
+    } else if (choice === 'type-timed-6') {
+      payload = { mode: 'type-timed', name: selectedAlertForSuppression.name, hours: 6 };
+    } else if (choice === 'type-timed-24') {
+      payload = { mode: 'type-timed', name: selectedAlertForSuppression.name, hours: 24 };
+    }
+
+    try {
+      const base = getApiBaseUrl();
+      const res = await fetch(`${base}/api/alerts/suppress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to suppress alert');
+
+      document.getElementById('alert-remove-modal')?.close();
+      showToast(`Rule applied: ${formatRuleMode(payload.mode)} for "${selectedAlertForSuppression.name}"`);
+      await fetchActiveAlerts();
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  }
+
+  async function unblockRule(ruleId) {
+    try {
+      const base = getApiBaseUrl();
+      const res = await fetch(`${base}/api/alerts/suppress/${encodeURIComponent(ruleId)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to remove rule');
+
+      showToast('Suppression rule removed. Alert restored.');
+      await fetchActiveAlerts();
+    } catch (e) {
+      showToast(e.message, true);
+    }
+  }
+
+  async function fetchActiveAlerts() {
+    try {
+      const base = getApiBaseUrl();
+      const res = await fetch(`${base}/api/alerts/active?t=${Date.now()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      renderActiveAlertsUI(data);
+    } catch (e) {}
+  }
+
+  function openAlertRulesModal() {
+    touchFeedback();
+    const modal = document.getElementById('alert-rules-modal');
+    const container = document.getElementById('rules-list-container');
+    if (!modal || !container) return;
+
+    const rules = lastActiveAlertsData.rules || [];
+    if (rules.length === 0) {
+      container.innerHTML = '<p style="color: var(--muted); text-align: center; padding: 24px;">No active alert suppression rules configured.</p>';
+    } else {
+      container.innerHTML = '';
+      rules.forEach(rule => {
+        const item = document.createElement('div');
+        item.className = 'rule-item-card';
+
+        const label = rule.label || rule.type || rule.key;
+        const modeDesc = formatRuleMode(rule.mode, rule.until);
+
+        item.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="stat-badge" style="font-size: 10px;">${rule.mode.toUpperCase()}</span>
+              <span style="font-weight: 700; color: #fff;">${escapeHtml(label)}</span>
+            </div>
+            <span style="font-size: 11px; color: var(--cyan);">${modeDesc}</span>
+          </div>
+          <button class="touch-btn btn-danger btn-sm btn-delete-rule" data-id="${rule.id}">Delete</button>
+        `;
+        container.appendChild(item);
+      });
+
+      container.querySelectorAll('.btn-delete-rule').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          touchFeedback();
+          const id = btn.getAttribute('data-id');
+          await unblockRule(id);
+          openAlertRulesModal(); // re-render
+        });
+      });
+    }
+
+    modal.showModal();
   }
 
   function updateSystemStatsUI(sys) {
@@ -505,10 +774,49 @@
       document.getElementById('log-modal')?.close();
     });
 
+    // Active alerts & suppression
+    document.getElementById('btn-manage-rules')?.addEventListener('click', openAlertRulesModal);
+    document.getElementById('btn-close-rules-modal')?.addEventListener('click', () => {
+      touchFeedback();
+      document.getElementById('alert-rules-modal')?.close();
+    });
+    document.getElementById('btn-clear-all-rules')?.addEventListener('click', async () => {
+      touchFeedback();
+      try {
+        const base = getApiBaseUrl();
+        await fetch(`${base}/api/alerts/suppress/clear`, { method: 'POST' });
+        showToast('All suppression rules cleared.');
+        await fetchActiveAlerts();
+        openAlertRulesModal();
+      } catch (e) {
+        showToast(e.message, true);
+      }
+    });
+
+    document.getElementById('btn-refresh-alerts')?.addEventListener('click', () => {
+      touchFeedback();
+      fetchActiveAlerts();
+      showToast('Alert feed refreshed.');
+    });
+
+    document.querySelectorAll('#alert-remove-modal .alert-option-btn[data-choice]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const choice = btn.getAttribute('data-choice');
+        applyAlertSuppression(choice);
+      });
+    });
+
+    document.getElementById('btn-cancel-alert-remove')?.addEventListener('click', () => {
+      touchFeedback();
+      document.getElementById('alert-remove-modal')?.close();
+    });
+
     // Initial load & intervals
     refreshStatus();
+    fetchActiveAlerts();
     fetchLogs();
     setInterval(refreshStatus, 2000);
+    setInterval(fetchActiveAlerts, 4000);
     setInterval(fetchLogs, 4000);
   }
 

@@ -136,6 +136,18 @@ app.all('/api/alert/trigger', (req, res) => {
         duration: duration > 0 ? duration : undefined,
         timestamp: Date.now()
     };
+    lastAlertReport = {
+        reportedAt: Date.now(),
+        alerts: [{
+            key: `${type}|simulation`,
+            name: type,
+            description: `Simulation alert test for ${type}.`,
+            cityName: "Simulation Test",
+            priority: 25,
+            severe: true,
+            color: 'red'
+        }]
+    };
     logger.alert(`Triggered alert test: "${type}" (crawl: ${includeCrawl}${duration > 0 ? `, duration: ${duration}s` : ''})`);
     res.json({ success: true, message: `Alert test triggered: ${type}`, alert: currentAlertCommand });
 });
@@ -151,6 +163,18 @@ app.all('/api/alert/quebec', (req, res) => {
         includeCrawl: includeCrawl,
         duration: duration > 0 ? duration : undefined,
         timestamp: Date.now()
+    };
+    lastAlertReport = {
+        reportedAt: Date.now(),
+        alerts: [{
+            key: `quebec|simulation`,
+            name: "Alerte Québec En Alerte",
+            description: "CECI EST UN TEST DU SYSTÈME QUÉBEC EN ALERTE.",
+            cityName: "Québec, QC",
+            priority: 10,
+            severe: true,
+            color: 'red'
+        }]
     };
     logger.alert(`Triggered Québec En Alerte test${duration > 0 ? ` (duration: ${duration}s)` : ''}`);
     res.json({ success: true, message: 'Québec En Alerte test triggered', alert: currentAlertCommand });
@@ -168,6 +192,14 @@ app.all('/api/alert/all', (req, res) => {
         duration: duration > 0 ? duration : undefined,
         timestamp: Date.now()
     };
+    lastAlertReport = {
+        reportedAt: Date.now(),
+        alerts: [
+            { key: "Tornado Warning|sim", name: "Tornado Warning", cityName: "Montréal", priority: 1, severe: true, color: 'red', description: "Simulation Tornado Warning" },
+            { key: "Severe Thunderstorm Warning|sim", name: "Severe Thunderstorm Warning", cityName: "Laval", priority: 2, severe: true, color: 'red', description: "Simulation Severe Storm" },
+            { key: "Flash Flood Warning|sim", name: "Flash Flood Warning", cityName: "Longueuil", priority: 3, severe: true, color: 'red', description: "Simulation Flood" }
+        ]
+    };
     logger.alert(`Triggered All Alerts test${duration > 0 ? ` (duration: ${duration}s)` : ''}`);
     res.json({ success: true, message: 'All alerts test triggered', alert: currentAlertCommand });
 });
@@ -180,8 +212,134 @@ app.all('/api/alert/clear', (req, res) => {
         includeCrawl: false,
         timestamp: Date.now()
     };
+    lastAlertReport = {
+        reportedAt: Date.now(),
+        alerts: []
+    };
     logger.alert('Cleared active alert test', logger.c.green('✓'));
     res.json({ success: true, message: 'Alert test cleared', alert: currentAlertCommand });
+});
+
+// -----------------------------------------------------------------------------
+// Live alert list + suppression rules
+// The display page reports every alert it fetched (before filtering) to
+// /api/alerts/report and receives the suppression rules to apply.
+// Rule modes:
+//   instance     - hide this exact alert only; new/updated alerts still show
+//   type-active  - hide this type (incl. updates/re-issues) until no alert of
+//                  this type is active anymore, then the rule removes itself
+//   type-timed   - hide this type until `until` (ms timestamp)
+//   type-always  - always block this type
+// -----------------------------------------------------------------------------
+const ALERT_FILTERS_PATH = path.join(__dirname, 'alert-filters.json');
+let alertFilterState = { version: 1, rules: [] };
+try {
+    const saved = JSON.parse(fs.readFileSync(ALERT_FILTERS_PATH, 'utf8'));
+    if (saved && Array.isArray(saved.rules)) alertFilterState = { version: Date.now(), rules: saved.rules };
+} catch (e) {}
+let lastAlertReport = { alerts: [], reportedAt: 0 };
+
+const ALERT_RULE_MODES = ['instance', 'type-active', 'type-timed', 'type-always'];
+const normType = (s) => String(s || '').trim().toLowerCase();
+
+function saveAlertFilters() {
+    alertFilterState.version = Date.now();
+    try {
+        fs.writeFileSync(ALERT_FILTERS_PATH, JSON.stringify({ rules: alertFilterState.rules }, null, 2));
+    } catch (e) {
+        logger.alert(`Could not save alert filters: ${e.message}`);
+    }
+}
+
+function pruneAlertRules(reportedAlerts) {
+    const now = Date.now();
+    const before = alertFilterState.rules.length;
+    alertFilterState.rules = alertFilterState.rules.filter((r) => {
+        if (r.mode === 'type-timed') return r.until > now;
+        if (!reportedAlerts) return true;
+        if (r.mode === 'instance') return reportedAlerts.some((a) => a.key === r.key);
+        if (r.mode === 'type-active') return reportedAlerts.some((a) => normType(a.name) === normType(r.type));
+        return true;
+    });
+    if (alertFilterState.rules.length !== before) saveAlertFilters();
+}
+
+function findBlockingRule(alert) {
+    const now = Date.now();
+    return alertFilterState.rules.find((r) => {
+        if (r.mode === 'instance') return r.key === alert.key;
+        if (r.mode === 'type-timed' && r.until <= now) return false;
+        return normType(r.type) === normType(alert.name);
+    }) || null;
+}
+
+function alertFilterPayload() {
+    return { version: alertFilterState.version, rules: alertFilterState.rules };
+}
+
+app.get('/api/alerts/filters', (req, res) => {
+    pruneAlertRules(null);
+    res.json(alertFilterPayload());
+});
+
+app.post('/api/alerts/report', (req, res) => {
+    const alerts = Array.isArray(req.body && req.body.alerts) ? req.body.alerts.slice(0, 200) : [];
+    lastAlertReport = {
+        reportedAt: Date.now(),
+        alerts: alerts.map((a) => ({
+            key: String(a.key || ''),
+            name: String(a.name || ''),
+            description: String(a.description || '').slice(0, 2000),
+            cityName: String(a.cityName || ''),
+            expiresAt: Number(a.expiresAt) || null,
+            priority: Number(a.priority) || 0,
+            severe: !!a.severe,
+            color: a.color || ''
+        }))
+    };
+    pruneAlertRules(lastAlertReport.alerts);
+    res.json(alertFilterPayload());
+});
+
+app.get('/api/alerts/active', (req, res) => {
+    pruneAlertRules(null);
+    res.json({
+        reportedAt: lastAlertReport.reportedAt,
+        alerts: lastAlertReport.alerts.map((a) => ({ ...a, blockedBy: findBlockingRule(a) })),
+        rules: alertFilterState.rules
+    });
+});
+
+app.post('/api/alerts/suppress', (req, res) => {
+    const { mode, key, name, hours } = req.body || {};
+    if (!ALERT_RULE_MODES.includes(mode)) return res.status(400).json({ error: 'Invalid mode' });
+    if (mode === 'instance' && !key) return res.status(400).json({ error: 'Missing alert key' });
+    if (mode !== 'instance' && !name) return res.status(400).json({ error: 'Missing alert type' });
+
+    const rule = { id: `r${Date.now()}${Math.floor(Math.random() * 1000)}`, mode, createdAt: Date.now() };
+    if (mode === 'instance') { rule.key = String(key); rule.label = String(name || key); }
+    else rule.type = String(name);
+    if (mode === 'type-timed') rule.until = Date.now() + Math.max(0.25, Number(hours) || 6) * 3600 * 1000;
+
+    // Replace any existing rule for the same target
+    alertFilterState.rules = alertFilterState.rules.filter((r) =>
+        mode === 'instance' ? r.key !== rule.key : normType(r.type) !== normType(rule.type));
+    alertFilterState.rules.push(rule);
+    saveAlertFilters();
+    logger.alert(`Alert suppression added: ${mode} → ${rule.type || rule.label}`);
+    res.json({ success: true, rule, ...alertFilterPayload() });
+});
+
+app.delete('/api/alerts/suppress/:id', (req, res) => {
+    alertFilterState.rules = alertFilterState.rules.filter((r) => r.id !== req.params.id);
+    saveAlertFilters();
+    res.json({ success: true, ...alertFilterPayload() });
+});
+
+app.post('/api/alerts/suppress/clear', (req, res) => {
+    alertFilterState.rules = [];
+    saveAlertFilters();
+    res.json({ success: true, ...alertFilterPayload() });
 });
 
 let currentForecastCommand = {
@@ -352,10 +510,14 @@ app.use(express.static(path.join(__dirname, 'webroot'), {
     }
 }));
 
-app.listen(port, '0.0.0.0', () => {
-    if (!process.env.INTELLISTAR_IPTV_RUNNER) {
-        logger.printBanner();
-    }
-    logger.server(`Webroot online at http://127.0.0.1:${port}`);
-    logger.stream(`HLS stream cache mounted at ${hlsDirectory}`);
-});
+if (require.main === module) {
+    app.listen(port, '0.0.0.0', () => {
+        if (!process.env.INTELLISTAR_IPTV_RUNNER) {
+            logger.printBanner();
+        }
+        logger.server(`Webroot online at http://127.0.0.1:${port}`);
+        logger.stream(`HLS stream cache mounted at ${hlsDirectory}`);
+    });
+}
+
+module.exports = app;

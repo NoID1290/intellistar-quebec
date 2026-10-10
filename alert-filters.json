@@ -1,0 +1,11 @@
+{
+  "rules": [
+    {
+      "id": "r1791667456006434",
+      "mode": "type-timed",
+      "createdAt": 1791667456006,
+      "type": "Avis de gel",
+      "until": 1791689056006
+    }
+  ]
+}

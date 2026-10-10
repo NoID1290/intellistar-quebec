@@ -170,6 +170,33 @@
           </div>
         </div>
 
+        <!-- Active Fetched Alerts -->
+        <div class="active-alerts-header-row">
+          <div class="active-alerts-title">
+            <span class="active-dot-status" id="active-alerts-indicator"></span>
+            <span>Active Fetched Alerts</span>
+            <span class="stat-badge" id="active-alerts-count">0 Detected</span>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-manage-rules" class="pill-btn" type="button" title="Manage alert suppression rules">
+              <span>🛡️ Rules</span> <span id="rules-count-badge" style="opacity: 0.8;">(0)</span>
+            </button>
+            <button id="btn-refresh-alerts" class="pill-btn" type="button" title="Refresh alert feed">
+              <span>🔄 Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="active-alerts-container" class="active-alerts-list">
+          <div class="empty-alerts-placeholder">
+            <span>🟢 No active weather alerts detected for monitored locations.</span>
+          </div>
+        </div>
+
+        <div class="alert-section-divider">
+          <span>Simulation & Test Triggers</span>
+        </div>
+
         <div class="alerts-grid">
           <button class="alert-card-btn alert-tornado" data-alert="Tornado Warning">
             <span class="alert-icon">🌪️</span>
@@ -440,6 +467,80 @@
     </div>
     <div class="modal-actions">
       <button id="btn-close-log-modal" class="touch-btn btn-subtle" style="min-height: 44px;">Close</button>
+    </div>
+  </dialog>
+
+  <!-- Weather Alert Removal / Suppression Modal -->
+  <dialog id="alert-remove-modal" class="touch-modal" style="width: min(640px, 94vw);">
+    <div class="modal-header">
+      <span>⚠️</span> Remove Weather Alert
+    </div>
+    <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+      <!-- Target Alert Card -->
+      <div id="modal-alert-summary" style="padding: 12px 14px; background: rgba(8, 17, 31, 0.8); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <span id="modal-alert-name" style="font-size: 14px; font-weight: 800; color: #fff;">Alert Name</span>
+          <span id="modal-alert-badge" class="alert-badge-live">ACTIVE</span>
+        </div>
+        <div id="modal-alert-city" style="font-size: 11px; color: var(--cyan); font-weight: 600;">Cities: Montréal</div>
+        <div id="modal-alert-desc" style="font-size: 11px; color: var(--muted); line-height: 1.4; max-height: 70px; overflow-y: auto;">Alert description text</div>
+      </div>
+
+      <div style="font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px;">
+        Choose Removal & Suppression Option:
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- Choice 1: Current alert only -->
+        <button class="alert-option-btn" data-choice="instance">
+          <span class="option-title">⚡ Current alert only (new alert not considered)</span>
+          <span class="option-sub">Hides this exact alert occurrence now. If Environment Canada or TWC issues an update or new alert, it will still broadcast.</span>
+        </button>
+
+        <!-- Choice 2: Future current alert of this type -->
+        <button class="alert-option-btn" data-choice="type-active">
+          <span class="option-title">⛈️ Future current alert of this warning type (active event)</span>
+          <span class="option-sub">Suppresses this warning type while the current event is active (including updates). Once the storm passes and alerts clear, the rule auto-removes itself.</span>
+        </button>
+
+        <!-- Choice 3: Always block -->
+        <button class="alert-option-btn" data-choice="type-always">
+          <span class="option-title">⛔ Always block this type of alert</span>
+          <span class="option-sub">Permanently blocks this warning type from ever showing on the broadcast (persisted in alert-filters.json).</span>
+        </button>
+
+        <!-- Choice 4: Mute 6h -->
+        <button class="alert-option-btn" data-choice="type-timed-6">
+          <span class="option-title">⏱️ Mute this warning type for 6 hours</span>
+          <span class="option-sub">Temporarily silences alerts of this warning type for the next 6 hours.</span>
+        </button>
+
+        <!-- Choice 5: Mute 24h -->
+        <button class="alert-option-btn" data-choice="type-timed-24">
+          <span class="option-title">⏱️ Mute this warning type for 24 hours</span>
+          <span class="option-sub">Temporarily silences alerts of this warning type for 24 hours.</span>
+        </button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-cancel-alert-remove" class="touch-btn btn-subtle" style="min-height: 44px;">Cancel</button>
+    </div>
+  </dialog>
+
+  <!-- Active Alert Suppression Rules Modal -->
+  <dialog id="alert-rules-modal" class="touch-modal" style="width: min(680px, 94vw);">
+    <div class="modal-header">
+      <span>🛡️</span> Active Alert Suppression Rules
+    </div>
+    <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+      <p style="font-size: 12px; color: var(--muted);">The following rules prevent matching alerts from being displayed on bulletin slides or LDL crawls:</p>
+      <div id="rules-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto;">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+    <div class="modal-actions" style="justify-content: space-between;">
+      <button id="btn-clear-all-rules" class="touch-btn btn-danger" style="min-height: 44px;">Clear All Rules</button>
+      <button id="btn-close-rules-modal" class="touch-btn btn-subtle" style="min-height: 44px;">Close</button>
     </div>
   </dialog>
 

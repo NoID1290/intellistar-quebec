@@ -589,6 +589,10 @@ function clearActiveAlerts() {
     if (typeof refreshSlidesForAlertTest === "function") {
         refreshSlidesForAlertTest();
     }
+    if (typeof reportFetchedAlerts === "function" && Array.isArray(lastRawFetchedAlerts) && lastRawFetchedAlerts.length > 0) {
+        lastRawFetchedAlerts = [];
+        reportFetchedAlerts([]);
+    }
 }
 window.clearActiveAlerts = clearActiveAlerts;
 
@@ -622,8 +626,13 @@ function applyAlertTestSet(alertNames, includeCrawl, expiresAt) {
         alerts.push(buildTestBulletinAlert(selectedNames[i], i, expiresAt));
     }
 
-    weatherInfo.bulletin.alerts = alerts.sort((a, b) => a.priority - b.priority);
+    var sorted = alerts.sort((a, b) => a.priority - b.priority);
+    weatherInfo.bulletin.alerts = sorted;
     markFeedSuccess("alerts");
+    if (typeof reportFetchedAlerts === "function") {
+        lastRawFetchedAlerts = sorted;
+        reportFetchedAlerts(sorted);
+    }
 }
 
 function getRuntimeAlertTestState() {
@@ -3560,31 +3569,7 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
         return alert;
     }).sort((a, b) => a.priority - b.priority);
 
-    weatherInfo.bulletin.alerts = nextAlerts;
-    if (nextAlerts.length > 0) {
-        weatherInfo.specialModes.bulletin = true;
-        weatherInfo.bulletin.enabled = true;
-        var top = nextAlerts[0];
-        weatherInfo.bulletin.crawlAlert.enabled = true;
-        weatherInfo.bulletin.crawlAlert.alert = {
-            name: top.name,
-            code: top.significance,
-            type: "Alert",
-            significance: top.significance,
-            description: top.description || top.headline,
-            severe: top.severe,
-            color: top.color,
-            priority: top.priority,
-            detailKey: top.detailKey,
-            expiresAt: top.expiresAt,
-            cityName: top.cityName,
-            areas: top.areas,
-            areaText: top.areaText
-        };
-        setTimeout(startAlertCrawl, 1000);
-    } else {
-        clearActiveAlerts();
-    }
+    await applyFetchedAlerts(nextAlerts);
     return true;
 }
 
@@ -3789,33 +3774,120 @@ async function grabAlerts() {
         return alert;
     }).sort((a, b) => a.priority - b.priority);
 
-    weatherInfo.bulletin.alerts = nextAlerts;
-    if (weatherInfo.bulletin.alerts.length > 0) {
+    await applyFetchedAlerts(nextAlerts);
+}
+
+// ---------------------------------------------------------------------------
+// Alert suppression (managed from the launcher UI "Active Alerts" list)
+// ---------------------------------------------------------------------------
+var alertFilterRules = [];
+var alertFilterVersion = 0;
+var lastRawFetchedAlerts = null;
+
+function getAlertInstanceKey(alert) {
+    return `${alert.name}|${alert.detailKey || alert.description || alert.headline || ""}`;
+}
+
+function isAlertSuppressed(alert) {
+    var now = Date.now();
+    var type = String(alert.name || "").trim().toLowerCase();
+    var key = getAlertInstanceKey(alert);
+    return alertFilterRules.some((r) => {
+        if (r.mode === "instance") return r.key === key;
+        if (r.mode === "type-timed" && r.until <= now) return false;
+        return String(r.type || "").trim().toLowerCase() === type;
+    });
+}
+
+function setAlertFilterPayload(data) {
+    if (data && Array.isArray(data.rules)) {
+        alertFilterRules = data.rules;
+        alertFilterVersion = data.version || 0;
+    }
+}
+
+async function reportFetchedAlerts(alerts) {
+    try {
+        const res = await fetch("/api/alerts/report", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                alerts: alerts.map((a) => ({
+                    key: getAlertInstanceKey(a),
+                    name: a.name,
+                    description: a.description || a.headline || "",
+                    cityName: a.cityName,
+                    expiresAt: a.expiresAt,
+                    priority: a.priority,
+                    severe: a.severe,
+                    color: a.color
+                }))
+            })
+        });
+        if (res.ok) setAlertFilterPayload(await res.json());
+    } catch (e) {}
+}
+
+function renderFilteredAlerts() {
+    if (!Array.isArray(lastRawFetchedAlerts)) return;
+    var visible = lastRawFetchedAlerts.filter((a) => !isAlertSuppressed(a));
+    var hidden = lastRawFetchedAlerts.length - visible.length;
+    if (hidden > 0) console.log(`[Alerts] ${hidden} alert(s) hidden by suppression rules.`);
+
+    weatherInfo.bulletin.alerts = visible;
+    if (visible.length > 0) {
         weatherInfo.specialModes.bulletin = true;
         weatherInfo.bulletin.enabled = true;
-
-        var topAlert = nextAlerts[0];
+        var top = visible[0];
         weatherInfo.bulletin.crawlAlert.enabled = true;
         weatherInfo.bulletin.crawlAlert.alert = {
-            name: topAlert.name,
-            code: topAlert.significance,
+            name: top.name,
+            code: top.significance,
             type: "Alert",
-            significance: topAlert.significance,
-            description: topAlert.description || topAlert.headline,
-            severe: topAlert.severe,
-            priority: topAlert.priority,
-            color: topAlert.color,
-            detailKey: topAlert.detailKey,
-            expiresAt: topAlert.expiresAt,
-            cityName: topAlert.cityName,
-            areas: topAlert.areas,
-            areaText: topAlert.areaText
+            significance: top.significance,
+            description: top.description || top.headline,
+            severe: top.severe,
+            priority: top.priority,
+            color: top.color,
+            detailKey: top.detailKey,
+            expiresAt: top.expiresAt,
+            cityName: top.cityName,
+            areas: top.areas,
+            areaText: top.areaText
         };
         setTimeout(startAlertCrawl, 1000);
     } else {
         clearActiveAlerts();
     }
 }
+
+async function applyFetchedAlerts(nextAlerts) {
+    lastRawFetchedAlerts = nextAlerts;
+    await reportFetchedAlerts(nextAlerts);
+    renderFilteredAlerts();
+}
+
+// Re-apply immediately when rules change from the launcher (no refetch needed)
+function startAlertFilterListener() {
+    if (window._alertFilterListenerStarted) return;
+    window._alertFilterListenerStarted = true;
+    setInterval(async () => {
+        try {
+            const res = await fetch("/api/alerts/filters");
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data || data.version === alertFilterVersion) return;
+            setAlertFilterPayload(data);
+            if (applyAlertTestModeIfNeeded && typeof getRuntimeAlertTestState === "function") {
+                var st = getRuntimeAlertTestState();
+                if (st && st.enabled) return; // don't override a running alert test
+            }
+            renderFilteredAlerts();
+        } catch (e) {}
+    }, 3000);
+}
+startAlertFilterListener();
+
 function grabAlertCrawl(dKey) {
     weatherInfo.bulletin.crawlAlert.enabled = true;
     if (weatherInfo.bulletin.crawlAlert.alert != undefined) {

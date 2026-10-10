@@ -99,10 +99,11 @@ function createLauncherRouter(targetObsPort = obsPort) {
       isAppAlive = await probeApp(targetObsPort);
     } catch (e) {}
 
-    const [forecast, alert, message] = await Promise.all([
+    const [forecast, alert, message, activeAlerts] = await Promise.all([
       fetchLocal('/api/forecast'),
       fetchLocal('/api/alert'),
       fetchLocal('/api/message'),
+      fetchLocal('/api/alerts/active'),
     ]);
 
     let interpolation = true;
@@ -120,6 +121,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
       app: { health: isAppAlive ? 'ready' : 'unavailable', port: targetObsPort },
       forecast: forecast || { state: 'idle' },
       alert: alert || { action: 'none' },
+      activeAlerts: activeAlerts || { alerts: [], rules: [] },
       message: message || { action: 'none' },
       system: getSystemStats(__dirname),
       encoding: getEncodingPreset(__dirname),
