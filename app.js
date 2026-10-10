@@ -15,6 +15,15 @@ app.get('/api/health', (req, res) => {
     res.json({ service: 'intellistar', version: 1 });
 });
 
+app.all(['/api/app/stop', '/api/app/shutdown'], (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, message: 'IntelliSTAR app server shutting down...' });
+    logger.info('Received remote shutdown request via /api/app/stop. Exiting...');
+    setTimeout(() => {
+        process.exit(0);
+    }, 100);
+});
+
 const hlsDirectory = resolveHlsDirectory(streamConfig);
 if (!fs.existsSync(hlsDirectory)) {
     fs.mkdirSync(hlsDirectory, { recursive: true });
@@ -511,13 +520,26 @@ app.use(express.static(path.join(__dirname, 'webroot'), {
 }));
 
 if (require.main === module) {
-    app.listen(port, '0.0.0.0', () => {
-        if (!process.env.INTELLISTAR_IPTV_RUNNER) {
-            logger.printBanner();
-        }
-        logger.server(`Webroot online at http://127.0.0.1:${port}`);
-        logger.stream(`HLS stream cache mounted at ${hlsDirectory}`);
-    });
+    (async () => {
+        try {
+            const probe = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(500) });
+            if (probe.ok) {
+                const data = await probe.json();
+                if (data && data.standby) {
+                    await fetch(`http://127.0.0.1:${port}/api/standby/yield`, { signal: AbortSignal.timeout(800) });
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+            }
+        } catch (e) {}
+
+        app.listen(port, '0.0.0.0', () => {
+            if (!process.env.INTELLISTAR_IPTV_RUNNER) {
+                logger.printBanner();
+            }
+            logger.server(`Webroot online at http://127.0.0.1:${port}`);
+            logger.stream(`HLS stream cache mounted at ${hlsDirectory}`);
+        });
+    })();
 }
 
 module.exports = app;

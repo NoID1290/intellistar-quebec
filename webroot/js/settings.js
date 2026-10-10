@@ -359,15 +359,104 @@ document.addEventListener('DOMContentLoaded', async () =>{
 })
 
 let lastProcessedForecastCommandId = null;
+let consecutiveOfflineCount = 0;
+let isStandbyOfflineActive = false;
+
+function showStandbyScreen() {
+    if (isStandbyOfflineActive) return;
+    isStandbyOfflineActive = true;
+    console.log('[Standby] App offline detected. Showing standby blackout screen.');
+
+    // 1. Immediately hide color bars, settings menu, and presentation
+    $('#colorbar-screen').hide();
+    $('#settings-menu').css('visibility', 'hidden');
+
+    // 2. Stop 1000 Hz calibration test tone and narration audio
+    if (typeof stopTestTone === 'function') {
+        try { stopTestTone(); } catch (e) {}
+    }
+    if (typeof bootClockInterval !== 'undefined' && bootClockInterval) {
+        try { clearInterval(bootClockInterval); bootClockInterval = null; } catch (e) {}
+    }
+    if (typeof bootToneOsc !== 'undefined' && bootToneOsc) {
+        try { bootToneOsc.stop(); bootToneOsc.disconnect(); bootToneOsc = null; } catch (e) {}
+    }
+    if (typeof bootToneGain !== 'undefined' && bootToneGain) {
+        try { bootToneGain.disconnect(); bootToneGain = null; } catch (e) {}
+    }
+    if (typeof stopAudio === 'function') {
+        try { stopAudio(); } catch (e) {}
+    }
+    if (window._testOscillator) {
+        try { window._testOscillator.stop(); } catch (e) {}
+    }
+
+    // 3. Display full-screen black standby overlay (fixed, 100vw x 100vh)
+    $('#standby-offline-screen').css({
+        display: 'flex',
+        transform: 'none',
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        right: '0',
+        bottom: '0',
+        width: '100vw',
+        height: '100vh',
+        zIndex: '999999'
+    });
+}
+
+function hideStandbyScreen() {
+    if (!isStandbyOfflineActive) return;
+    isStandbyOfflineActive = false;
+    console.log('[Standby] App reconnected. Hiding standby blackout screen.');
+    $('#standby-offline-screen').hide();
+
+    // Check if we are in IPTV initialization mode (with ?iptv or ?boot)
+    const isIptvMode = window.location.search.includes('iptv') || window.location.search.includes('boot');
+    if (isIptvMode && (!window.isWeatherDataReady || (document.getElementById('startbutton') && document.getElementById('startbutton').style.pointerEvents === 'none'))) {
+        $('#colorbar-screen').show();
+        if (typeof startTestTone === 'function') {
+            try { startTestTone(); } catch (e) {}
+        }
+    }
+
+    if (typeof window.scaleWindow === 'function') {
+        window.scaleWindow();
+    }
+}
+
 function startForecastCommandListener() {
     if (window._forecastCommandListenerStarted) return;
     window._forecastCommandListenerStarted = true;
     setInterval(async () => {
         try {
-            const res = await fetch('/api/forecast');
-            if (!res.ok) return;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 1200);
+            const res = await fetch('/api/forecast', { signal: controller.signal });
+            clearTimeout(timer);
+
+            if (!res.ok) {
+                consecutiveOfflineCount++;
+                if (consecutiveOfflineCount >= 2) showStandbyScreen();
+                return;
+            }
             const data = await res.json();
-            if (!data) return;
+            if (!data) {
+                consecutiveOfflineCount++;
+                if (consecutiveOfflineCount >= 2) showStandbyScreen();
+                return;
+            }
+
+            if (data.standby) {
+                showStandbyScreen();
+                return;
+            }
+
+            consecutiveOfflineCount = 0;
+            if (isStandbyOfflineActive) {
+                hideStandbyScreen();
+            }
 
             // On first poll, record baseline ID without executing stale command
             if (lastProcessedForecastCommandId === null) {
@@ -386,7 +475,12 @@ function startForecastCommandListener() {
             } else if (data.action === 'stop') {
                 window.stopForecast();
             }
-        } catch (e) {}
+        } catch (e) {
+            consecutiveOfflineCount++;
+            if (consecutiveOfflineCount >= 2) {
+                showStandbyScreen();
+            }
+        }
     }, 1000);
 }
 

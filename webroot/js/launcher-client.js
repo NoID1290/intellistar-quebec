@@ -112,7 +112,23 @@
 
     if (badge && badgeText) {
       badge.className = 'status-badge ' + (phase === 'running' ? 'running' : (phase === 'starting' ? 'starting' : (obs.error ? 'error' : 'stopped')));
-      badgeText.textContent = phase.toUpperCase() + (obs.output ? ` (${obs.output.toUpperCase()})` : '');
+      badgeText.textContent = 'OBS: ' + phase.toUpperCase() + (obs.output ? ` (${obs.output.toUpperCase()})` : '');
+    }
+
+    const appBadge = document.getElementById('header-app-badge');
+    const appBadgeText = document.getElementById('app-status-text');
+    if (appBadge && appBadgeText) {
+      const appHealth = data.app?.health || 'unavailable';
+      if (appHealth === 'ready') {
+        appBadge.className = 'status-badge running';
+        appBadgeText.textContent = 'APP: ONLINE (PORT ' + (data.app?.port || 7070) + ')';
+      } else if (appHealth === 'standby' || data.obs?.app?.standby) {
+        appBadge.className = 'status-badge starting';
+        appBadgeText.textContent = 'APP: STANDBY (ENCODER LIVE)';
+      } else {
+        appBadge.className = 'status-badge stopped';
+        appBadgeText.textContent = 'APP: OFFLINE';
+      }
     }
 
     if (forecastStateEl) {
@@ -572,6 +588,9 @@
     document.getElementById('btn-start-ndi')?.addEventListener('click', () => apiAction('start-obs', { output: 'ndi' }));
     document.getElementById('btn-start-youtube')?.addEventListener('click', () => apiAction('start-obs', { output: 'youtube' }));
     document.getElementById('btn-start-dual')?.addEventListener('click', () => apiAction('start-obs', { output: 'dual' }));
+    document.getElementById('btn-start-app')?.addEventListener('click', () => apiAction('start-app'));
+    document.getElementById('btn-stop-app')?.addEventListener('click', () => apiAction('stop-app'));
+    document.getElementById('btn-restart-app')?.addEventListener('click', () => apiAction('restart-app'));
     
     // Stop broadcast confirmation
     const stopModal = document.getElementById('stop-modal');

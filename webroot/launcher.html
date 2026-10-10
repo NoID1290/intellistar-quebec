@@ -27,7 +27,11 @@
     <div class="header-status-group">
       <div id="header-status-badge" class="status-badge stopped">
         <span class="status-dot"></span>
-        <span id="status-text">CONNECTING...</span>
+        <span id="status-text">OBS: CONNECTING...</span>
+      </div>
+      <div id="header-app-badge" class="status-badge stopped">
+        <span class="status-dot"></span>
+        <span id="app-status-text">APP: DETECTING...</span>
       </div>
       <div id="network-pill" class="network-pill">
         Deck IP: <b>Detecting...</b>
@@ -86,6 +90,21 @@
           <button id="btn-start-dual" class="touch-btn btn-primary" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(217, 70, 239, 0.42)); border-color: rgba(217, 70, 239, 0.6);" title="Stream simultaneously to YouTube (RTMP) and HLS with 1 encoding pass">
             <span class="btn-icon">📡</span>
             <span>Start Dual (YT + HLS)</span>
+          </button>
+
+          <button id="btn-start-app" class="touch-btn btn-success" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.42)); border-color: rgba(16, 185, 129, 0.6);" title="Start IntelliSTAR web server">
+            <span class="btn-icon">⚡</span>
+            <span>Start IntelliSTAR</span>
+          </button>
+
+          <button id="btn-stop-app" class="touch-btn btn-warning" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.42)); border-color: rgba(245, 158, 11, 0.6);" title="Stop IntelliSTAR (OBS keeps streaming black screen/standby message)">
+            <span class="btn-icon">⏸</span>
+            <span>Stop IntelliSTAR</span>
+          </button>
+
+          <button id="btn-restart-app" class="touch-btn btn-subtle" title="Restart IntelliSTAR server cleanly without stopping broadcast">
+            <span class="btn-icon">🔄</span>
+            <span>Restart IntelliSTAR</span>
           </button>
 
           <button id="btn-forecast-start" class="touch-btn btn-success" title="Start weather forecast presentation">

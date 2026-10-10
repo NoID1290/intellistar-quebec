@@ -103,6 +103,25 @@
     <div id="blackscreen" class="container"
         style="position: absolute; z-index: 2000; background-color: black; display: none;">
     </div>
+    <div id="standby-offline-screen"
+        style="position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 999999; background-color: #000000; display: none; align-items: center; justify-content: center; flex-direction: column; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; margin: 0; padding: 0; transform: none !important;">
+        <div style="background: rgba(12, 18, 28, 0.94); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 14px; padding: 40px 52px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85); max-width: 760px;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px;">
+                <div style="width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 10px #f59e0b;"></div>
+                <span style="font-size: 18px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8;">INTELLISTAR</span>
+            </div>
+            <div style="font-size: 30px; font-weight: 800; letter-spacing: 1px; margin-bottom: 12px; color: #ffffff;">
+                SIGNAL EN ATTENTE
+            </div>
+            <div style="font-size: 16px; color: #cbd5e1; line-height: 1.5; margin-bottom: 20px;">
+                L'application météo est temporairement hors ligne.<br>
+                La diffusion de l'encodeur se poursuit normalement.
+            </div>
+            <div style="display: inline-block; font-size: 12px; font-weight: 600; color: #64748b; background: rgba(255,255,255,0.05); padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08);">
+                Reprise automatique dès le redémarrage...
+            </div>
+        </div>
+    </div>
     <div id="main">
         <div id="map-interactive-settings" style="display: none;">
             <button class="backbuttonmap" onclick="mapSettingsExit()" style="pointer-events: all;">Back</button>

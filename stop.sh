@@ -21,27 +21,40 @@ if [ -n "$PIDS" ]; then
     FOUND=1
 fi
 
-# 2. Stop any process listening on the target port
+# 2. Stop any process listening on the target port (preserve OBS encoder backend)
+kill_non_obs_pid() {
+    local pid="$1"
+    local cmd
+    cmd=$(tr '\0' ' ' < "/proc/${pid}/cmdline" 2>/dev/null || true)
+    if [[ "$cmd" =~ start-obs|stream-obs ]]; then
+        echo "  Preserving OBS encoder standby listener on port ${PORT} (PID: ${pid})."
+    else
+        echo "  Freeing port ${PORT} (PID: ${pid})..."
+        kill -9 "$pid" 2>/dev/null || true
+        FOUND=1
+    fi
+}
+
 if command -v fuser >/dev/null 2>&1; then
     PORT_PIDS=$(fuser "${PORT}/tcp" 2>/dev/null || true)
     if [ -n "$PORT_PIDS" ]; then
-        echo "Freeing port ${PORT} via fuser..."
-        fuser -k -n tcp "${PORT}" >/dev/null 2>&1 || true
-        FOUND=1
+        for pid in $PORT_PIDS; do
+            kill_non_obs_pid "$pid"
+        done
     fi
 elif command -v lsof >/dev/null 2>&1; then
     PORT_PIDS=$(lsof -ti ":${PORT}" 2>/dev/null || true)
     if [ -n "$PORT_PIDS" ]; then
-        echo "Freeing port ${PORT} (PID: $PORT_PIDS)..."
-        kill -9 $PORT_PIDS 2>/dev/null || true
-        FOUND=1
+        for pid in $PORT_PIDS; do
+            kill_non_obs_pid "$pid"
+        done
     fi
 elif command -v ss >/dev/null 2>&1; then
     PORT_PIDS=$(ss -lptn "sport = :${PORT}" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 || true)
     if [ -n "$PORT_PIDS" ]; then
-        echo "Freeing port ${PORT} (PID: $PORT_PIDS)..."
-        kill -9 $PORT_PIDS 2>/dev/null || true
-        FOUND=1
+        for pid in $PORT_PIDS; do
+            kill_non_obs_pid "$pid"
+        done
     fi
 fi
 

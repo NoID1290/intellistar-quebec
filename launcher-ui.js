@@ -79,6 +79,130 @@ function getLanIps() {
   return ips;
 }
 
+// Helper: find PIDs for running app.js on targetPort
+function findAppPids(targetPort = obsPort) {
+  try {
+    let pids = [];
+    try {
+      const portOut = execSync(`lsof -ti :${targetPort} 2>/dev/null || true`, { encoding: 'utf8' }).trim();
+      if (portOut) {
+        pids = portOut.split(/\s+/).map(s => parseInt(s.trim(), 10)).filter(p => !isNaN(p) && p !== process.pid);
+      }
+    } catch {}
+
+    if (pids.length > 0) {
+      const filtered = pids.filter(pid => {
+        try {
+          const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+          return cmd.includes('app.js') && !cmd.includes('start-obs') && !cmd.includes('stream-obs') && !cmd.includes('launcher');
+        } catch { return false; }
+      });
+      if (filtered.length > 0) return filtered;
+    }
+
+    const stdout = execSync("pgrep -f 'app\\.js' || true", { encoding: 'utf8' }).trim();
+    if (!stdout) return [];
+    return stdout.split('\n').map(s => parseInt(s.trim(), 10)).filter(pid => {
+      if (isNaN(pid) || pid === process.pid) return false;
+      try {
+        const cmd = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8');
+        if (!cmd.includes('app.js') || cmd.includes('start-obs') || cmd.includes('stream-obs') || cmd.includes('launcher')) {
+          return false;
+        }
+        const environ = fs.readFileSync(`/proc/${pid}/environ`, 'utf8');
+        if (environ.includes(`PORT=${targetPort}`)) return true;
+        // If targetPort is 7070 (default), allow processes that don't have PORT set in environ
+        if (Number(targetPort) === 7070 && !environ.includes('PORT=')) return true;
+        return false;
+      } catch {
+        return false;
+      }
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+// Helper: start app.js
+async function startAppProcess(targetPort = obsPort) {
+  let isAlive = false;
+  try { isAlive = await probeApp(targetPort); } catch (e) {}
+  if (isAlive) return { success: true, message: 'IntelliSTAR app server is already running.' };
+
+  // Yield standby server if present
+  try {
+    const probe = await fetch(`http://127.0.0.1:${targetPort}/api/health`, { signal: AbortSignal.timeout(400) });
+    if (probe.ok) {
+      const data = await probe.json();
+      if (data && data.standby) {
+        await fetch(`http://127.0.0.1:${targetPort}/api/standby/yield`, { signal: AbortSignal.timeout(800) });
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }
+  } catch (e) {}
+
+  const child = spawn(process.execPath, [path.join(__dirname, 'app.js')], {
+    cwd: __dirname,
+    env: { ...process.env, PORT: String(targetPort), INTELLISTAR_IPTV_RUNNER: '1' },
+    detached: true,
+    stdio: 'ignore',
+  });
+  child.unref();
+
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    try {
+      if (await probeApp(targetPort)) {
+        return { success: true, message: 'IntelliSTAR app server started successfully.' };
+      }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return { success: true, message: 'IntelliSTAR app server launch initiated.' };
+}
+
+// Helper: stop app.js process without touching OBS
+async function stopAppProcess(targetPort = obsPort) {
+  // 1. Try graceful HTTP shutdown request to app.js
+  try {
+    const probe = await fetch(`http://127.0.0.1:${targetPort}/api/health`, { signal: AbortSignal.timeout(400) });
+    if (probe.ok) {
+      const data = await probe.json().catch(() => null);
+      if (data && !data.standby && data.service === 'intellistar') {
+        await fetch(`http://127.0.0.1:${targetPort}/api/app/stop`, { method: 'POST', signal: AbortSignal.timeout(800) });
+        await new Promise(r => setTimeout(r, 350));
+      }
+    }
+  } catch (e) {}
+
+  // 2. Locate and terminate any remaining app.js processes
+  const pids = findAppPids(targetPort);
+  for (const pid of pids) {
+    try { process.kill(pid, 'SIGTERM'); } catch (e) {}
+  }
+  if (pids.length > 0) {
+    await new Promise(r => setTimeout(r, 500));
+    const remaining = findAppPids(targetPort);
+    for (const pid of remaining) {
+      try { process.kill(pid, 'SIGKILL'); } catch (e) {}
+    }
+  }
+
+  // 3. Confirm app has shut down
+  const alive = await probeApp(targetPort);
+  if (!alive) {
+    return { success: true, message: 'IntelliSTAR app server stopped. OBS encoder continues broadcasting.' };
+  }
+  return { success: false, message: 'Could not stop IntelliSTAR app server.' };
+}
+
+// Helper: restart app.js
+async function restartAppProcess(targetPort = obsPort) {
+  await stopAppProcess();
+  await new Promise(r => setTimeout(r, 500));
+  return await startAppProcess(targetPort);
+}
+
 // -----------------------------------------------------------------------------
 // API Router
 // -----------------------------------------------------------------------------
@@ -228,6 +352,24 @@ function createLauncherRouter(targetObsPort = obsPort) {
           return res.json({ success: true, message: 'Broadcast stop signal sent.' });
         }
 
+        case 'start-app':
+        case 'start-intellistar': {
+          const result = await startAppProcess(targetObsPort);
+          return res.json(result);
+        }
+
+        case 'stop-app':
+        case 'stop-intellistar': {
+          const result = await stopAppProcess(targetObsPort);
+          return res.json(result);
+        }
+
+        case 'restart-app':
+        case 'restart-intellistar': {
+          const result = await restartAppProcess(targetObsPort);
+          return res.json(result);
+        }
+
         case 'forecast-start': {
           const resp = await fetchLocal('/api/forecast/start');
           return res.json({ success: true, message: resp?.message || 'Forecast presentation started.' });
@@ -346,6 +488,75 @@ function createLauncherRouter(targetObsPort = obsPort) {
       res.json({ scripts });
     } catch (e) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Dedicated Remote OBS Endpoints
+  router.all('/obs/start', async (req, res) => {
+    const output = req.query.output || req.body?.output || 'youtube';
+    const selectedOutput = ['ndi', 'youtube', 'dual'].includes(output) ? output : 'hls';
+    try {
+      const result = await startBackground(selectedOutput);
+      res.json({ success: true, message: `OBS ${selectedOutput.toUpperCase()} started.`, status: result.status });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.all('/obs/stop', async (req, res) => {
+    try {
+      const options = obsOptions();
+      const response = await controlRequest(options.socketPath, 'stop', __dirname);
+      res.json({ success: true, message: response ? 'OBS stop signal sent.' : 'OBS was not running.' });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/obs/status', async (req, res) => {
+    try {
+      const options = obsOptions();
+      const obs = await controlRequest(options.socketPath, 'status', __dirname);
+      res.json({ obs: obs || { phase: 'stopped', processAlive: false } });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Dedicated Remote IntelliSTAR App Endpoints
+  router.all('/app/start', async (req, res) => {
+    try {
+      const result = await startAppProcess(targetObsPort);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.all('/app/stop', async (req, res) => {
+    try {
+      const result = await stopAppProcess(targetObsPort);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.all('/app/restart', async (req, res) => {
+    try {
+      const result = await restartAppProcess(targetObsPort);
+      res.json(result);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.get('/app/status', async (req, res) => {
+    try {
+      const isAppAlive = await probeApp(targetObsPort);
+      res.json({ health: isAppAlive ? 'ready' : 'unavailable', port: targetObsPort });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   });
 

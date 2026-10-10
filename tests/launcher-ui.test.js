@@ -61,6 +61,10 @@ test('Touchscreen UI launcher API and static assets', async (t) => {
     assert.match(res.body, /btn-start-ndi/);
     assert.match(res.body, /btn-start-youtube/);
     assert.match(res.body, /btn-start-dual/);
+    assert.match(res.body, /btn-start-app/);
+    assert.match(res.body, /btn-stop-app/);
+    assert.match(res.body, /btn-restart-app/);
+    assert.match(res.body, /header-app-badge/);
     assert.match(res.body, /btn-stop-obs/);
     assert.match(res.body, /btn-close-instance/);
     assert.match(res.body, /btn-sleep-monitors/);

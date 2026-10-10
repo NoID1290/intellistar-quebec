@@ -9,6 +9,7 @@ const ini = require('ini');
 const { randomUUID } = require('node:crypto');
 const { hlsOptions, hlsArgs, hlsReady, requireFreePort } = require('./stream-hls');
 const { validateHlsProfile, validateYouTubeProfile, ensureYouTubeProfile, getResolvedStreamKey, YOUTUBE_DEFAULT_SERVER } = require('./obs-hls-profile');
+const { createStandbyServer } = require('./standby-server');
 
 const OBS_APP = 'com.obsproject.Studio';
 
@@ -266,7 +267,7 @@ function probeApp(port, timeout = 1500) {
         try {
           const data = JSON.parse(body);
           if (response.statusCode !== 200 || data.service !== 'intellistar' || data.version !== 1) throw new Error('Unexpected health response');
-          resolve(true);
+          resolve(!data.standby);
         } catch {
           reject(new Error(`Port ${port} is occupied by an unrecognized server. Stop it yourself or choose PORT; older IntelliSTAR servers need restarting.`));
         }
@@ -320,8 +321,13 @@ function createBackend(options, overrides = {}) {
   let installation = null;
   let flatpakInstance = '';
   let stopping = null;
+  const standbyServer = overrides.standbyServer !== undefined
+    ? overrides.standbyServer
+    : (overrides.disableStandby ? null : createStandbyServer({ port: options.port, hlsDirectory: hls?.directory }, { log: dependencies.log }));
+  let standbyMonitor = null;
   const status = () => ({ phase, error: failure, url: options.url, installation, output: options.output,
-    app: { owned: Boolean(appChild), pid: appChild?.pid || null, processAlive: childAlive(appChild) },
+    app: { owned: Boolean(appChild), pid: appChild?.pid || null, processAlive: childAlive(appChild),
+           standby: Boolean(standbyServer?.isListening && standbyServer.isListening()) },
     obs: { pid: obsChild?.pid || null, processAlive: childAlive(obsChild) },
     ndi: options.output === 'ndi' ? 'unverified: confirm output at the receiver' : 'plugin output is independent; disable it in OBS if not wanted',
     hls: hls ? { url: `http://127.0.0.1:${options.port}/stream/${hls.playlistName}`,
@@ -334,6 +340,8 @@ function createBackend(options, overrides = {}) {
     failure = error ? String(error.message || error) : failure;
     phase = 'stopping';
     stopping = (async () => {
+      if (standbyMonitor) { clearInterval(standbyMonitor); standbyMonitor = null; }
+      if (standbyServer) await standbyServer.stop();
       await dependencies.stopChild(obsChild);
       if (installation === 'flatpak' && /^\d+$/.test(flatpakInstance.trim())) dependencies.killFlatpak(flatpakInstance.trim());
       await dependencies.stopChild(hlsChild);
@@ -380,9 +388,32 @@ function createBackend(options, overrides = {}) {
       const existing = await dependencies.probeApp(options.port);
       assertStarting();
       if (!existing) {
-        appChild = watch(dependencies.spawn(process.execPath, [path.join(__dirname, 'app.js')], {
+        appChild = dependencies.spawn(process.execPath, [path.join(__dirname, 'app.js')], {
           cwd: __dirname, env: { ...dependencies.env, PORT: String(options.port), INTELLISTAR_IPTV_RUNNER: '1' }, stdio: 'inherit',
-        }), 'IntelliSTAR server');
+        });
+        appChild.once('error', error => {
+          if (phase === 'starting') {
+            void stop(new Error(`IntelliSTAR server: ${error.message}`));
+          } else {
+            dependencies.log(`IntelliSTAR server error: ${error.message}`);
+          }
+        });
+        appChild.once('exit', (code, signal) => {
+          if (appChild) {
+            if (code !== null && code !== undefined) appChild.exitCode = code;
+            if (signal) appChild.signalCode = signal;
+          }
+          if (phase === 'starting') {
+            void stop(new Error(`IntelliSTAR server exited (${signal || code}).`));
+          } else if (phase === 'running') {
+            dependencies.log(`IntelliSTAR app server exited (${signal || code}). OBS encoder continues broadcasting.`);
+            if (standbyServer && !standbyServer.isListening()) {
+              standbyServer.start().catch(err => {
+                dependencies.log(`Could not start standby HTTP server: ${err.message}`);
+              });
+            }
+          }
+        });
         const deadline = dependencies.now() + dependencies.startupTimeout;
         while (!(await dependencies.probeApp(options.port))) {
           assertStarting();
@@ -415,6 +446,20 @@ function createBackend(options, overrides = {}) {
         assertStarting();
       }
       phase = 'running';
+      if (standbyServer) {
+        standbyMonitor = setInterval(async () => {
+          if (phase !== 'running') return;
+          try {
+            const alive = await dependencies.probeApp(options.port);
+            if (!alive && !standbyServer.isListening()) {
+              await standbyServer.start();
+            } else if (alive && standbyServer.isListening()) {
+              await standbyServer.stop();
+            }
+          } catch {}
+        }, 3000);
+        if (typeof standbyMonitor.unref === 'function') standbyMonitor.unref();
+      }
       const logMsg = options.output === 'dual'
         ? `OBS Dual streaming live: YouTube RTMP (rtmp://a.rtmp.youtube.com/live2) & HLS (http://127.0.0.1:${options.port}/stream/${hls.playlistName})`
         : (options.output === 'youtube'
