@@ -72,6 +72,8 @@ app.all('/api/interpolation', (req, res) => {
             }
             fs.writeFileSync(targetFile, JSON.stringify(raw, null, '\t'), 'utf8');
         }
+        // Notify running display pages (they poll /api/refresh every second).
+        currentRefreshCommand = { id: Date.now(), action: 'interpolation', enabled, timestamp: Date.now() };
         res.json({ success: true, enabled, message: `Interpolation ${enabled ? 'enabled' : 'disabled'}` });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
@@ -327,6 +329,8 @@ app.post('/api/refresh', (req, res) => {
     logger.refresh('Triggered live JS hot-reload');
     res.json({ success: true, message: 'Live JS refresh triggered', refresh: currentRefreshCommand });
 });
+
+require('./tts').installTTSAPI(app, logger);
 
 try {
     const { createLauncherRouter } = require('./launcher-ui');

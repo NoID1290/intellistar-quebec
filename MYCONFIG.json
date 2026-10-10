@@ -1,6 +1,6 @@
 {
 	"fetchIntervalMinutes": 5,
-	"smoothRadar": true,
+	"smoothRadar": false,
 	"vocalLanguage": "fr",
 	"vocallocal": true,
 	"appearanceSettings": {
@@ -1536,11 +1536,19 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol",
+				"slideDelay": 8500
+			},
+			{
 				"function": "localDoppler2",
 				"slideDelay": 9000
 			},
 			{
 				"function": "couvertureNuageuse2",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol2",
 				"slideDelay": 8500
 			},
 			{
@@ -1556,11 +1564,19 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol3",
+				"slideDelay": 8500
+			},
+			{
 				"function": "localDoppler4",
 				"slideDelay": 9000
 			},
 			{
 				"function": "couvertureNuageuse4",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol4",
 				"slideDelay": 8500
 			},
 			{
@@ -1573,6 +1589,10 @@
 			},
 			{
 				"function": "couvertureNuageuse5",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol5",
 				"slideDelay": 8500
 			},
 			{
@@ -1589,6 +1609,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol6",
+				"slideDelay": 8500
+			},
+			{
 				"function": "quebecCities",
 				"slides": 8,
 				"slideDelay": 8000
@@ -1599,6 +1623,10 @@
 			},
 			{
 				"function": "couvertureNuageuse7",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol7",
 				"slideDelay": 8500
 			},
 			{
@@ -1615,6 +1643,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol8",
+				"slideDelay": 8500
+			},
+			{
 				"function": "mapCurrent",
 				"slideDelay": 8000
 			},
@@ -1624,6 +1656,10 @@
 			},
 			{
 				"function": "couvertureNuageuse9",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol9",
 				"slideDelay": 8500
 			},
 			{
@@ -1640,6 +1676,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol10",
+				"slideDelay": 8500
+			},
+			{
 				"function": "canadaForecast",
 				"slides": 8,
 				"slideDelay": 8000
@@ -1653,6 +1693,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "neigeAuSol11",
+				"slideDelay": 8500
+			},
+			{
 				"function": "resortForecast",
 				"slides": 2,
 				"slideDelay": 8000
@@ -1663,6 +1707,10 @@
 			},
 			{
 				"function": "couvertureNuageuse12",
+				"slideDelay": 8500
+			},
+			{
+				"function": "neigeAuSol12",
 				"slideDelay": 8500
 			},
 			{

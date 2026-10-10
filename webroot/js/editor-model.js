@@ -27,6 +27,10 @@
         ['couvertureNuageuse1', 'Couverture nuageuse 1', 'satellite'],
         ['canadaSatellite', 'Canada Satellite', 'satellite'],
         ['satellite', 'Satellite (Couverture)', 'satellite'],
+        ...Array.from({ length: 12 }, (_, i) => [i ? `neigeAuSol${i + 1}` : 'neigeAuSol', `Neige au sol ${i + 1}`, 'snow-cover']),
+        ['neigeAuSol1', 'Neige au sol 1', 'snow-cover'],
+        ['canadaNeigeAuSol', 'Canada Neige au sol', 'snow-cover'],
+        ['snowCover', 'Neige au sol (Accumulation)', 'snow-cover'],
         ['environmentCanada', 'Data attribution', 'environment-canada']
     ].map(([fn, label, className]) => ({ function: fn, label, className }));
     const sections = ['appearanceSettings', 'slideSettings', 'audioSettings', 'locationSettings', 'alertTestSettings'];
@@ -115,7 +119,7 @@
         const order = config.slideSettings.order;
         if (!Array.isArray(order) || !order.length || order.length > 200 || !order.some(s => s.enabled !== false)) fail('Enable at least one slide (maximum 200)');
         for (const slide of order) {
-            if (!slides.some(s => s.function === slide.function) && slide.function !== 'localDoppler1' && slide.function !== 'couvertureNuageuse1') fail(`Unknown slide: ${slide.function}`);
+            if (!slides.some(s => s.function === slide.function) && slide.function !== 'localDoppler1' && slide.function !== 'couvertureNuageuse1' && slide.function !== 'neigeAuSol1') fail(`Unknown slide: ${slide.function}`);
             if (!Number.isFinite(slide.slideDelay) || slide.slideDelay < 1000 || slide.slideDelay > 300000) fail('Slide duration must be 1–300 seconds');
             if (slide.slides !== undefined && (!Number.isInteger(slide.slides) || slide.slides < 1 || slide.slides > 100)) fail('Page count must be 1–100');
         }

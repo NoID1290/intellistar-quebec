@@ -352,6 +352,29 @@ function createLauncherRouter(targetObsPort = obsPort) {
 
 app.use('/api/launcher', createLauncherRouter(obsPort));
 
+// French TTS for the bulletin slide (works even if the main app is down).
+require('./tts').installTTSAPI(app);
+
+// Forward every other /api/* call (config, refresh, interpolation, alert...)
+// to the main app so display pages opened through port 7080 work fully.
+app.use('/api', async (req, res) => {
+  try {
+    const hasBody = !['GET', 'HEAD'].includes(req.method);
+    const upstream = await fetch(`http://127.0.0.1:${obsPort}/api${req.url}`, {
+      method: req.method,
+      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
+      body: hasBody ? JSON.stringify(req.body || {}) : undefined,
+    });
+    res.status(upstream.status);
+    const type = upstream.headers.get('content-type');
+    if (type) res.type(type);
+    res.setHeader('Cache-Control', upstream.headers.get('cache-control') || 'no-store');
+    res.send(Buffer.from(await upstream.arrayBuffer()));
+  } catch (e) {
+    res.status(502).json({ error: `Main app (port ${obsPort}) is not reachable` });
+  }
+});
+
 // Root route redirect to launcher UI
 app.get('/', (req, res) => {
   res.redirect('/launcher.html');

@@ -603,6 +603,104 @@ function flavorChanger(flv){
     slideFlavor = flavorPicker(flv, getSpecialModes());
 }
 
+function getCloudSlideForDoppler(fn) {
+    if (!fn || typeof fn !== 'string') return null;
+    if (fn === 'localDoppler' || fn === 'localDoppler1') return 'couvertureNuageuse';
+    var match = fn.match(/^localDoppler(\d+)$/);
+    if (match) {
+        var num = parseInt(match[1], 10);
+        return (num === 1) ? 'couvertureNuageuse' : `couvertureNuageuse${num}`;
+    }
+    if (fn === 'canadaDoppler') return 'canadaSatellite';
+    return null;
+}
+
+function isMatchingCloudSlide(cloudFn, candidateFn) {
+    if (!cloudFn || !candidateFn) return false;
+    if (candidateFn === cloudFn) return true;
+    if (cloudFn === 'couvertureNuageuse' && (candidateFn === 'couvertureNuageuse1' || candidateFn === 'satellite1' || candidateFn === 'satellite')) return true;
+    if (cloudFn === 'couvertureNuageuse1' && (candidateFn === 'couvertureNuageuse' || candidateFn === 'satellite' || candidateFn === 'satellite1')) return true;
+    var matchCloud = cloudFn.match(/^couvertureNuageuse(\d+)$/);
+    var matchCandidate = candidateFn.match(/^(?:couvertureNuageuse|satellite)(\d+)$/);
+    if (matchCloud && matchCandidate && matchCloud[1] === matchCandidate[1]) return true;
+    if (cloudFn === 'canadaSatellite' && (candidateFn === 'canadaSatellite' || candidateFn === 'couvertureNuageuse11' || candidateFn === 'satellite11')) return true;
+    return false;
+}
+
+function getSnowSlideForCloud(fn) {
+    if (!fn || typeof fn !== 'string') return null;
+    if (fn === 'couvertureNuageuse' || fn === 'couvertureNuageuse1' || fn === 'satellite' || fn === 'satellite1' || fn === 'cloudCover') return 'neigeAuSol';
+    var match = fn.match(/^couvertureNuageuse(\d+)$/);
+    if (match) {
+        var num = parseInt(match[1], 10);
+        return (num === 1) ? 'neigeAuSol' : `neigeAuSol${num}`;
+    }
+    var satMatch = fn.match(/^satellite(\d+)$/);
+    if (satMatch) {
+        var num = parseInt(satMatch[1], 10);
+        return (num === 1) ? 'neigeAuSol' : `neigeAuSol${num}`;
+    }
+    if (fn === 'canadaSatellite') return 'canadaNeigeAuSol';
+    return null;
+}
+
+function isMatchingSnowSlide(snowFn, candidateFn) {
+    if (!snowFn || !candidateFn) return false;
+    if (candidateFn === snowFn) return true;
+    if (snowFn === 'neigeAuSol' && (candidateFn === 'neigeAuSol1' || candidateFn === 'snowCover')) return true;
+    if (snowFn === 'neigeAuSol1' && (candidateFn === 'neigeAuSol' || candidateFn === 'snowCover')) return true;
+    var matchSnow = snowFn.match(/^neigeAuSol(\d+)$/);
+    var matchCandidate = candidateFn.match(/^neigeAuSol(\d+)$/);
+    if (matchSnow && matchCandidate && matchSnow[1] === matchCandidate[1]) return true;
+    if (snowFn === 'canadaNeigeAuSol' && (candidateFn === 'canadaNeigeAuSol' || candidateFn === 'neigeAuSol11')) return true;
+    return false;
+}
+
+function normalizeToLocalDoppler(order) {
+    if (!Array.isArray(order)) {
+        return [];
+    }
+
+    var validSlides = order.filter(slide => slide && slide.enabled !== false && typeof slide.function === "string");
+    var normalized = [];
+
+    for (var i = 0; i < validSlides.length; i++) {
+        var current = validSlides[i];
+        normalized.push(current);
+
+        var cloudCompanion = getCloudSlideForDoppler(current.function);
+        if (cloudCompanion) {
+            var next = (i + 1 < validSlides.length) ? validSlides[i + 1] : null;
+            if (!next || !isMatchingCloudSlide(cloudCompanion, next.function)) {
+                normalized.push({
+                    function: cloudCompanion,
+                    slideDelay: 8500
+                });
+                var snowForCloud = getSnowSlideForCloud(cloudCompanion);
+                if (snowForCloud && (!next || !isMatchingSnowSlide(snowForCloud, next.function))) {
+                    normalized.push({
+                        function: snowForCloud,
+                        slideDelay: 8500
+                    });
+                }
+            }
+        }
+
+        var snowCompanion = getSnowSlideForCloud(current.function);
+        if (snowCompanion) {
+            var next = (i + 1 < validSlides.length) ? validSlides[i + 1] : null;
+            if (!next || !isMatchingSnowSlide(snowCompanion, next.function)) {
+                normalized.push({
+                    function: snowCompanion,
+                    slideDelay: 8500
+                });
+            }
+        }
+    }
+
+    return normalized;
+}
+
 /**
  * Returns a flavor
  * @param {int} time Duration of the flavor
@@ -621,66 +719,16 @@ function flavorPicker(time, modes) {
 
         var disabledSlides = new Set([
             "mapCurrent", "mapForecast", "mapTest", "radarDoppler", "canadaDoppler",
-            "couvertureNuageuse", "canadaSatellite", "satellite", "cloudCover"
+            "couvertureNuageuse", "canadaSatellite", "satellite", "cloudCover",
+            "neigeAuSol", "canadaNeigeAuSol", "snowCover"
         ]);
         console.warn('[IPTV] Skipping map and radar slides because WebGL maps are unavailable.');
         return order.filter(slide => {
             if (!slide || !slide.function) return false;
             if (disabledSlides.has(slide.function)) return false;
-            if (/^(localDoppler|couvertureNuageuse|satellite)\d+$/.test(slide.function)) return false;
+            if (/^(localDoppler|couvertureNuageuse|satellite|neigeAuSol)\d+$/.test(slide.function)) return false;
             return true;
         });
-    }
-
-    function getCloudSlideForDoppler(fn) {
-        if (!fn || typeof fn !== 'string') return null;
-        if (fn === 'localDoppler' || fn === 'localDoppler1') return 'couvertureNuageuse';
-        var match = fn.match(/^localDoppler(\d+)$/);
-        if (match) {
-            var num = parseInt(match[1], 10);
-            return (num === 1) ? 'couvertureNuageuse' : `couvertureNuageuse${num}`;
-        }
-        if (fn === 'canadaDoppler') return 'canadaSatellite';
-        return null;
-    }
-
-    function isMatchingCloudSlide(cloudFn, candidateFn) {
-        if (!cloudFn || !candidateFn) return false;
-        if (candidateFn === cloudFn) return true;
-        if (cloudFn === 'couvertureNuageuse' && (candidateFn === 'couvertureNuageuse1' || candidateFn === 'satellite1' || candidateFn === 'satellite')) return true;
-        if (cloudFn === 'couvertureNuageuse1' && (candidateFn === 'couvertureNuageuse' || candidateFn === 'satellite' || candidateFn === 'satellite1')) return true;
-        var matchCloud = cloudFn.match(/^couvertureNuageuse(\d+)$/);
-        var matchCandidate = candidateFn.match(/^(?:couvertureNuageuse|satellite)(\d+)$/);
-        if (matchCloud && matchCandidate && matchCloud[1] === matchCandidate[1]) return true;
-        if (cloudFn === 'canadaSatellite' && (candidateFn === 'canadaSatellite' || candidateFn === 'couvertureNuageuse11' || candidateFn === 'satellite11')) return true;
-        return false;
-    }
-
-    function normalizeToLocalDoppler(order) {
-        if (!Array.isArray(order)) {
-            return [];
-        }
-
-        var validSlides = order.filter(slide => slide && slide.enabled !== false && typeof slide.function === "string");
-        var normalized = [];
-
-        for (var i = 0; i < validSlides.length; i++) {
-            var current = validSlides[i];
-            normalized.push(current);
-
-            var cloudCompanion = getCloudSlideForDoppler(current.function);
-            if (cloudCompanion) {
-                var next = (i + 1 < validSlides.length) ? validSlides[i + 1] : null;
-                if (!next || !isMatchingCloudSlide(cloudCompanion, next.function)) {
-                    normalized.push({
-                        function: cloudCompanion,
-                        slideDelay: 8500
-                    });
-                }
-            }
-        }
-
-        return normalized;
     }
 
     if(slideSettings.auto == false){
@@ -1267,4 +1315,23 @@ async function searchMapCity(){
         loadMapCityDropbox()
     })
     await grabMapCityData();
+}
+
+if (typeof window !== 'undefined') {
+    window.normalizeToLocalDoppler = normalizeToLocalDoppler;
+    window.getCloudSlideForDoppler = getCloudSlideForDoppler;
+    window.isMatchingCloudSlide = isMatchingCloudSlide;
+    window.getSnowSlideForCloud = getSnowSlideForCloud;
+    window.isMatchingSnowSlide = isMatchingSnowSlide;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        flavorPicker,
+        normalizeToLocalDoppler,
+        getCloudSlideForDoppler,
+        isMatchingCloudSlide,
+        getSnowSlideForCloud,
+        isMatchingSnowSlide
+    };
 }

@@ -28,6 +28,11 @@ const radarEngine = {
   timestamps: [],
   satTimestamps: [],
   satProduct: 'ussat',
+  snowTimestamps: [],
+  snowProduct: 'snow24hr',
+  snowDataCache: new Map(),
+  activeSnowCities: [],
+  snowParticles: null,
   activeInterval: null,
   activeRaf: null,
   activeTarget: null,
@@ -39,6 +44,7 @@ const radarEngine = {
   lastUpdated: 0,
   lastTimestampsKey: '',
   lastSatTimestampsKey: '',
+  lastSnowTimestampsKey: '',
 
   // Reusable offscreen canvas for atomic double-buffering (completely eliminates tearing and compositor flicker)
   getRenderBuffer(width = 1620, height = 1080) {
@@ -283,11 +289,12 @@ const radarEngine = {
     await Promise.all(workers);
   },
 
-  // Prune cached tiles that belong to expired radar or satellite timestamps
-  pruneImageCache(activeTimestamps = [], activeSatTimestamps = []) {
+  // Prune cached tiles that belong to expired radar, satellite, or snow timestamps
+  pruneImageCache(activeTimestamps = [], activeSatTimestamps = [], activeSnowTimestamps = []) {
     const validTsSet = new Set([
       ...(activeTimestamps || []).map((ts) => String(ts)),
       ...(activeSatTimestamps || []).map((ts) => String(ts)),
+      ...(activeSnowTimestamps || []).map((ts) => String(ts)),
     ]);
     if (validTsSet.size === 0) return;
     for (const url of this.imageCache.keys()) {
@@ -340,6 +347,30 @@ const radarEngine = {
           window.markFeedSuccess('satellite');
         }
       }
+
+      // 3. Snow Accumulation & Coverage (snow24hr, snowCoverageConus1hr, snow1hr)
+      let snowProd = 'snow24hr';
+      let snowSeries = sInfo.snow24hr?.series;
+      if (!snowSeries || snowSeries.length === 0) {
+        snowProd = 'snowCoverageConus1hr';
+        snowSeries = sInfo.snowCoverageConus1hr?.series;
+      }
+      if (!snowSeries || snowSeries.length === 0) {
+        snowProd = 'snow1hr';
+        snowSeries = sInfo.snow1hr?.series;
+      }
+      if (snowSeries && snowSeries.length > 0) {
+        this.snowProduct = snowProd;
+        const sortedSnow = snowSeries
+          .slice()
+          .sort((a, b) => a.ts - b.ts)
+          .map((item) => item.ts)
+          .slice(-count);
+        this.snowTimestamps = sortedSnow;
+        if (typeof window.markFeedSuccess === 'function') {
+          window.markFeedSuccess('snow');
+        }
+      }
     } catch (err) {
       console.error('[RadarEngine] Failed to fetch timestamps:', err);
     }
@@ -353,6 +384,11 @@ const radarEngine = {
   async fetchSatelliteTimestamps(count = 12) {
     await this.fetchAllTimestamps(count);
     return this.satTimestamps || [];
+  },
+
+  async fetchSnowTimestamps(count = 12) {
+    await this.fetchAllTimestamps(count);
+    return this.snowTimestamps || [];
   },
 
   // Pre-render the ESRI satellite basemap once per location into an offscreen Canvas
@@ -437,6 +473,24 @@ const radarEngine = {
   // Draw satellite cloud tiles with alpha blending
   drawSatelliteCloudTiles(ctx, loc, timestamp, prod, alpha = 1.0) {
     if (!timestamp || alpha <= 0.005) return;
+    const tiles = this.getTileDescriptors(loc, timestamp, prod);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    for (const t of tiles) {
+      let img = this.imageCache.get(t.url);
+      if (!img) {
+        this.loadTileImage(t.url);
+      } else if (img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, t.dx, t.dy, t.dw, t.dh);
+      }
+    }
+    ctx.restore();
+  },
+
+  // Draw snow accumulation / coverage tiles with alpha blending
+  drawSnowTiles(ctx, loc, timestamp, alpha = 1.0) {
+    if (!timestamp || alpha <= 0.005) return;
+    const prod = this.snowProduct || 'snow24hr';
     const tiles = this.getTileDescriptors(loc, timestamp, prod);
     ctx.save();
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
@@ -570,6 +624,165 @@ const radarEngine = {
     this.renderInterpolatedFrame(ctx, loc, basemapCanvas, timestamp, null, 0, layerType);
   },
 
+  // Initialize atmospheric drifting snow particles
+  initSnowParticles(count = 65) {
+    if (this.snowParticles && this.snowParticles.length === count) return;
+    this.snowParticles = [];
+    for (let i = 0; i < count; i++) {
+      this.snowParticles.push({
+        x: Math.random() * 1620,
+        y: Math.random() * 1080,
+        r: 1.5 + Math.random() * 2.8,
+        speed: 1.0 + Math.random() * 2.2,
+        drift: 0.3 + Math.random() * 0.8,
+        opacity: 0.3 + Math.random() * 0.55,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  },
+
+  // Broadcast-quality animated snow accumulation engine (real-time data reveal & live winter atmosphere)
+  startSnowAnimation(ctx, canvas, loc, basemap) {
+    this.initSnowParticles(65);
+    const startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const rafFn = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
+
+    const renderBuf = this.getRenderBuffer(1620, 1080);
+    const bufCtx = renderBuf ? renderBuf.getContext('2d', { alpha: false }) : null;
+    const drawCtx = bufCtx || ctx;
+
+    const tick = (now) => {
+      if (!this.activeTarget || this.activeCanvas !== canvas) return;
+      const curTime = now || ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+      const elapsed = curTime - startTime;
+
+      // 1. Draw static satellite basemap (opaque)
+      if (basemap) {
+        drawCtx.drawImage(basemap, 0, 0);
+      } else {
+        drawCtx.fillStyle = '#0b1626';
+        drawCtx.fillRect(0, 0, 1620, 1080);
+      }
+
+      // 2. Animated Real-time Snow Accumulation Layer
+      this.renderSnowAccumulationLayer(drawCtx, loc, elapsed);
+
+      // 3. Falling Snowflakes Particle Atmosphere
+      this.renderDriftingSnow(drawCtx, curTime);
+
+      // 4. Double-buffer blit to visible canvas (zero tearing)
+      if (bufCtx) {
+        ctx.drawImage(renderBuf, 0, 0);
+      }
+
+      this.activeRaf = rafFn(tick);
+    };
+
+    this.activeRaf = rafFn(tick);
+  },
+
+  renderSnowAccumulationLayer(ctx, loc, elapsed) {
+    const progress = Math.min(1.0, elapsed / 2200);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const cities = (this.activeSnowCities && this.activeSnowCities.length > 0) ? this.activeSnowCities : [];
+
+    // 1. Frost sweep wavefront (simulates Canadian winter weather front passing through)
+    ctx.save();
+    const wavePos = ease * 1.5;
+    const waveGrad = ctx.createLinearGradient(0, 0, 1620, 1080);
+    waveGrad.addColorStop(Math.max(0, Math.min(1, wavePos - 0.35)), 'rgba(140, 225, 245, 0.0)');
+    waveGrad.addColorStop(Math.max(0, Math.min(1, wavePos - 0.1)), 'rgba(178, 235, 242, 0.18)');
+    waveGrad.addColorStop(Math.max(0, Math.min(1, wavePos)), 'rgba(255, 255, 255, 0.38)');
+    waveGrad.addColorStop(Math.min(1, wavePos + 0.05), 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = waveGrad;
+    ctx.fillRect(0, 0, 1620, 1080);
+    ctx.restore();
+
+    // 2. Draw NOAA/Weather.com snow tiles if available
+    if (this.snowTimestamps && this.snowTimestamps.length > 0) {
+      const latestTs = this.snowTimestamps[this.snowTimestamps.length - 1];
+      this.drawSnowTiles(ctx, loc, latestTs, ease * 0.85);
+    }
+
+    // 3. Draw real-time station snow accumulation fields & contours
+    for (const c of cities) {
+      if (!c || c.x == null || c.y == null) continue;
+      const depth = c.snowCm || 0;
+      const distNorm = (c.x / 1620 + c.y / 1080) * 0.5;
+      const cityWave = Math.max(0, Math.min(1, (ease * 1.5 - distNorm) / 0.35));
+      if (cityWave <= 0.01) continue;
+
+      const activeDepth = depth * cityWave;
+      const baseRadius = 150 + Math.min(activeDepth * 7, 260);
+
+      ctx.save();
+      const radGrad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, baseRadius);
+
+      if (activeDepth >= 35) {
+        radGrad.addColorStop(0.0, `rgba(215, 45, 130, ${0.92 * cityWave})`);
+        radGrad.addColorStop(0.25, `rgba(150, 85, 220, ${0.85 * cityWave})`);
+        radGrad.addColorStop(0.5, `rgba(240, 248, 255, ${0.75 * cityWave})`);
+        radGrad.addColorStop(0.8, `rgba(64, 180, 245, ${0.45 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(64, 180, 245, 0)');
+      } else if (activeDepth >= 20) {
+        radGrad.addColorStop(0.0, `rgba(150, 85, 220, ${0.88 * cityWave})`);
+        radGrad.addColorStop(0.3, `rgba(190, 170, 245, ${0.80 * cityWave})`);
+        radGrad.addColorStop(0.55, `rgba(240, 248, 255, ${0.70 * cityWave})`);
+        radGrad.addColorStop(0.8, `rgba(64, 180, 245, ${0.40 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(64, 180, 245, 0)');
+      } else if (activeDepth >= 10) {
+        radGrad.addColorStop(0.0, `rgba(190, 170, 245, ${0.82 * cityWave})`);
+        radGrad.addColorStop(0.35, `rgba(245, 250, 255, ${0.75 * cityWave})`);
+        radGrad.addColorStop(0.65, `rgba(129, 212, 250, ${0.50 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(129, 212, 250, 0)');
+      } else if (activeDepth >= 2) {
+        radGrad.addColorStop(0.0, `rgba(240, 248, 255, ${0.78 * cityWave})`);
+        radGrad.addColorStop(0.4, `rgba(129, 212, 250, ${0.55 * cityWave})`);
+        radGrad.addColorStop(0.75, `rgba(178, 235, 242, ${0.30 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(178, 235, 242, 0)');
+      } else if (activeDepth > 0) {
+        radGrad.addColorStop(0.0, `rgba(178, 235, 242, ${0.55 * cityWave})`);
+        radGrad.addColorStop(0.5, `rgba(178, 235, 242, ${0.28 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(178, 235, 242, 0)');
+      } else {
+        // Trace dusting / 0cm ground sensor outline
+        radGrad.addColorStop(0.0, `rgba(224, 247, 250, ${0.15 * cityWave})`);
+        radGrad.addColorStop(0.6, `rgba(178, 235, 242, ${0.08 * cityWave})`);
+        radGrad.addColorStop(1.0, 'rgba(178, 235, 242, 0)');
+      }
+
+      ctx.fillStyle = radGrad;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, baseRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  },
+
+  renderDriftingSnow(ctx, curTime) {
+    if (!this.snowParticles) this.initSnowParticles(65);
+    ctx.save();
+    for (let i = 0; i < this.snowParticles.length; i++) {
+      const p = this.snowParticles[i];
+      p.y += p.speed;
+      p.x += p.drift + Math.sin(curTime / 600 + p.phase) * 0.4;
+      if (p.y > 1090) {
+        p.y = -10;
+        p.x = Math.random() * 1620;
+      }
+      if (p.x > 1630) p.x = -10;
+      if (p.x < -10) p.x = 1630;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+      ctx.shadowColor = 'rgba(200, 240, 255, 0.8)';
+      ctx.shadowBlur = 4;
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
   // Pre-load basemaps & initial radar/satellite tiles at startup
   async preloadAll() {
     if (this.isPreloading) return;
@@ -599,12 +812,18 @@ const radarEngine = {
         await this.preloadTiles(locations, this.satTimestamps, this.satProduct || 'ussat');
       }
 
-      this.pruneImageCache(this.timestamps, this.satTimestamps);
+      // 4. Pre-load snow accumulation tile images if available
+      if (this.snowTimestamps && this.snowTimestamps.length > 0) {
+        await this.preloadTiles(locations, this.snowTimestamps, this.snowProduct || 'snow24hr');
+      }
+
+      this.pruneImageCache(this.timestamps, this.satTimestamps, this.snowTimestamps);
 
       this.isReady = true;
       this.lastUpdated = Date.now();
       this.lastTimestampsKey = (this.timestamps || []).join(',');
       this.lastSatTimestampsKey = (this.satTimestamps || []).join(',');
+      this.lastSnowTimestampsKey = (this.snowTimestamps || []).join(',');
       console.log(`[RadarEngine] Pre-load complete for all locations in ${Date.now() - startTime}ms (${this.imageCache.size} tiles cached).`);
     } catch (err) {
       console.error('[RadarEngine] Error during radar preload:', err);
@@ -619,12 +838,14 @@ const radarEngine = {
       await this.fetchAllTimestamps(12);
       const newRadarKey = (this.timestamps || []).join(',');
       const newSatKey = (this.satTimestamps || []).join(',');
+      const newSnowKey = (this.snowTimestamps || []).join(',');
 
-      if (newRadarKey === this.lastTimestampsKey && newSatKey === this.lastSatTimestampsKey && this.isReady) {
+      if (newRadarKey === this.lastTimestampsKey && newSatKey === this.lastSatTimestampsKey && newSnowKey === this.lastSnowTimestampsKey && this.isReady) {
         return;
       }
       this.lastTimestampsKey = newRadarKey;
       this.lastSatTimestampsKey = newSatKey;
+      this.lastSnowTimestampsKey = newSnowKey;
 
       const locations = this.getAllRadarLocations();
       if (this.timestamps && this.timestamps.length > 0) {
@@ -634,7 +855,10 @@ const radarEngine = {
       if (this.satTimestamps && this.satTimestamps.length > 0) {
         await this.preloadTiles(locations, this.satTimestamps, this.satProduct || 'ussat');
       }
-      this.pruneImageCache(this.timestamps, this.satTimestamps);
+      if (this.snowTimestamps && this.snowTimestamps.length > 0) {
+        await this.preloadTiles(locations, this.snowTimestamps, this.snowProduct || 'snow24hr');
+      }
+      this.pruneImageCache(this.timestamps, this.satTimestamps, this.snowTimestamps);
       this.lastUpdated = Date.now();
       console.log(`[RadarEngine] Background tile refresh completed (${this.imageCache.size} tiles active).`);
     } catch (err) {
@@ -654,6 +878,9 @@ const radarEngine = {
 
     if (containerId === 'radarsat') {
       layerType = 'satellite';
+      if (!locKey || locKey === 'regional') locKey = 'satellite';
+    } else if (containerId === 'radarsnow') {
+      layerType = 'snow';
       if (!locKey || locKey === 'regional') locKey = 'satellite';
     }
 
@@ -684,6 +911,11 @@ const radarEngine = {
     this.activeCanvas = canvas;
     this.activeLocKey = locKey;
     this.activeLayer = layerType;
+
+    if (layerType === 'snow') {
+      this.startSnowAnimation(ctx, canvas, loc, basemap);
+      return;
+    }
 
     if (timestamps.length === 0 || !basemap) {
       // If basemap or timestamps not ready yet, render basemap or background
@@ -858,6 +1090,21 @@ async function startSatellite(target = 'radarsat', dopplerIdx = null, dConfig = 
 }
 
 function stopSatellite(target = 'radarsat') {
+  radarEngine.stopPlayback();
+}
+
+async function startSnowCover(target = 'radarsnow', dopplerIdx = null, dConfig = null) {
+  let targetId = typeof target === 'string' ? target : (target && target.id ? target.id : 'radarsnow');
+  let locKey = 'satellite';
+  if (typeof dopplerIdx === 'string') {
+    locKey = dopplerIdx;
+  } else if (dopplerIdx !== null && dopplerIdx !== undefined && dopplerIdx !== false) {
+    locKey = `local_${dopplerIdx || 0}`;
+  }
+  radarEngine.startPlayback(targetId, locKey, 'snow');
+}
+
+function stopSnowCover(target = 'radarsnow') {
   radarEngine.stopPlayback();
 }
 
@@ -1164,6 +1411,160 @@ function addSatelliteCities(dopplerIdx = null, dConfig = null) {
   }
 }
 
+async function fetchSnowAccumulationForCities(cities) {
+  if (!cities || cities.length === 0) return {};
+  const valid = cities.filter(c => c && c.lat != null && c.lon != null);
+  if (valid.length === 0) return {};
+
+  const cacheKey = valid.map(c => `${Number(c.lat).toFixed(2)},${Number(c.lon).toFixed(2)}`).sort().join(';');
+  const now = Date.now();
+  const cached = radarEngine.snowDataCache.get(cacheKey);
+  if (cached && (now - cached.ts < 10 * 60 * 1000)) {
+    return cached.data;
+  }
+
+  try {
+    const lats = valid.map(c => Number(c.lat).toFixed(3)).join(',');
+    const lons = valid.map(c => Number(c.lon).toFixed(3)).join(',');
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=snow_depth,snowfall&daily=snowfall_sum&timezone=auto`;
+
+    let res = null;
+    if (typeof fetch !== 'undefined') {
+      const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+      try {
+        res = await fetch(url, controller ? { signal: controller.signal } : {});
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    }
+    if (!res || !res.ok) throw new Error(res ? `HTTP ${res.status}` : 'Fetch unavailable');
+    const data = await res.json();
+    const results = {};
+    const items = Array.isArray(data) ? data : [data];
+    items.forEach((item, idx) => {
+      const city = valid[idx];
+      if (!city) return;
+      const depthMeters = item?.current?.snow_depth ?? 0;
+      const dailySumCm = (Array.isArray(item?.daily?.snowfall_sum) && item.daily.snowfall_sum[0] != null) ? item.daily.snowfall_sum[0] : 0;
+      const currentSnowCm = Math.round(depthMeters * 100);
+      const totalAccumCm = Math.max(currentSnowCm, Math.round(dailySumCm));
+      results[(city.name || '').toLowerCase()] = {
+        snowDepthM: depthMeters,
+        snowCm: totalAccumCm
+      };
+    });
+    radarEngine.snowDataCache.set(cacheKey, { ts: now, data: results });
+    return results;
+  } catch (err) {
+    console.warn('[RadarEngine] Snow accumulation fetch notice:', err && err.message ? err.message : err);
+    return {};
+  }
+}
+
+async function addSnowCities(dopplerIdx = null, dConfig = null) {
+  $('.snow-cities').empty();
+  $('.snow-cities-trans').empty();
+
+  let loc = null;
+  let source = null;
+
+  if (dopplerIdx === null || dopplerIdx === undefined || dopplerIdx === false) {
+    const satLoc = radarEngine.getLocationByKey('satellite');
+    loc = satLoc;
+    if (typeof locationConfig !== 'undefined' && locationConfig && locationConfig.radarCities && Array.isArray(locationConfig.radarCities.regional) && locationConfig.radarCities.regional.length > 0) {
+      source = locationConfig.radarCities.regional;
+    } else if (typeof locationConfig !== 'undefined' && locationConfig) {
+      source = [
+        locationConfig.mainCity,
+        ...(locationConfig.eightCities?.cities || []),
+        ...(locationConfig.quebecCities || []),
+        ...(locationConfig.regionalMap?.map || []),
+        ...(locationConfig.regionalForecasts || []),
+      ].filter(Boolean);
+    }
+  } else {
+    const locKey = `local_${dopplerIdx || 0}`;
+    if (!dConfig && typeof locationConfig !== 'undefined' && locationConfig && Array.isArray(locationConfig.localDopplers) && locationConfig.localDopplers[dopplerIdx]) {
+      dConfig = locationConfig.localDopplers[dopplerIdx];
+    }
+    const engineLoc = radarEngine.getLocationByKey(locKey);
+    loc = {
+      lon: (dConfig && dConfig.lon != null) ? Number(dConfig.lon) : engineLoc.lon,
+      lat: (dConfig && dConfig.lat != null) ? Number(dConfig.lat) : engineLoc.lat,
+      zoom: (dConfig && dConfig.zoom != null) ? Number(dConfig.zoom) : (engineLoc.zoom || 9.8),
+    };
+
+    if (dConfig && Array.isArray(dConfig.cities) && dConfig.cities.length > 0) {
+      source = dConfig.cities;
+    } else if (dopplerIdx === 0 && typeof locationConfig !== 'undefined' && locationConfig && locationConfig.radarCities && Array.isArray(locationConfig.radarCities.local) && locationConfig.radarCities.local.length > 0) {
+      source = locationConfig.radarCities.local;
+    } else if (typeof locationConfig !== 'undefined' && locationConfig) {
+      source = [
+        locationConfig.mainCity,
+        ...(locationConfig.eightCities?.cities || []),
+        ...(locationConfig.quebecCities || []),
+        ...(locationConfig.regionalMap?.map || []),
+        ...(locationConfig.regionalForecasts || []),
+        ...(locationConfig.canadaCities || []),
+      ].filter(Boolean);
+    }
+  }
+
+  const placedSnow = resolvePlacements(source, loc, 10);
+
+  let snowDataMap = {};
+  try {
+    snowDataMap = await fetchSnowAccumulationForCities(placedSnow);
+  } catch (e) {}
+
+  const isMet = (typeof isMetric === 'function') ? isMetric() : true;
+
+  for (let i = 0; i < placedSnow.length; i++) {
+    const c = placedSnow[i];
+    const cityKey = (c.name || '').toLowerCase();
+    const sInfo = snowDataMap[cityKey] || null;
+    const snowCm = sInfo ? sInfo.snowCm : 0;
+    c.snowCm = snowCm;
+
+    let formatted = '';
+    if (isMet) {
+      formatted = `${snowCm} cm`;
+    } else {
+      const snowIn = Math.round(snowCm / 2.54);
+      formatted = `${snowIn} po`;
+    }
+    c.snowFormatted = formatted;
+
+    const word = (typeof numToWord === 'function' && numToWord(i)) ? numToWord(i) : `city-${i}`;
+    const sideClass = c.side === 'left' ? 'label-left' : 'label-right';
+
+    $('.snow-cities').append(`
+      <div class="radar-city snow-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot snow-dot"></div>
+        <div class="city-name" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
+          <span>${c.name}</span>
+          <span class="city-snow-badge" data-val="${snowCm}">
+            <span class="snow-badge-val">${formatted}</span>
+          </span>
+        </div>
+      </div>`);
+
+    $('.snow-cities-trans').append(`
+      <div class="radar-city snow-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot snow-dot"></div>
+        <div class="city-name-trans" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
+          <span>${c.name}</span>
+          <span class="city-snow-badge" data-val="${snowCm}">
+            <span class="snow-badge-val">${formatted}</span>
+          </span>
+        </div>
+      </div>`);
+  }
+
+  radarEngine.activeSnowCities = placedSnow;
+}
+
 if (typeof window !== 'undefined') {
   window.radarEngine = radarEngine;
   window.refreshRadarFrames = refreshRadarFrames;
@@ -1171,6 +1572,8 @@ if (typeof window !== 'undefined') {
   window.stopRadar = stopRadar;
   window.startSatellite = startSatellite;
   window.stopSatellite = stopSatellite;
+  window.startSnowCover = startSnowCover;
+  window.stopSnowCover = stopSnowCover;
   window.createMaps = createMaps;
   window.createRegionalMaps = createRegionalMaps;
   window.createLocalMaps = createLocalMaps;
@@ -1178,6 +1581,7 @@ if (typeof window !== 'undefined') {
   window.destroyLocalMaps = destroyLocalMaps;
   window.addRadarCities = addRadarCities;
   window.addSatelliteCities = addSatelliteCities;
+  window.addSnowCities = addSnowCities;
   window.preloadRadars = preloadRadars;
   window.releaseUnusedMemory = function() {
     if (radarEngine && typeof radarEngine.releaseMemory === 'function') {
@@ -1193,11 +1597,15 @@ if (typeof module !== 'undefined' && module.exports) {
     stopRadar,
     startSatellite,
     stopSatellite,
+    startSnowCover,
+    stopSnowCover,
     createMaps,
     createRegionalMaps,
     destroyRegionalMaps,
     destroyLocalMaps,
     addRadarCities,
-    addSatelliteCities
+    addSatelliteCities,
+    addSnowCities,
+    fetchSnowAccumulationForCities
   };
 }

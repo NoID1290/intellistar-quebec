@@ -126,6 +126,10 @@ function startRefreshCommandListener() {
             if (data.action === 'refresh') {
                 console.log('[Live Refresh] Remote refresh trigger received from API.');
                 await reloadScripts();
+            } else if (data.action === 'interpolation') {
+                console.log(`[Live Refresh] Interpolation ${data.enabled ? 'enabled' : 'disabled'} remotely.`);
+                if (typeof radarSmoothChanger === 'function') radarSmoothChanger(!!data.enabled);
+                else if (typeof appearanceSettings !== 'undefined') appearanceSettings.smoothRadar = !!data.enabled;
             }
         } catch (e) {}
     }, 1000);

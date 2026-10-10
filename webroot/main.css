@@ -204,11 +204,11 @@ body, html {
     background-image: url(images/boxes/radar_banner.png);
     /* opacity: 0; */
 }
-.satellite .banner {
+.satellite .banner, .snow-cover .banner {
     background-image: url(images/boxes/radar_satellite_banner.png);
     /* opacity: 0; */
 }
-.radar .header, .satellite .header {
+.radar .header, .satellite .header, .snow-cover .header {
     text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.9), 1px 1px 3px #000000;
 }
 .daypart-forecast .box {

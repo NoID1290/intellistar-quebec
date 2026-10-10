@@ -62,6 +62,21 @@ var slideDivs = {
     "satellite11": ".satellite",
     "satellite12": ".satellite",
     "cloudCover": ".satellite",
+    "neigeAuSol": ".snow-cover",
+    "neigeAuSol1": ".snow-cover",
+    "neigeAuSol2": ".snow-cover",
+    "neigeAuSol3": ".snow-cover",
+    "neigeAuSol4": ".snow-cover",
+    "neigeAuSol5": ".snow-cover",
+    "neigeAuSol6": ".snow-cover",
+    "neigeAuSol7": ".snow-cover",
+    "neigeAuSol8": ".snow-cover",
+    "neigeAuSol9": ".snow-cover",
+    "neigeAuSol10": ".snow-cover",
+    "neigeAuSol11": ".snow-cover",
+    "neigeAuSol12": ".snow-cover",
+    "canadaNeigeAuSol": ".snow-cover",
+    "snowCover": ".snow-cover",
     "environmentCanada": ".environment-canada"
 };
 
@@ -98,6 +113,21 @@ var slideHeaders = {
     "satellite11": "Couverture Nuageuse",
     "satellite12": "Couverture Nuageuse",
     "cloudCover": "Couverture Nuageuse",
+    "neigeAuSol": "Neige au Sol",
+    "neigeAuSol1": "Neige au Sol",
+    "neigeAuSol2": "Neige au Sol",
+    "neigeAuSol3": "Neige au Sol",
+    "neigeAuSol4": "Neige au Sol",
+    "neigeAuSol5": "Neige au Sol",
+    "neigeAuSol6": "Neige au Sol",
+    "neigeAuSol7": "Neige au Sol",
+    "neigeAuSol8": "Neige au Sol",
+    "neigeAuSol9": "Neige au Sol",
+    "neigeAuSol10": "Neige au Sol",
+    "neigeAuSol11": "Neige au Sol",
+    "neigeAuSol12": "Neige au Sol",
+    "canadaNeigeAuSol": "Neige au Sol",
+    "snowCover": "Neige au Sol",
     "environmentCanada": ""
 };
 
@@ -751,6 +781,60 @@ var slidePrograms = {
     async satellite11() { return slidePrograms.couvertureNuageuse(10); },
     async satellite12() { return slidePrograms.couvertureNuageuse(11); },
     async cloudCover() { return slidePrograms.couvertureNuageuse(); },
+    async neigeAuSol(dopplerIdx = 0) {
+        var dConfig = (dopplerIdx !== null && locationConfig.localDopplers && locationConfig.localDopplers[dopplerIdx]) ? locationConfig.localDopplers[dopplerIdx] : null;
+
+        $('.snow-cover').show();
+        $('#radarsnow').show();
+        if (typeof addSnowCities === 'function') {
+            await addSnowCities(dopplerIdx, dConfig);
+        }
+        $(".snow-cities").show();
+        $(".snow-cities-trans").show();
+
+        var headerText = "Neige au Sol";
+        if (dConfig && dConfig.name) {
+            var regionName = dConfig.name.replace(/^doppler\s+local\s*[-—–:]\s*/i, '').trim();
+            $('.snow-cover .hourloop').text(regionName.toUpperCase() + " • NEIGE AU SOL");
+        } else {
+            $('.snow-cover .hourloop').text("Accumulation au sol • En direct");
+        }
+        $('.snow-cover .header').text(headerText);
+        $('.snow-cover .header').fadeIn(167);
+        if (typeof startSnowCover === 'function') {
+            startSnowCover("radarsnow", dopplerIdx, dConfig);
+        }
+
+        setTimeout(() => {
+            $(".snow-cities").hide();
+            $(".snow-cities-trans").hide();
+            $('.snow-cover .header').hide();
+            if (typeof stopSnowCover === 'function') {
+                stopSnowCover("radarsnow");
+            }
+            $('.snow-cover').hide();
+            $('#radarsnow').hide();
+
+            slideCallBack();
+        }, slideLength);
+    },
+    async neigeAuSol1() { return slidePrograms.neigeAuSol(0); },
+    async neigeAuSol2() { return slidePrograms.neigeAuSol(1); },
+    async neigeAuSol3() { return slidePrograms.neigeAuSol(2); },
+    async neigeAuSol4() { return slidePrograms.neigeAuSol(3); },
+    async neigeAuSol5() { return slidePrograms.neigeAuSol(4); },
+    async neigeAuSol6() { return slidePrograms.neigeAuSol(5); },
+    async neigeAuSol7() { return slidePrograms.neigeAuSol(6); },
+    async neigeAuSol8() { return slidePrograms.neigeAuSol(7); },
+    async neigeAuSol9() { return slidePrograms.neigeAuSol(8); },
+    async neigeAuSol10() { return slidePrograms.neigeAuSol(9); },
+    async neigeAuSol11() { return slidePrograms.neigeAuSol(10); },
+    async neigeAuSol12() { return slidePrograms.neigeAuSol(11); },
+    async canadaNeigeAuSol() {
+        var canadaIdx = (locationConfig.localDopplers || []).findIndex(d => d.name && d.name.toLowerCase().includes('canada'));
+        return slidePrograms.neigeAuSol(canadaIdx >= 0 ? canadaIdx : 10);
+    },
+    async snowCover() { return slidePrograms.neigeAuSol(null); },
     regionalForecast(pageIdx = 0) {
         try {
             var regions = (weatherInfo.regionalForecasts && weatherInfo.regionalForecasts.regions) ? weatherInfo.regionalForecasts.regions : [];
@@ -1100,7 +1184,6 @@ var slidePrograms = {
 
         if (pageIdx === 0) {
             audioPlayer.vocallocal.bl = vocallocalBulletin();
-            audioPlayer.playBulletin();
             $('.bulletin').show();
             $('.bulletin .box').show();
             $('.bulletin .header').show();
@@ -1140,21 +1223,61 @@ var slidePrograms = {
         // Comfortable reading time: minimum 20 seconds, dynamic up to 30 seconds
         var pageDuration = Math.max(20000, Math.min(30000, (wordCount / 2.5) * 1000 + 6000));
 
-        setTimeout(() => {
-            if (pageIdx === totalPages - 1) {
-                $('.bulletin .header').fadeOut(167, 'linear');
-                $('.bulletin .alerts').fadeOut(167, 'linear');
-                setTimeout(() => {
-                    $('.bulletin').hide();
-                    slideCallBack();
-                }, 167);
+        // French TTS narration of this page (server-rendered WAV, see tts.js).
+        // Set window.BULLETIN_TTS = false to disable.
+        var ttsEnabled = typeof window === 'undefined' || window.BULLETIN_TTS !== false;
+        var speech = [title.charAt(0) + title.slice(1).toLowerCase(), headline, area, description]
+            .map(s => String(s || '').replace(/<[^>]*>/g, ' ').trim())
+            .filter(Boolean)
+            .map(s => /[.!?:]$/.test(s) ? s : s + '.')
+            .join(' ');
+        var introQueue = pageIdx === 0 ? (audioPlayer.vocallocal.bl || []) : [];
+
+        var schedulePage = (duration) => {
+            setTimeout(() => {
+                if (pageIdx === totalPages - 1) {
+                    $('.bulletin .header').fadeOut(167, 'linear');
+                    $('.bulletin .alerts').fadeOut(167, 'linear');
+                    setTimeout(() => {
+                        $('.bulletin').hide();
+                        slideCallBack();
+                    }, 167);
+                } else {
+                    $('.bulletin .alerts').fadeOut(167, 'linear');
+                    setTimeout(() => {
+                        slidePrograms.bulletin(pageIdx + 1);
+                    }, 167);
+                }
+            }, duration - 167);
+        };
+
+        if (!ttsEnabled || !speech || typeof Audio === 'undefined') {
+            if (pageIdx === 0) audioPlayer.playBulletin();
+            schedulePage(pageDuration);
+            return;
+        }
+
+        var ttsUrl = '/api/tts?text=' + encodeURIComponent(speech);
+        var probe = new Audio();
+        var settled = false;
+        var proceed = (speechMs) => {
+            if (settled) return;
+            settled = true;
+            probe.onloadedmetadata = probe.onerror = null;
+            if (speechMs > 0) {
+                audioPlayer.startPlaying(introQueue.concat([ttsUrl]), false);
+                var introMs = introQueue.length ? 5000 : 0;
+                schedulePage(Math.max(pageDuration, introMs + speechMs + 1500));
             } else {
-                $('.bulletin .alerts').fadeOut(167, 'linear');
-                setTimeout(() => {
-                    slidePrograms.bulletin(pageIdx + 1);
-                }, 167);
+                if (introQueue.length) audioPlayer.startPlaying(introQueue, false);
+                schedulePage(pageDuration);
             }
-        }, pageDuration - 167);
+        };
+        probe.preload = 'metadata';
+        probe.onloadedmetadata = () => proceed(isFinite(probe.duration) ? probe.duration * 1000 : pageDuration);
+        probe.onerror = () => { console.warn('[Slides] Bulletin TTS unavailable, using default narration.'); proceed(0); };
+        setTimeout(() => proceed(0), 8000); // synthesis timeout safeguard
+        probe.src = ttsUrl;
     },
     mapTest() {
         $('.map').show();

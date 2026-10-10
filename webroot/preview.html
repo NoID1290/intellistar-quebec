@@ -1024,7 +1024,20 @@
                                 </div>
                             </div>
 
-                            <!-- 18. Environment Canada Attribution -->
+                            <!-- 18. Neige au Sol (Snow Accumulation) -->
+                            <div class="snow-cover" style="display: none;">
+                                <div class="header">NEIGE AU SOL</div>
+                                <div class="hourloop">ACCUMULATION AU SOL (EN DIRECT)</div>
+                                <div class="key"><span>TRACE</span><img src="images/2026/snowLegend.png"><span>50+ CM</span></div>
+                                <div class="banner">NEIGE AU SOL</div>
+                                <div id="radarsnow" style="display:none;"></div>
+                                <div style="position: absolute; top: 220px; left: 160px; right: 160px; bottom: 180px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(0,229,255,0.4); box-shadow: 0 15px 40px rgba(0,0,0,0.8); background: #030814;">
+                                    <img src="images/maps/regional_map.png" style="width: 100%; height: 100%; object-fit: cover; filter: brightness(0.6) contrast(1.2);">
+                                    <div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(140,225,245,0.5) 0%, rgba(64,180,245,0.3) 40%, transparent 80%); filter: blur(30px);"></div>
+                                </div>
+                            </div>
+
+                            <!-- 19. Environment Canada Attribution -->
                             <div class="environment-canada" style="display: none;">
                                 <div class="header">Source Officielle des Données</div>
                                 <div class="box"></div>
@@ -1106,7 +1119,8 @@
             { id: "map", name: "15. Carte Régionale (Regional Map)", selector: ".map" },
             { id: "radar", name: "16. Radar Doppler en Direct (Local Doppler)", selector: ".radar" },
             { id: "satellite", name: "17. Couverture Nuageuse (Satellite)", selector: ".satellite" },
-            { id: "environment-canada", name: "18. Attribution Environnement Canada", selector: ".environment-canada" }
+            { id: "snow-cover", name: "18. Neige au Sol (Snow Accumulation)", selector: ".snow-cover" },
+            { id: "environment-canada", name: "19. Attribution Environnement Canada", selector: ".environment-canada" }
         ];
 
         let currentSlideIdx = 0;

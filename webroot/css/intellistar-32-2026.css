@@ -420,7 +420,8 @@ body, html {
 }
 
 .radar .banner,
-.satellite .banner {
+.satellite .banner,
+.snow-cover .banner {
     position: absolute;
     height: 160px;
     width: 1512px;
@@ -436,13 +437,15 @@ body, html {
     background-size: 100% 100% !important;
 }
 
-.satellite .banner {
+.satellite .banner,
+.snow-cover .banner {
     background-image: url(../images/boxes/2026/radar_satellite_banner.png) !important;
     background-size: 100% 100% !important;
 }
 
 .radar .banner::before,
-.satellite .banner::before {
+.satellite .banner::before,
+.snow-cover .banner::before {
     content: '';
     position: absolute;
     top: 0;
@@ -2224,7 +2227,7 @@ body, html {
    SLIDE 16 & 17: RADAR & SATELLITE LOOP
    ========================================================================== */
 
-#locradar, #regradar, #radarsat {
+#locradar, #regradar, #radarsat, #radarsnow {
     position: absolute;
     width: 1620px;
     height: 1080px;
@@ -2233,7 +2236,7 @@ body, html {
     z-index: 6;
 }
 
-.reg-cities, .loc-cities, .sat-cities {
+.reg-cities, .loc-cities, .sat-cities, .snow-cities {
     position: absolute;
     z-index: 12;
     pointer-events: none;
@@ -2243,7 +2246,7 @@ body, html {
     left: 0;
 }
 
-.reg-cities-trans, .loc-cities-trans, .sat-cities-trans {
+.reg-cities-trans, .loc-cities-trans, .sat-cities-trans, .snow-cities-trans {
     position: absolute;
     z-index: 13;
     pointer-events: none;
@@ -2309,7 +2312,7 @@ body, html {
     opacity: 0.85;
 }
 
-.radar .header, .satellite .header {
+.radar .header, .satellite .header, .snow-cover .header {
     position: absolute !important;
     top: 86px !important;
     left: 180px !important;
@@ -2324,7 +2327,7 @@ body, html {
     z-index: 15 !important;
 }
 
-.radar .key, .satellite .key {
+.radar .key, .satellite .key, .snow-cover .key {
     position: absolute !important;
     font-family: "Interstate Bold", sans-serif !important;
     font-size: 24px !important;
@@ -2340,14 +2343,14 @@ body, html {
     text-shadow: 0 2px 4px #000000 !important;
 }
 
-.radar .key img, .satellite .key img {
+.radar .key img, .satellite .key img, .snow-cover .key img {
     width: 220px !important;
     height: 20px !important;
     border-radius: 4px !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-.radar .hourloop, .satellite .hourloop {
+.radar .hourloop, .satellite .hourloop, .snow-cover .hourloop {
     position: absolute !important;
     font-family: "Interstate Bold", sans-serif !important;
     font-size: 26px !important;
@@ -2359,6 +2362,50 @@ body, html {
     letter-spacing: 1px !important;
     z-index: 15 !important;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 229, 255, 0.5) !important;
+}
+
+/* Snow Cover (Neige au Sol) City Pins and Accumulation Badges */
+.snow-cover .radar-city-dot.snow-dot {
+    width: 14px !important;
+    height: 14px !important;
+    border-radius: 50% !important;
+    background: #e0f7fa !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 0 8px #00e5ff, 0 0 16px rgba(255, 255, 255, 0.8) !important;
+}
+
+.snow-cover .city-snow-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    margin-left: 10px !important;
+    padding: 1px 9px !important;
+    background: linear-gradient(135deg, rgba(8, 28, 56, 0.88), rgba(16, 44, 87, 0.82)) !important;
+    border: 1.5px solid rgba(0, 229, 255, 0.65) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 229, 255, 0.3) !important;
+    backdrop-filter: blur(4px) !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 22px !important;
+    color: #ffffff !important;
+    animation: snowBadgeBloom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+
+.snow-cover .city-snow-badge .snow-badge-val {
+    color: #b2ebf2 !important;
+    font-weight: bold !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+}
+
+@keyframes snowBadgeBloom {
+    0% {
+        opacity: 0;
+        transform: scale(0.65) translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 /* ==========================================================================
