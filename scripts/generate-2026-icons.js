@@ -523,7 +523,7 @@ function pmBadge() {
 const ICONS = {
     // Clear / Sun
     'Sun': (t) => dynamicSun(256, 256, 120, true, t),
-    'MSun': (t) => `${dynamicSun(330, 190, 85, true, t)}${cloud(220, 310, 1.05, 'front', t)}`,
+    'MSun': (t) => `${dynamicSun(290, 210, 95, true, t)}${cloud(190, 340, 0.8, 'front', t)}`,
     'DPc': (t) => `${dynamicSun(330, 190, 85, true, t)}${cloud(220, 310, 1.05, 'front', t)}`,
     'DMc': (t) => `${dynamicSun(340, 180, 75, true, t)}${cloud(190, 270, 0.9, 'rear', t)}${cloud(240, 320, 1.1, 'front', t)}`,
     'Cld': (t) => `${cloud(190, 250, 0.95, 'rear', t)}${cloud(250, 310, 1.1, 'front', t)}`,
@@ -750,9 +750,7 @@ async function renderIconsWithPuppeteer(targetFps = 60, iconEntries = Object.ent
 
                 if (f === 0) {
                     const stillPngPath = path.join(STILLS_DIR, `${name}.mv.png`);
-                    if (!fs.existsSync(stillPngPath)) {
-                        fs.copyFileSync(framePath, stillPngPath);
-                    }
+                    fs.copyFileSync(framePath, stillPngPath);
                 }
             }
 
@@ -783,11 +781,19 @@ async function renderIconsWithPuppeteer(targetFps = 60, iconEntries = Object.ent
 async function generateIconSet(targetFps = 60, options = {}) {
     const outDir = getOutputDirForFps(targetFps);
     fs.mkdirSync(outDir, { recursive: true });
-    const iconEntries = Object.entries(ICONS);
+    let iconEntries = Object.entries(ICONS);
+    if (options.iconFilter) {
+        iconEntries = iconEntries.filter(([name]) => name.toLowerCase() === options.iconFilter.toLowerCase());
+        if (iconEntries.length === 0) {
+            throw new Error(`Icon '${options.iconFilter}' not found in ICONS`);
+        }
+    }
     const totalIcons = iconEntries.length;
 
     // Check if 60fps set is available and we can use fast frame extraction
-    const has60fps = fs.existsSync(DIR_60FPS) && fs.readdirSync(DIR_60FPS).filter(f => f.endsWith('.webp')).length >= 80;
+    const has60fps = options.iconFilter
+        ? fs.existsSync(path.join(DIR_60FPS, `${iconEntries[0][0]}.webp`))
+        : (fs.existsSync(DIR_60FPS) && fs.readdirSync(DIR_60FPS).filter(f => f.endsWith('.webp')).length >= 80);
     const canFastTranscode = (targetFps === 24 || targetFps === 30) && has60fps && !options.forceRender;
 
     if (canFastTranscode) {
@@ -832,7 +838,7 @@ async function generateIconSet(targetFps = 60, options = {}) {
             fs.rmSync(workerTempDir, { recursive: true, force: true });
         }
 
-        await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => transcodeWorker(i + 1)));
+        await Promise.all(Array.from({ length: Math.min(CONCURRENCY, totalIcons) }, (_, i) => transcodeWorker(i + 1)));
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         console.log(`[IconGenerator] Successfully generated all ${targetFps}fps icons in ${elapsed}s!`);
     } else {
@@ -842,6 +848,15 @@ async function generateIconSet(targetFps = 60, options = {}) {
 
 async function generateAllIconSets(options = {}) {
     console.log(`\n=== GENERATING 24 / 30 / 60 FPS WEATHER ICONS ===\n`);
+    if (options.iconFilter) {
+        console.log(`[IconGenerator] Targeting single icon: ${options.iconFilter}`);
+        await generateIconSet(60, { ...options, forceRender: true });
+        await generateIconSet(30, options);
+        await generateIconSet(24, options);
+        console.log(`\n=== ICON ${options.iconFilter} COMPLETE FOR ALL FRAME RATES ===\n`);
+        return;
+    }
+
     // 1. Ensure 60fps set is available first (or copy existing from large/ if present)
     const existingInLarge = fs.existsSync(LARGE_DIR) && fs.readdirSync(LARGE_DIR).filter(f => f.endsWith('.webp')).length >= 80;
     const existingIn60fps = fs.existsSync(DIR_60FPS) && fs.readdirSync(DIR_60FPS).filter(f => f.endsWith('.webp')).length >= 80;
@@ -866,7 +881,7 @@ async function generateAllIconSets(options = {}) {
     console.log(`\n=== ALL 24 / 30 / 60 FPS ICON SETS COMPLETE ===\n`);
 }
 
-function syncActiveIcons(targetFps = 60, appDir = path.join(__dirname, '..')) {
+function syncActiveIcons(targetFps = 60, appDir = path.join(__dirname, '..'), iconFilter = null) {
     const srcDir = path.join(appDir, 'webroot', 'images', 'icons', '2026', `${targetFps}fps`);
     const dstDir = path.join(appDir, 'webroot', 'images', 'icons', '2026', 'large');
 
@@ -876,7 +891,10 @@ function syncActiveIcons(targetFps = 60, appDir = path.join(__dirname, '..')) {
     }
 
     fs.mkdirSync(dstDir, { recursive: true });
-    const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.webp'));
+    let files = fs.readdirSync(srcDir).filter(f => f.endsWith('.webp'));
+    if (iconFilter) {
+        files = files.filter(f => f.toLowerCase() === `${iconFilter.toLowerCase()}.webp`);
+    }
     for (const f of files) {
         fs.copyFileSync(path.join(srcDir, f), path.join(dstDir, f));
     }
@@ -889,10 +907,16 @@ async function main() {
     const args = process.argv.slice(2);
     let target = 'all';
     let forceRender = false;
+    let iconFilter = null;
 
-    for (const arg of args) {
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
         if (arg === '--force-render') {
             forceRender = true;
+        } else if (arg.startsWith('--icon=')) {
+            iconFilter = arg.split('=')[1];
+        } else if (arg === '--icon' && i + 1 < args.length) {
+            iconFilter = args[++i];
         } else if (['24', '30', '60', 'all'].includes(arg.toLowerCase())) {
             target = arg.toLowerCase();
         } else if (arg.startsWith('--fps=')) {
@@ -902,12 +926,14 @@ async function main() {
         }
     }
 
+    const options = { forceRender, iconFilter };
+
     if (target === 'all') {
-        await generateAllIconSets({ forceRender });
+        await generateAllIconSets(options);
     } else {
         const fpsNum = parseInt(target, 10);
         if ([24, 30, 60].includes(fpsNum)) {
-            await generateIconSet(fpsNum, { forceRender });
+            await generateIconSet(fpsNum, options);
         } else {
             console.error(`Unknown target fps '${target}'. Use 24, 30, 60, or all.`);
             process.exit(1);
@@ -919,9 +945,9 @@ async function main() {
         const { getEncodingPreset } = require('../encoding-presets');
         const activePreset = getEncodingPreset(path.join(__dirname, '..'));
         console.log(`[IconGenerator] Active encoding preset: ${activePreset.resolution.toUpperCase()} @ ${activePreset.fps}fps`);
-        syncActiveIcons(activePreset.fps, path.join(__dirname, '..'));
+        syncActiveIcons(activePreset.fps, path.join(__dirname, '..'), iconFilter);
     } catch (e) {
-        syncActiveIcons(60, path.join(__dirname, '..'));
+        syncActiveIcons(60, path.join(__dirname, '..'), iconFilter);
     }
 }
 

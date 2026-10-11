@@ -124,4 +124,39 @@ test('Visual and Presentation Improvements (Pictures 1-5)', async (t) => {
             assert.match(css, /\.almanac\s+\.sunset-icon/, `${name} CSS must position .sunset-icon`);
         }
     });
+
+    await t.test('MSun (Très beau) and DPc (Beau) icons differ across all 2026 asset directories', () => {
+        const iconsRoot = path.join(__dirname, '../webroot/images/icons/2026');
+        const dirs = ['large', 'stills', '24fps', '30fps', '60fps'];
+
+        for (const dir of dirs) {
+            const ext = dir === 'stills' ? '.mv.png' : '.webp';
+            const msunPath = path.join(iconsRoot, dir, `MSun${ext}`);
+            const dpcPath = path.join(iconsRoot, dir, `DPc${ext}`);
+
+            assert.ok(fs.existsSync(msunPath), `${msunPath} must exist`);
+            assert.ok(fs.existsSync(dpcPath), `${dpcPath} must exist`);
+
+            const msunBuf = fs.readFileSync(msunPath);
+            const dpcBuf = fs.readFileSync(dpcPath);
+
+            assert.notDeepStrictEqual(
+                msunBuf,
+                dpcBuf,
+                `MSun and DPc in ${dir} must be distinct and not identical duplicates`
+            );
+        }
+
+        // Verify generator definition
+        const genIconsPath = path.join(__dirname, '../scripts/generate-2026-icons.js');
+        const { ICONS } = require(genIconsPath);
+        assert.ok(ICONS.MSun, 'ICONS.MSun must be defined');
+        assert.ok(ICONS.DPc, 'ICONS.DPc must be defined');
+        assert.notStrictEqual(
+            ICONS.MSun(0),
+            ICONS.DPc(0),
+            'ICONS.MSun and ICONS.DPc procedural SVG render functions must differ'
+        );
+    });
 });
+
