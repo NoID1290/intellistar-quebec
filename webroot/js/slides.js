@@ -620,6 +620,8 @@ var slidePrograms = {
         $('.almanac .day.i .almheader').text(weatherInfo.almanac.days[0].day);
         $('.almanac .day.i .sunrise').html(weatherInfo.almanac.days[0].sunrise);
         $('.almanac .day.i .sunset').html(weatherInfo.almanac.days[0].sunset);
+        getIcon($('.almanac .sunrise-icon'), 3200, 'forecast');
+        getIcon($('.almanac .sunset-icon'), 3100, 'forecast');
         $('.almanac .day.ii .almheader').text(weatherInfo.almanac.days[1].day);
         $('.almanac .day.ii .sunrise').html(weatherInfo.almanac.days[1].sunrise);
         $('.almanac .day.ii .sunset').html(weatherInfo.almanac.days[1].sunset);

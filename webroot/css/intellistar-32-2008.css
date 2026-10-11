@@ -821,6 +821,21 @@
 .almanac .sunset {
     margin-top: 172px;
 }
+.almanac .sunrise-icon, .almanac .sunset-icon {
+    position: absolute;
+    left: 235px;
+    width: 72px;
+    height: 72px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.almanac .sunrise-icon {
+    margin-top: 254px;
+}
+.almanac .sunset-icon {
+    margin-top: 345px;
+}
 .almanac .sunrise-text, .almanac .sunset-text {
     position: absolute;
     left: 335px;

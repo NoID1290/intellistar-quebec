@@ -145,12 +145,27 @@ function translateWindCardinal(cardinal) {
     return map[c] !== undefined ? map[c] : c;
 }
 
+function formatClockTimestamp(ts) {
+    if (!ts) return "--:--";
+    var parts = new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true, minute: 'numeric' }).split(" ");
+    var timePart = parts[0] || "";
+    var ampmPart = parts[1] || "";
+    return `${timePart}<span class="ampm">${ampmPart}</span>`;
+}
+
 function updateLastUpdatedIndicator() {
-    var forecastStamp = formatTimestamp(dataRefreshState.lastSuccessful.forecast);
-    var alertsStamp = formatTimestamp(dataRefreshState.lastSuccessful.alerts);
-    var radarStamp = formatTimestamp(dataRefreshState.lastSuccessful.radar);
+    var latestTs = Math.max(
+        dataRefreshState.lastSuccessful.forecast || 0,
+        dataRefreshState.lastSuccessful.alerts || 0,
+        dataRefreshState.lastSuccessful.radar || 0
+    );
+    if (!latestTs) {
+        $(".data-updated").text("Données météo : en attente de la première mise à jour").removeClass("error");
+        return;
+    }
+    var timeHtml = formatClockTimestamp(latestTs);
     $(".data-updated")
-        .text(`Mises à jour | Prévisions ${forecastStamp} | Alertes ${alertsStamp} | Radar ${radarStamp}`)
+        .html(`Mise à jour | <span class="time-val">${timeHtml}</span>`)
         .removeClass("error");
 }
 

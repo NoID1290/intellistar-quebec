@@ -751,6 +751,23 @@ body, html {
     z-index: 7 !important;
 }
 
+.ldl-blue .data-updated .time-val,
+.data-updated .time-val {
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 16px !important;
+    color: #ffffff !important;
+    margin-left: 3px !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+}
+
+.ldl-blue .data-updated .ampm,
+.data-updated .ampm {
+    font-size: 13px !important;
+    color: #38bdf8 !important;
+    margin-left: 3px !important;
+    font-weight: bold !important;
+}
+
 .ldl-blue .data-updated.error,
 .data-updated.error {
     color: #fca5a5 !important;
@@ -814,6 +831,9 @@ body, html {
     max-width: 320px;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.35;
+    padding-top: 4px;
+    padding-bottom: 4px;
 }
 
 .ldl-blue .observations .obs {
@@ -879,22 +899,33 @@ body, html {
 
 .ldl-blue .observations .obs-metrics {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    justify-content: center;
     flex: 1;
     min-width: 0;
-    gap: 14px;
-    height: 60px;
+    gap: 3px;
+    height: 72px;
 }
 
-.ldl-blue .observations .obs-metrics > div {
+.ldl-blue .observations .metrics-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 34px;
+}
+
+.ldl-blue .observations .metrics-row > div,
+.ldl-blue .observations .obs-metrics > div:not(.metrics-row) {
     display: flex;
     align-items: center;
     white-space: nowrap;
-    padding-left: 14px;
+    padding-left: 12px;
     border-left: 1.5px solid rgba(0, 210, 255, 0.35);
     flex-shrink: 0;
 }
 
+.ldl-blue .observations .metrics-row > div.is-first-visible,
+.ldl-blue .observations .metrics-row > div:first-child,
 .ldl-blue .observations .obs-metrics > div.is-first-visible,
 .ldl-blue .observations .obs-metrics > div:first-child {
     border-left: none !important;
@@ -903,20 +934,20 @@ body, html {
 
 .ldl-blue .observations .obsheader {
     position: static !important;
-    font-size: 21px !important;
+    font-size: 18px !important;
     font-family: "Interstate Bold", sans-serif !important;
     color: #38bdf8 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.6px !important;
+    letter-spacing: 0.5px !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.95) !important;
-    margin: 0 8px 0 0 !important;
+    margin: 0 6px 0 0 !important;
     transform: none !important;
     white-space: nowrap !important;
 }
 
 .ldl-blue .observations .info {
     position: static !important;
-    font-size: 27px !important;
+    font-size: 23px !important;
     font-family: "Interstate Black Cn", sans-serif !important;
     color: #ffffff !important;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 1px 1px #000000 !important;
@@ -929,7 +960,7 @@ body, html {
 .ldl-blue .observations .info span,
 .ldl-blue .observations .info span.degree {
     font-family: "Interstate Black Cn", sans-serif !important;
-    font-size: 23px !important;
+    font-size: 20px !important;
     color: #00e5ff !important;
     padding-left: 2px !important;
     position: static !important;
@@ -938,16 +969,16 @@ body, html {
 
 .ldl-blue .observations .info .unit {
     font-family: "Interstate Bold", sans-serif !important;
-    font-size: 18px !important;
+    font-size: 16px !important;
     color: #94a3b8 !important;
     padding-left: 4px !important;
 }
 
 .ldl-blue .observations .info .gust-label {
     font-family: "Interstate Bold", sans-serif !important;
-    font-size: 19px !important;
+    font-size: 16px !important;
     color: #38bdf8 !important;
-    padding-left: 6px !important;
+    padding-left: 4px !important;
 }
 
 /* ==========================================================================
@@ -1579,6 +1610,25 @@ body, html {
     font-family: "Interstate Bold", sans-serif;
 }
 
+.almanac .sunrise-icon, .almanac .sunset-icon {
+    position: absolute;
+    left: 235px;
+    width: 72px;
+    height: 72px;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+}
+
+.almanac .sunrise-icon {
+    top: 250px;
+}
+
+.almanac .sunset-icon {
+    top: 341px;
+}
+
 .almanac .sunrise-text, .almanac .sunset-text {
     position: absolute;
     left: 335px;
@@ -1879,7 +1929,7 @@ body, html {
     margin: 0 !important;
     font-family: "Interstate Black", "Interstate Bold", sans-serif !important;
     font-size: 40px !important;
-    line-height: 1.1 !important;
+    line-height: 1.25 !important;
     color: #ffffff !important;
     letter-spacing: 0.5px !important;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9) !important;
@@ -1891,6 +1941,7 @@ body, html {
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
+    padding-top: 4px !important;
     padding-bottom: 6px !important;
     z-index: 2;
 }

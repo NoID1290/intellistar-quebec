@@ -241,6 +241,15 @@
     z-index: 7;
     pointer-events: none;
 }
+.ldl-blue .data-updated .time-val {
+    font-family: "Interstate Bold", Arial, sans-serif;
+    color: #ffffff;
+    margin-left: 3px;
+}
+.ldl-blue .data-updated .ampm {
+    font-size: 13px;
+    margin-left: 3px;
+}
 .ldl-blue .data-updated.error {
     color: #ffd0d0;
 }
@@ -1161,6 +1170,21 @@
 }
 .almanac .sunset {
     margin-top: 172px;
+}
+.almanac .sunrise-icon, .almanac .sunset-icon {
+    position: absolute;
+    left: 235px;
+    width: 72px;
+    height: 72px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.almanac .sunrise-icon {
+    margin-top: 254px;
+}
+.almanac .sunset-icon {
+    margin-top: 345px;
 }
 .almanac .sunrise-text, .almanac .sunset-text {
     position: absolute;

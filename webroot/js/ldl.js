@@ -679,8 +679,16 @@ function hasSlide2(city) {
 }
 
 function updateFirstVisibleBorder($metrics) {
-    $metrics.children("div").removeClass("is-first-visible");
-    $metrics.children("div:visible").first().addClass("is-first-visible");
+    if ($metrics.find(".metrics-row").length > 0) {
+        $metrics.find(".metrics-row").each(function() {
+            var $row = $(this);
+            $row.children("div").removeClass("is-first-visible");
+            $row.children("div:visible").first().addClass("is-first-visible");
+        });
+    } else {
+        $metrics.children("div").removeClass("is-first-visible");
+        $metrics.children("div:visible").first().addClass("is-first-visible");
+    }
 }
 
 function renderBluePrimary($obs, city) {
@@ -690,11 +698,11 @@ function renderBluePrimary($obs, city) {
     // Dynamic font sizing for long city names to prevent clipping
     var len = (city.name || "").length;
     if (len > 16) {
-        $name.css({ "font-size": "29px", "letter-spacing": "0.3px" });
+        $name.css({ "font-size": "29px", "letter-spacing": "0.3px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
     } else if (len > 11) {
-        $name.css({ "font-size": "33px", "letter-spacing": "0.5px" });
+        $name.css({ "font-size": "33px", "letter-spacing": "0.5px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
     } else {
-        $name.css({ "font-size": "38px", "letter-spacing": "0.8px" });
+        $name.css({ "font-size": "38px", "letter-spacing": "0.8px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
     }
 
     // Weather Icon
@@ -713,10 +721,10 @@ function renderBluePrimary($obs, city) {
     }
 }
 
-function renderSlide1Metrics($obs, city) {
+function renderAllMetrics($obs, city) {
     var $metrics = $obs.find(".obs-metrics");
 
-    // Feels Like (Ressenti / Indice humidex / Refroid. éolien)
+    // Line 1: Feels Like (Ressenti / Indice humidex / Refroid. éolien)
     var fl = city.feelslike;
     var flVal = (fl && fl.val !== "" && fl.val !== undefined) ? fl.val : "";
     var flType = (fl && fl.type) ? fl.type : "Ressenti";
@@ -728,7 +736,7 @@ function renderSlide1Metrics($obs, city) {
         $obs.find(".feelslike").hide();
     }
 
-    // Wind + Gusts
+    // Line 1: Wind + Gusts
     var windVal = formatWindValue(city.wind, city.windStr);
     if (windVal && windVal !== "Calme") {
         var windParts = windVal.split(" ");
@@ -748,7 +756,7 @@ function renderSlide1Metrics($obs, city) {
         $obs.find(".wind").hide();
     }
 
-    // Humidity
+    // Line 1: Humidity
     var hum = city.humidity;
     if (hum !== "" && hum !== undefined && hum != null) {
         $obs.find(".humidity .info").html(`${String(hum).replace("%", "")}<span class="unit">%</span>`);
@@ -757,18 +765,7 @@ function renderSlide1Metrics($obs, city) {
         $obs.find(".humidity").hide();
     }
 
-    // Hide Slide 2 metrics
-    $obs.find(".pressure, .dewpt, .visibility, .highlow, .precip").hide();
-    updateFirstVisibleBorder($metrics);
-}
-
-function renderSlide2Metrics($obs, city) {
-    var $metrics = $obs.find(".obs-metrics");
-
-    // Hide Slide 1 metrics
-    $obs.find(".feelslike, .wind, .humidity, .gusts").hide();
-
-    // Pressure
+    // Line 2: Pressure
     var pres = city.pressure;
     var presVal = (pres && pres.val !== undefined) ? pres.val : (pres || "");
     if (presVal !== "" && presVal != null) {
@@ -779,7 +776,7 @@ function renderSlide2Metrics($obs, city) {
         $obs.find(".pressure").hide();
     }
 
-    // Dew Point
+    // Line 2: Dew Point
     var dew = city.dewpoint;
     if (dew !== "" && dew !== undefined && dew != null) {
         $obs.find(".dewpt .info").html(`${dew}<span class="degree">°</span>`);
@@ -788,7 +785,7 @@ function renderSlide2Metrics($obs, city) {
         $obs.find(".dewpt").hide();
     }
 
-    // Visibility
+    // Line 2: Visibility
     var vis = city.visibility;
     if (vis !== "" && vis !== undefined && vis != null) {
         var visUnit = isMetric() ? "KM" : "MI";
@@ -798,7 +795,7 @@ function renderSlide2Metrics($obs, city) {
         $obs.find(".visibility").hide();
     }
 
-    // High / Low
+    // Line 2: High / Low
     if (city.high !== "" && city.high !== undefined && city.high != null && city.low !== "" && city.low !== undefined && city.low != null) {
         $obs.find(".highlow .info").html(`${city.high}<span class="degree">°</span> / ${city.low}<span class="degree">°</span>`);
         $obs.find(".highlow").show();
@@ -807,6 +804,14 @@ function renderSlide2Metrics($obs, city) {
     }
 
     updateFirstVisibleBorder($metrics);
+}
+
+function renderSlide1Metrics($obs, city) {
+    renderAllMetrics($obs, city);
+}
+
+function renderSlide2Metrics($obs, city) {
+    renderAllMetrics($obs, city);
 }
 
 var blueCityIndex = 0;
@@ -848,19 +853,8 @@ function blueLDLObs(){
     $obs.stop(true, true).fadeTo(180, 0, function() {
         renderBluePrimary($obs, city);
         $metrics.css("opacity", 1);
-        renderSlide1Metrics($obs, city);
+        renderAllMetrics($obs, city);
         $obs.fadeTo(220, 1);
-
-        // If city has secondary metrics, schedule crossfade to Slide 2 at 4 seconds
-        if (hasSlide2(city)) {
-            metricSlideTimeout = setTimeout(function() {
-                if (alertActive) return;
-                $metrics.stop(true, true).fadeTo(180, 0, function() {
-                    renderSlide2Metrics($obs, city);
-                    $metrics.fadeTo(220, 1);
-                });
-            }, 4000);
-        }
     });
 
     scheduleNextObs(blueLDLObs, 8000);
