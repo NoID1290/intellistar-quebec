@@ -92,9 +92,13 @@ function vocallocalLF(idx, durr) {
             "Samedi soir": "Saturday_Night"
         };
 
-        var mappedDay = dayMap[dayName] || dayName.replace(" ", "_");
+        var mappedDay = dayMap[dayName] || dayName;
         if (dayMap[mappedDay]) mappedDay = dayMap[mappedDay];
-        mappedDay = mappedDay.replace(/\bnight\b/i, "Night").replace(" ", "_");
+        // Normalize to the on-disk Title_Case file names (e.g. "Monday night" -> "Monday_Night").
+        // Note: "\bnight\b" can't be used after "_" since underscore is a word character.
+        mappedDay = mappedDay.trim().split(/[\s_]+/)
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join("_");
 
         dayAudio = base + 'dayname/' + mappedDay + '.wav';
 

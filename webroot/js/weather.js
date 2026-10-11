@@ -3185,8 +3185,15 @@ async function grabLocalForecast() {
         //36 HOUR
         for (var i = (data.daypart[0].daypartName[0] === null ? 1 : 0); i < (data.daypart[0].daypartName[0] === null ? 5 : 4); i++) {
             var rawName = data.daypart[0].daypartName[i] || "";
+            // "Tomorrow" / "Tomorrow night" must resolve to the real weekday of that daypart.
+            // Use the API's own dayOfWeek (2 dayparts per day) so the label is always correct
+            // and the vocal narration finds a matching dayname file (there is no Tomorrow.wav).
+            if (/^Tomorrow/i.test(rawName)) {
+                var tomorrowEn = (data.dayOfWeek && data.dayOfWeek[Math.floor(i / 2)])
+                    || ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][(new Date().getDay() + 1) % 7];
+                rawName = rawName.replace(/^Tomorrow/i, tomorrowEn);
+            }
             var translatedName = rawName
-                .replace("Tomorrow", dayOfWeek[new Date().getHours() > 3 ? new Date().getDay() : new Date().getDay() - 1])
                 .replace("Sunday", "Dimanche").replace("Monday", "Lundi").replace("Tuesday", "Mardi")
                 .replace("Wednesday", "Mercredi").replace("Thursday", "Jeudi").replace("Friday", "Vendredi")
                 .replace("Saturday", "Samedi").replace("Tonight", "Ce soir").replace("Today", "Aujourd'hui")

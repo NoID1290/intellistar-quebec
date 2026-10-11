@@ -334,6 +334,16 @@ class AudioManager {
                     }, 50);
                 });
 
+                // A missing/unloadable clip must not silence the rest of the narration.
+                const failedIdx = state.currentIdx;
+                state.active.off($.jPlayer.event.error).on($.jPlayer.event.error, () => {
+                    if (state.queue !== arr || state.currentIdx !== failedIdx) return;
+                    console.warn('[Audio] Voice clip failed to load, skipping:', arr[failedIdx]);
+                    setTimeout(() => {
+                        playNextVoice();
+                    }, 50);
+                });
+
                 state.active.jPlayer('play');
 
                 // Preload upcoming track if available
