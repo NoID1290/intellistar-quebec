@@ -695,14 +695,47 @@ function renderBluePrimary($obs, city) {
     var $name = $obs.find(".city-name");
     $name.text(city.name);
 
-    // Dynamic font sizing for long city names to prevent clipping
+    // Dynamic font sizing for long city names to ensure full visibility without clipping or truncation
     var len = (city.name || "").length;
-    if (len > 16) {
-        $name.css({ "font-size": "29px", "letter-spacing": "0.3px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
-    } else if (len > 11) {
-        $name.css({ "font-size": "33px", "letter-spacing": "0.5px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
+    var fontSize = 38;
+    var letterSpacing = "0.8px";
+
+    if (len > 22) {
+        fontSize = 23;
+        letterSpacing = "0.2px";
+    } else if (len > 17) {
+        fontSize = 26;
+        letterSpacing = "0.3px";
+    } else if (len > 13) {
+        fontSize = 31;
+        letterSpacing = "0.4px";
+    } else if (len > 10) {
+        fontSize = 35;
+        letterSpacing = "0.5px";
     } else {
-        $name.css({ "font-size": "38px", "letter-spacing": "0.8px", "line-height": "1.35", "padding-top": "4px", "padding-bottom": "4px" });
+        fontSize = 38;
+        letterSpacing = "0.8px";
+    }
+
+    $name.css({
+        "font-size": `${fontSize}px`,
+        "letter-spacing": letterSpacing,
+        "line-height": "1.35",
+        "padding-top": "4px",
+        "padding-bottom": "4px",
+        "max-width": "none",
+        "overflow": "visible",
+        "text-overflow": "clip"
+    });
+
+    // Auto-fit check: if rendered width exceeds available space (420px), progressively step down font size
+    var el = $name[0];
+    if (el && el.scrollWidth > 420) {
+        var currentSize = fontSize;
+        while (currentSize > 18 && el.scrollWidth > 420) {
+            currentSize -= 1;
+            $name.css({ "font-size": `${currentSize}px` });
+        }
     }
 
     // Weather Icon

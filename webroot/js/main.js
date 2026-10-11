@@ -93,6 +93,15 @@ async function reloadScripts() {
         }
     }
 
+    try {
+        $('link[rel="stylesheet"]').each(function() {
+            var href = $(this).attr('href');
+            if (href) {
+                $(this).attr('href', href.split('?')[0] + '?v=' + cacheBuster);
+            }
+        });
+    } catch (e) {}
+
     if (typeof grabAlerts === 'function') {
         try {
             await grabAlerts();

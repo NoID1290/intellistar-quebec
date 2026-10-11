@@ -73,7 +73,7 @@ test('Visual and Presentation Improvements (Pictures 1-5)', async (t) => {
         assert.match(css2026, /\.ldl-blue\s+\.observations\s+\.metrics-row/);
     });
 
-    await t.test('Picture 4: French accent police type vertical clipping resolved', () => {
+    await t.test('Picture 4: French accent police type vertical clipping resolved and city name fully visible', () => {
         const css2026 = fs.readFileSync(css2026Path, 'utf8');
         const ldlJs = fs.readFileSync(ldlJsPath, 'utf8');
 
@@ -81,6 +81,17 @@ test('Visual and Presentation Improvements (Pictures 1-5)', async (t) => {
         assert.match(css2026, /\.ldl-blue\s+\.observations\s+\.city-name[\s\S]*?line-height:\s*1\.35/);
         assert.match(css2026, /\.ldl-blue\s+\.observations\s+\.city-name[\s\S]*?padding-top:\s*4px/);
         assert.ok(ldlJs.includes('"line-height": "1.35"'), 'ldl.js sets line-height to 1.35 during font fit calculations');
+
+        // City name must not be truncated with 320px max-width or ellipsis
+        assert.doesNotMatch(css2026, /\.ldl-blue\s+\.observations\s+\.city-name\s*\{[^}]*max-width:\s*320px/);
+        assert.doesNotMatch(css2026, /\.ldl-blue\s+\.observations\s+\.city-name\s*\{[^}]*text-overflow:\s*ellipsis/);
+        assert.ok(ldlJs.includes('"max-width": "none"'), 'ldl.js explicitly sets max-width: none');
+        assert.ok(ldlJs.includes('"overflow": "visible"'), 'ldl.js explicitly sets overflow: visible');
+        assert.ok(ldlJs.includes('"text-overflow": "clip"'), 'ldl.js explicitly sets text-overflow: clip');
+
+        // Dynamic scaling thresholds in ldl.js
+        assert.ok(ldlJs.includes('len > 22'), 'ldl.js handles very long city names (>22 chars)');
+        assert.ok(ldlJs.includes('len > 13'), 'ldl.js handles medium-long city names like Saint-Hyacinthe (15 chars)');
     });
 
     await t.test('Picture 5: Almanac slide has sunrise and sunset/moonset icons', () => {
