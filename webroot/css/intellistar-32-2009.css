@@ -524,6 +524,9 @@
     left: 139px;
     white-space: nowrap;
     top: 2%;
+    max-width: 960px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .ldl-black .alertinfo .alertcrawl {
     position: absolute;

@@ -317,6 +317,45 @@ function rotateNextAlertCrawl() {
     }
 }
 
+function fitAlertHeader($nameEl, displayName, city, maxWidth) {
+    maxWidth = maxWidth || 960;
+    var baseFontSize = 38;
+    var minFontSize = 26;
+
+    var headerCities = city ? String(city).split(/\s*,\s*/).filter(Boolean) : [];
+
+    var candidates = [];
+    if (headerCities.length > 0) {
+        var twoCities = headerCities.slice(0, 2).join(", ");
+        if (headerCities.length > 2) {
+            twoCities += ` +${headerCities.length - 2}`;
+        }
+        candidates.push(`${displayName} — ${twoCities.toUpperCase()}`);
+
+        if (headerCities.length > 1) {
+            var oneCity = `${headerCities[0]} +${headerCities.length - 1}`;
+            candidates.push(`${displayName} — ${oneCity.toUpperCase()}`);
+        }
+    }
+    candidates.push(displayName);
+
+    $nameEl.css({ "max-width": maxWidth + "px" });
+    var el = $nameEl[0];
+
+    for (var i = 0; i < candidates.length; i++) {
+        var text = candidates[i];
+        $nameEl.text(text);
+        for (var fs = baseFontSize; fs >= minFontSize; fs -= 2) {
+            $nameEl.css("font-size", fs + "px");
+            if (el && el.scrollWidth <= maxWidth) {
+                return;
+            }
+        }
+    }
+
+    $nameEl.text(displayName).css("font-size", minFontSize + "px");
+}
+
 function startAlertCrawl(){
     if (!weatherInfo || !weatherInfo.bulletin || !weatherInfo.bulletin.crawlAlert || !weatherInfo.bulletin.crawlAlert.alert) {
         return;
@@ -379,17 +418,6 @@ function startAlertCrawl(){
         city = String(alertObj.areaText).replace(/^Secteurs?\s*:\s*/i, "").trim();
     }
 
-    var headerName = displayName;
-    if (city) {
-        // Keep the header short next to the clock: show at most 2 cities, then "+N"
-        var headerCities = city.split(/\s*,\s*/).filter(Boolean);
-        var headerCity = headerCities.slice(0, 2).join(", ");
-        if (headerCities.length > 2) {
-            headerCity += ` +${headerCities.length - 2}`;
-        }
-        headerName = `${displayName} — ${headerCity.toUpperCase()}`;
-    }
-
     var fullCrawl = crawlDesc;
     if (city) {
         var cityUpper = city.toUpperCase();
@@ -399,9 +427,9 @@ function startAlertCrawl(){
         }
     }
 
-    $('.ldl-black .alertinfo .name').text(headerName);
-    $('.ldl-black .alertinfo .alertcrawl').text(fullCrawl.toUpperCase());
     $('.ldl-black .alertinfo').show();
+    fitAlertHeader($('.ldl-black .alertinfo .name'), displayName, city, 960);
+    $('.ldl-black .alertinfo .alertcrawl').text(fullCrawl.toUpperCase());
     $('.ldl-black .alertinfo .alertcrawl').marquee({speed: 185, pauseOnHover: false}).on('finished', () =>{
         if (typeof checkAlertExpiration === 'function') {
             checkAlertExpiration();
@@ -425,7 +453,11 @@ function endAlertCrawl(){
         $('.ldl-black .alertinfo .alertcrawl').marquee('destroy');
     } catch (e) {}
     $('.ldl-black .alertinfo .alertcrawl').text('');
-    $('.ldl-black .alertinfo .name').text('');
+    $('.ldl-black .alertinfo .name').text('').css({
+        "color": "",
+        "text-shadow": "",
+        "font-size": ""
+    });
     $('.ldl-black .alertinfo').hide();
     $('.ldl-black .template.alert').hide();
     $('.data-updated').show();
