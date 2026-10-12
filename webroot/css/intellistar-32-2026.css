@@ -2162,7 +2162,7 @@ body, html {
     position: absolute;
     width: 1350px;
     max-height: 520px;
-    overflow: hidden;
+    overflow: visible;
     font-size: 32px;
     font-family: "Interstate Bold", sans-serif;
     color: #ffffff;
@@ -2172,10 +2172,20 @@ body, html {
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
 }
 
+.bulletin .alerts .bulletin-card {
+    overflow: visible;
+}
+
 .bulletin .alerts .bulletin-title {
     color: #ef4444;
     text-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
     animation: severeTextPulse 1.8s ease-in-out infinite alternate;
+    overflow: visible;
+}
+
+.bulletin .alerts .bulletin-desc {
+    max-height: 360px;
+    overflow: hidden;
 }
 
 /* ==========================================================================
