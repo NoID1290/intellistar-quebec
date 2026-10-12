@@ -1045,6 +1045,162 @@
     display: block;
 }
 
+/* Alert Regions Map Slide (Retro 2008 Fallback) */
+.bulletin-map {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    background-color: #030a16;
+    z-index: 1;
+}
+
+.alertmap-canvas-wrap,
+.alertmap-canvas {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+}
+
+.alertmap-banner {
+    position: absolute;
+    top: 68px;
+    left: 54px;
+    width: 1512px;
+    height: 108px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(32, 10, 18, 0.95) 0%, rgba(10, 20, 44, 0.95) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85);
+    z-index: 10;
+}
+
+.alertmap-icon-box {
+    width: 66px;
+    height: 66px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 22px;
+    background: #dc2626;
+    border: 2px solid #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+}
+
+.alertmap-icon {
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 44px;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.alertmap-banner-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.alertmap-title {
+    font-family: "Interstate Bold", "Interstate", sans-serif;
+    font-size: 42px;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.alertmap-subtitle {
+    font-family: "Interstate", sans-serif;
+    font-size: 22px;
+    color: #e2e8f0;
+    margin-top: 2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.alertmap-status-blocks {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 20px;
+}
+
+.alertmap-status-blocks .block {
+    width: 12px;
+    height: 44px;
+    border-radius: 2px;
+    background: #dc2626;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    transform: skewX(-12deg);
+}
+
+.alertmap-subbar {
+    position: absolute;
+    top: 188px;
+    left: 54px;
+    width: 1512px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.alertmap-eccc-logo {
+    height: 38px;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9));
+}
+
+.alertmap-legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 20px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8);
+}
+
+.alertmap-legend-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background-color: #ec4899;
+    border: 1.5px solid #ffffff;
+    flex-shrink: 0;
+}
+
+.alertmap-legend-text {
+    font-family: "Interstate Bold", sans-serif;
+    font-size: 22px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
+.alertmap-cities,
+.alertmap-cities-trans {
+    position: absolute;
+    width: 1620px;
+    height: 1080px;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 12;
+}
+
 .map .header {
     z-index: 2;
     transform: scaleY(0.88);

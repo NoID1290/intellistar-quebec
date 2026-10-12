@@ -19,6 +19,7 @@
         ['resortForecast', 'Resorts & ski', 'resort-forecast'],
         ['outdoorActivity', 'Outdoor activity', 'outdoor-activity'],
         ['bulletin', 'Weather bulletin', 'bulletin'],
+        ['bulletinMap', 'Alert regions map', 'bulletin-map'],
         ['mapCurrent', 'Regional observations map', 'map'], ['mapForecast', 'Regional forecast map', 'map'],
         ['radarDoppler', 'Regional Doppler', 'radar'], ['canadaDoppler', 'Canada Doppler', 'radar'],
         ...Array.from({ length: 12 }, (_, i) => [i ? `localDoppler${i + 1}` : 'localDoppler', `Local Doppler ${i + 1}`, 'radar']),

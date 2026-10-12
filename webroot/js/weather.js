@@ -605,10 +605,31 @@ function getDisasterAlertCatalog() {
     return names;
 }
 
+function generateSectorPolygon(cLon, cLat, radiusKm = 48, numPoints = 16) {
+    var coords = [];
+    var dLat = radiusKm / 111.32;
+    var dLon = radiusKm / (111.32 * Math.cos(cLat * Math.PI / 180));
+    for (var i = 0; i < numPoints; i++) {
+        var angle = (i / numPoints) * 2 * Math.PI;
+        var wobble = 0.82 + 0.32 * Math.sin(angle * 3 + 1.2) + 0.14 * Math.cos(angle * 5);
+        var pLon = cLon + Math.cos(angle) * dLon * wobble;
+        var pLat = cLat + Math.sin(angle) * dLat * wobble;
+        coords.push([Number(pLon.toFixed(6)), Number(pLat.toFixed(6))]);
+    }
+    coords.push([coords[0][0], coords[0][1]]);
+    return {
+        type: "Polygon",
+        coordinates: [coords]
+    };
+}
+
 function buildTestBulletinAlert(name, index, expiresAt) {
     var rule = warningSettings[name] || { priority: 125, severe: false };
     var frName = getAlertDisplayNameFr(name);
     var city = (locationConfig.mainCity && (locationConfig.mainCity.displayname || locationConfig.mainCity.name)) || "Montréal";
+    var testLat = (locationConfig.mainCity && Number(locationConfig.mainCity.lat)) || 45.503;
+    var testLon = (locationConfig.mainCity && Number(locationConfig.mainCity.lon)) || -73.573;
+    var testGeom = generateSectorPolygon(testLon, testLat, 45 + (index * 12));
     return {
         name: frName,
         significance: "W",
@@ -623,7 +644,9 @@ function buildTestBulletinAlert(name, index, expiresAt) {
         priority: rule.priority,
         color: rule.color || (rule.severe ? 'red' : 'yellow'),
         severe: !!rule.severe,
-        expiresAt: expiresAt || null
+        expiresAt: expiresAt || null,
+        geometry: testGeom,
+        geometries: [testGeom]
     };
 }
 
@@ -3559,7 +3582,7 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
             return Promise.resolve({ ok: false });
         }
         var d = 0.005;
-        var url = `https://api.weather.gc.ca/collections/weather-alerts/items?f=json&lang=fr&skipGeometry=true&limit=100&bbox=${lon - d},${lat - d},${lon + d},${lat + d}`;
+        var url = `https://api.weather.gc.ca/collections/weather-alerts/items?f=json&lang=fr&limit=100&bbox=${lon - d},${lat - d},${lon + d},${lat + d}`;
         return new Promise((resolve) => {
             $.getJSON(url, function (data) {
                 resolve({ ok: !!(data && Array.isArray(data.features)), features: (data && data.features) || [], cityName: geocodeCityMap[geocode] || "" });
@@ -3650,7 +3673,10 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
                     severe: severe,
                     expiresAt: isNaN(expiry) ? undefined : expiry,
                     expireTimeLocal: p.expiration_datetime || "",
-                    endTimeLocal: p.event_end_datetime || ""
+                    endTimeLocal: p.event_end_datetime || "",
+                    geometry: feature.geometry || null,
+                    geometries: feature.geometry ? [feature.geometry] : [],
+                    features: [feature]
                 };
             } else {
                 if (city && !grouped[key].areas.includes(city)) {
@@ -3660,6 +3686,13 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
                 if (!isNaN(expiry)) {
                     grouped[key].expiresAt = Math.max(grouped[key].expiresAt || 0, expiry);
                 }
+                if (feature.geometry) {
+                    if (!grouped[key].geometries) grouped[key].geometries = [];
+                    grouped[key].geometries.push(feature.geometry);
+                    if (!grouped[key].geometry) grouped[key].geometry = feature.geometry;
+                }
+                if (!grouped[key].features) grouped[key].features = [];
+                grouped[key].features.push(feature);
             }
         });
     });

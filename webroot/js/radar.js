@@ -434,6 +434,148 @@ const radarEngine = {
     return canvas;
   },
 
+  // Pre-render high-resolution satellite basemap with reference boundaries for alert maps
+  async bakeAlertBasemap(loc) {
+    const key = `alert_${Number(loc.lon).toFixed(2)}_${Number(loc.lat).toFixed(2)}_${Number(loc.zoom).toFixed(1)}`;
+    if (this.basemapCache.has(key)) {
+      return this.basemapCache.get(key);
+    }
+
+    const bounds = this.getTileBounds(loc.lon, loc.lat, loc.zoom);
+    const canvas = document.createElement('canvas');
+    canvas.width = bounds.width;
+    canvas.height = bounds.height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+
+    // Fallback broadcast space backdrop
+    ctx.fillStyle = '#030a16';
+    ctx.fillRect(0, 0, bounds.width, bounds.height);
+
+    const tileUrls = [];
+    const satDrawInfo = [];
+    const refDrawInfo = [];
+    for (let ty = bounds.minTileY; ty <= bounds.maxTileY; ty++) {
+      for (let tx = bounds.minTileX; tx <= bounds.maxTileX; tx++) {
+        const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`;
+        const refUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`;
+        const dx = Math.floor((tx * 256 - bounds.leftPixel) * bounds.scale);
+        const dy = Math.floor((ty * 256 - bounds.topPixel) * bounds.scale);
+        const dw = Math.ceil(256 * bounds.scale);
+        const dh = Math.ceil(256 * bounds.scale);
+        tileUrls.push(satUrl, refUrl);
+        satDrawInfo.push({ url: satUrl, dx, dy, dw, dh });
+        refDrawInfo.push({ url: refUrl, dx, dy, dw, dh });
+      }
+    }
+
+    await this.loadTilesInBatches(tileUrls, 8);
+
+    // 1. Draw Satellite Terrain
+    for (const info of satDrawInfo) {
+      const img = this.imageCache.get(info.url);
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, info.dx, info.dy, info.dw, info.dh);
+      }
+    }
+
+    // 2. Draw Boundaries & Regional Reference Overlay
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    for (const info of refDrawInfo) {
+      const img = this.imageCache.get(info.url);
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.drawImage(img, info.dx, info.dy, info.dw, info.dh);
+      }
+    }
+    ctx.restore();
+
+    // 3. Subtle top atmospheric horizon gradient for broadcast aesthetic
+    const grad = ctx.createLinearGradient(0, 0, 0, 240);
+    grad.addColorStop(0, 'rgba(3, 10, 22, 0.82)');
+    grad.addColorStop(0.5, 'rgba(3, 10, 22, 0.40)');
+    grad.addColorStop(1, 'rgba(3, 10, 22, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, bounds.width, 240);
+
+    this.basemapCache.set(key, canvas);
+    return canvas;
+  },
+
+  // Draw GeoJSON or synthesized alert sector polygons onto canvas
+  drawAlertPolygons(ctx, alerts, loc) {
+    if (!alerts || !Array.isArray(alerts) || alerts.length === 0) return;
+
+    alerts.forEach((alert) => {
+      const style = (typeof getAlertColorTheme === 'function') 
+        ? getAlertColorTheme(alert) 
+        : { fill: 'rgba(239, 68, 68, 0.48)', stroke: '#ff1744', glow: 'rgba(255, 23, 68, 0.85)' };
+      const geoms = alert.geometries || (alert.geometry ? [alert.geometry] : null);
+
+      const renderRings = (geom) => {
+        if (!geom) return;
+        let polyList = [];
+        if (geom.type === 'Polygon') polyList = [geom.coordinates];
+        else if (geom.type === 'MultiPolygon') polyList = geom.coordinates;
+
+        polyList.forEach((rings) => {
+          if (!rings || !rings[0] || rings[0].length < 3) return;
+          const outer = rings[0];
+
+          ctx.save();
+          ctx.beginPath();
+          let started = false;
+          for (let i = 0; i < outer.length; i++) {
+            const pt = this.latLonToScreen(outer[i][0], outer[i][1], loc.lon, loc.lat, loc.zoom, 1620, 1080);
+            if (pt) {
+              if (!started) {
+                ctx.moveTo(pt.x, pt.y);
+                started = true;
+              } else {
+                ctx.lineTo(pt.x, pt.y);
+              }
+            }
+          }
+
+          if (started) {
+            ctx.closePath();
+
+            // 1. Radiant semi-transparent fill with broadcast glow
+            ctx.fillStyle = style.fill;
+            ctx.shadowColor = style.glow;
+            ctx.shadowBlur = 18;
+            ctx.fill();
+
+            // 2. Vibrant neon boundary stroke
+            ctx.lineWidth = 3.5;
+            ctx.strokeStyle = style.stroke;
+            ctx.stroke();
+
+            // 3. Crisp inner boundary accent line
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+      };
+
+      if (geoms && geoms.length > 0) {
+        geoms.forEach(renderRings);
+      } else {
+        const coords = (typeof getCoordinatesForAlert === 'function') 
+          ? getCoordinatesForAlert(alert, loc) 
+          : { lon: loc.lon, lat: loc.lat };
+        if (coords) {
+          const fallbackGeom = (typeof generateSectorPolygon === 'function') 
+            ? generateSectorPolygon(coords.lon, coords.lat, 48) 
+            : null;
+          if (fallbackGeom) renderRings(fallbackGeom);
+        }
+      }
+    });
+  },
+
   // Calculate precipitation or satellite tile descriptors for a location and timestamp
   getTileDescriptors(loc, timestamp, mapType = 'twcRadarMosaic') {
     const bounds = this.getTileBounds(loc.lon, loc.lat, loc.zoom);
@@ -1565,6 +1707,306 @@ async function addSnowCities(dopplerIdx = null, dConfig = null) {
   radarEngine.activeSnowCities = placedSnow;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// Active Weather Alert Regions Map Engine (Slide 14b)
+// ═══════════════════════════════════════════════════════════════════════
+
+const CANADIAN_ALERT_COORDS = {
+  "montréal": { lon: -73.573, lat: 45.503 },
+  "montreal": { lon: -73.573, lat: 45.503 },
+  "québec": { lon: -71.211, lat: 46.813 },
+  "quebec": { lon: -71.211, lat: 46.813 },
+  "laval": { lon: -73.753, lat: 45.570 },
+  "longueuil": { lon: -73.518, lat: 45.531 },
+  "gatineau": { lon: -75.701, lat: 45.476 },
+  "ottawa": { lon: -75.697, lat: 45.421 },
+  "sherbrooke": { lon: -71.890, lat: 45.401 },
+  "trois-rivières": { lon: -72.548, lat: 46.343 },
+  "saguenay": { lon: -71.068, lat: 48.427 },
+  "lévis": { lon: -71.178, lat: 46.800 },
+  "joliette": { lon: -73.442, lat: 46.027 },
+  "saint-jérôme": { lon: -74.004, lat: 45.778 },
+  "saint-jean-sur-richelieu": { lon: -73.256, lat: 45.308 },
+  "drummondville": { lon: -72.484, lat: 45.883 },
+  "granby": { lon: -72.730, lat: 45.400 },
+  "victoriaville": { lon: -71.956, lat: 46.059 },
+  "rouyn-noranda": { lon: -79.022, lat: 48.243 },
+  "val-d'or": { lon: -77.783, lat: 48.100 },
+  "rimouski": { lon: -68.524, lat: 48.449 },
+  "sept-îles": { lon: -66.383, lat: 50.217 },
+  "toronto": { lon: -79.383, lat: 43.653 },
+  "winnipeg": { lon: -97.138, lat: 49.895 },
+  "brandon": { lon: -99.953, lat: 49.848 },
+  "dauphin": { lon: -100.049, lat: 51.149 },
+  "thompson": { lon: -97.856, lat: 55.743 },
+  "flin flon": { lon: -101.877, lat: 54.766 },
+  "regina": { lon: -104.619, lat: 50.445 },
+  "saskatoon": { lon: -106.670, lat: 52.133 },
+  "yorkton": { lon: -102.463, lat: 51.214 },
+  "estevan": { lon: -102.986, lat: 49.139 },
+  "nipawin": { lon: -104.015, lat: 53.363 },
+  "redvers": { lon: -101.681, lat: 49.578 },
+  "berens river": { lon: -97.020, lat: 52.361 },
+  "sandy lake": { lon: -93.344, lat: 53.056 },
+  "red lake": { lon: -93.817, lat: 51.017 },
+  "calgary": { lon: -114.071, lat: 51.045 },
+  "edmonton": { lon: -113.491, lat: 53.544 },
+  "vancouver": { lon: -123.121, lat: 49.283 },
+  "halifax": { lon: -63.575, lat: 44.649 },
+  "moncton": { lon: -64.778, lat: 46.088 }
+};
+
+function getAlertColorTheme(alert) {
+  const name = String(alert && (alert.name || alert.headline) || '').toLowerCase();
+  const color = String(alert && alert.color || '').toLowerCase();
+  const severe = !!(alert && alert.severe);
+
+  if (name.includes('chaleur') || name.includes('heat')) {
+    return {
+      fill: 'rgba(233, 30, 99, 0.48)',
+      stroke: '#ff4081',
+      glow: 'rgba(255, 64, 129, 0.85)',
+      badge: '#ff1493',
+      swatch: '#ff1493',
+      subtitleFr: "Préparez-vous à des températures extrêmes",
+      subtitleEn: "Prepare for Extreme Heat Impacts"
+    };
+  }
+  if (name.includes('tornad') || name.includes('violent') || color === 'red' || severe) {
+    return {
+      fill: 'rgba(239, 68, 68, 0.50)',
+      stroke: '#ff1744',
+      glow: 'rgba(255, 23, 68, 0.90)',
+      badge: '#ef4444',
+      swatch: '#ef4444',
+      subtitleFr: name.includes('tornad') ? "Mettez-vous immédiatement à l'abri" : "Préparez-vous à des conditions météorologiques violentes",
+      subtitleEn: name.includes('tornad') ? "Take Immediate Shelter" : "Prepare for Significant Severe Weather"
+    };
+  }
+  if (name.includes('vent') || name.includes('wind') || color === 'orange') {
+    return {
+      fill: 'rgba(249, 115, 22, 0.48)',
+      stroke: '#ff6d00',
+      glow: 'rgba(255, 109, 0, 0.85)',
+      badge: '#f97316',
+      swatch: '#f97316',
+      subtitleFr: "Préparez-vous à de fortes rafales de vent",
+      subtitleEn: "Prepare for Damaging Wind Gusts"
+    };
+  }
+  if (name.includes('inondation') || name.includes('flood')) {
+    return {
+      fill: 'rgba(16, 185, 129, 0.48)',
+      stroke: '#00e676',
+      glow: 'rgba(0, 230, 118, 0.85)',
+      badge: '#10b981',
+      swatch: '#10b981',
+      subtitleFr: "Préparez-vous à des inondations et des accumulations d'eau",
+      subtitleEn: "Prepare for Rising Flood Waters"
+    };
+  }
+  if (name.includes('neige') || name.includes('snow') || name.includes('blizzard') || name.includes('hiver') || name.includes('winter')) {
+    return {
+      fill: 'rgba(236, 72, 153, 0.48)',
+      stroke: '#f472b6',
+      glow: 'rgba(244, 114, 182, 0.85)',
+      badge: '#ec4899',
+      swatch: '#ec4899',
+      subtitleFr: "Préparez-vous à des conditions hivernales dangereuses",
+      subtitleEn: "Prepare for Hazardous Winter Conditions"
+    };
+  }
+  return {
+    fill: 'rgba(234, 179, 8, 0.46)',
+    stroke: '#ffd600',
+    glow: 'rgba(255, 214, 0, 0.85)',
+    badge: '#eab308',
+    swatch: '#eab308',
+    subtitleFr: "Surveillez l'évolution des conditions météo",
+    subtitleEn: "Prepare for Significant Weather Impacts"
+  };
+}
+
+function getCoordinatesForAlert(alert, defaultLoc) {
+  if (!alert) return defaultLoc;
+
+  const geom = alert.geometry || (alert.geometries && alert.geometries[0]);
+  if (geom) {
+    let rings = (geom.type === 'Polygon') ? geom.coordinates : (geom.type === 'MultiPolygon' ? geom.coordinates[0] : null);
+    if (rings && rings[0] && rings[0].length > 0) {
+      let sumLon = 0, sumLat = 0, count = 0;
+      rings[0].forEach(pt => {
+        sumLon += pt[0];
+        sumLat += pt[1];
+        count++;
+      });
+      if (count > 0) {
+        return { lon: sumLon / count, lat: sumLat / count };
+      }
+    }
+  }
+
+  const names = [alert.cityName, ...(alert.areas || []), ...(alert.cities || [])].filter(Boolean);
+  for (const n of names) {
+    const norm = String(n).toLowerCase().replace(/^secteurs?\s*:\s*/i, '').trim();
+    for (const [key, coords] of Object.entries(CANADIAN_ALERT_COORDS)) {
+      if (norm.includes(key) || key.includes(norm)) {
+        return { lon: coords.lon, lat: coords.lat };
+      }
+    }
+  }
+
+  return defaultLoc;
+}
+
+function addAlertMapCities(alerts, loc) {
+  $('.alertmap-cities').empty();
+  $('.alertmap-cities-trans').empty();
+
+  let candidatePool = [];
+
+  for (const [cName, cCoords] of Object.entries(CANADIAN_ALERT_COORDS)) {
+    const pt = radarEngine.latLonToScreen(cCoords.lon, cCoords.lat, loc.lon, loc.lat, loc.zoom, 1620, 1080);
+    if (pt && pt.x >= 60 && pt.x <= 1540 && pt.y >= 240 && pt.y <= 830) {
+      const capName = cName.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      candidatePool.push({
+        name: capName,
+        lon: cCoords.lon,
+        lat: cCoords.lat
+      });
+    }
+  }
+
+  if (typeof locationConfig !== 'undefined' && locationConfig) {
+    const configCities = [
+      locationConfig.mainCity,
+      ...(locationConfig.eightCities?.cities || []),
+      ...(locationConfig.quebecCities || []),
+      ...(locationConfig.regionalMap?.map || []),
+      ...(locationConfig.regionalForecasts || [])
+    ].filter(Boolean);
+    candidatePool.push(...configCities);
+  }
+
+  const placed = resolvePlacements(candidatePool, loc, 12);
+  for (let i = 0; i < placed.length; i++) {
+    const c = placed[i];
+    const word = (typeof numToWord === 'function' && numToWord(i)) ? numToWord(i) : `city-${i}`;
+    const sideClass = c.side === 'left' ? 'label-left' : 'label-right';
+    $('.alertmap-cities').append(`
+      <div class="radar-city alertmap-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot"></div>
+        <div class="city-name" style="margin-top: ${c.nameTopMargin || 0}px; margin-left: ${c.nameLeftMargin || 0}px;">${c.name}</div>
+      </div>`);
+    $('.alertmap-cities-trans').append(`
+      <div class="radar-city alertmap-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot"></div>
+        <div class="city-name-trans" style="margin-top: ${c.nameTopMargin || 0}px; margin-left: ${c.nameLeftMargin || 0}px;">${c.name}</div>
+      </div>`);
+  }
+}
+
+var activeAlertMapCanvas = null;
+
+async function startAlertMap(targetCanvasId = 'alertmap-canvas', alerts = null) {
+  let canvas = document.getElementById(targetCanvasId);
+  if (!canvas) {
+    const wrap = document.querySelector('.alertmap-canvas-wrap');
+    if (wrap) {
+      canvas = document.createElement('canvas');
+      canvas.id = targetCanvasId;
+      canvas.className = 'alertmap-canvas';
+      canvas.width = 1620;
+      canvas.height = 1080;
+      wrap.appendChild(canvas);
+    }
+  }
+  if (!canvas) return;
+
+  activeAlertMapCanvas = canvas;
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  const activeAlerts = (Array.isArray(alerts) && alerts.length > 0)
+    ? alerts
+    : ((weatherInfo && weatherInfo.bulletin && Array.isArray(weatherInfo.bulletin.alerts)) ? weatherInfo.bulletin.alerts : []);
+
+  const topAlert = activeAlerts[0] || { name: "Avertissement d'orages violents", color: "red", severe: true };
+  const alertTheme = getAlertColorTheme(topAlert);
+
+  const lang = (typeof locationConfig !== 'undefined' && locationConfig && locationConfig.vocalLanguage) ? locationConfig.vocalLanguage : 'fr';
+  const isEn = (lang === 'en');
+
+  let bannerTitle = isEn ? "WATCHES & WARNINGS" : "AVERTISSEMENTS EN VIGUEUR";
+  if (topAlert.color === 'yellow' || (!topAlert.severe && !topAlert.color)) {
+    bannerTitle = isEn ? "YELLOW WATCHES & WARNINGS" : "SURVEILLANCE ET AVERTISSEMENTS";
+  }
+  let bannerSub = isEn ? alertTheme.subtitleEn : alertTheme.subtitleFr;
+
+  $('.alertmap-title').text(bannerTitle);
+  $('.alertmap-subtitle').text(bannerSub);
+
+  // Update Icon Badge
+  $('.alertmap-icon-box').css({
+    'background': (topAlert.severe || topAlert.color === 'red')
+      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 60%, #991b1b 100%)'
+      : (topAlert.color === 'orange')
+        ? 'linear-gradient(135deg, #f97316 0%, #ea580c 60%, #c2410c 100%)'
+        : 'linear-gradient(135deg, #facc15 0%, #eab308 60%, #ca8a04 100%)',
+    'box-shadow': (topAlert.severe || topAlert.color === 'red')
+      ? '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(239, 68, 68, 0.6)'
+      : '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(250, 204, 21, 0.5)'
+  });
+
+  // Update Legend Pill
+  const displayName = typeof getAlertDisplayNameFr === 'function' ? getAlertDisplayNameFr(topAlert.name) : topAlert.name;
+  $('.alertmap-legend-color').css({
+    'background-color': alertTheme.swatch,
+    'box-shadow': `0 0 12px ${alertTheme.glow}`
+  });
+  $('.alertmap-legend-text').text(displayName);
+
+  // Determine Map Center & Zoom
+  let centerLon = -73.573;
+  let centerLat = 45.503;
+  let zoom = 7.5;
+
+  if (typeof locationConfig !== 'undefined' && locationConfig) {
+    if (locationConfig.radar && locationConfig.radar.regionalCoords && locationConfig.radar.regionalCoords.lon != null) {
+      centerLon = Number(locationConfig.radar.regionalCoords.lon) || centerLon;
+      centerLat = Number(locationConfig.radar.regionalCoords.lat) || centerLat;
+    } else if (locationConfig.mainCity && locationConfig.mainCity.lon != null) {
+      centerLon = Number(locationConfig.mainCity.lon) || centerLon;
+      centerLat = Number(locationConfig.mainCity.lat) || centerLat;
+    }
+  }
+
+  const alertCoords = getCoordinatesForAlert(topAlert, { lon: centerLon, lat: centerLat });
+  if (alertCoords && alertCoords.lon != null && alertCoords.lat != null) {
+    centerLon = alertCoords.lon;
+    centerLat = alertCoords.lat;
+  }
+
+  const mapLoc = {
+    key: 'alert_map',
+    lon: centerLon,
+    lat: centerLat,
+    zoom: zoom
+  };
+
+  const basemap = await radarEngine.bakeAlertBasemap(mapLoc);
+  if (canvas && activeAlertMapCanvas === canvas) {
+    ctx.drawImage(basemap, 0, 0);
+    radarEngine.drawAlertPolygons(ctx, activeAlerts, mapLoc);
+    addAlertMapCities(activeAlerts, mapLoc);
+  }
+}
+
+function stopAlertMap() {
+  activeAlertMapCanvas = null;
+  $('.alertmap-cities').empty();
+  $('.alertmap-cities-trans').empty();
+}
+
 if (typeof window !== 'undefined') {
   window.radarEngine = radarEngine;
   window.refreshRadarFrames = refreshRadarFrames;
@@ -1574,6 +2016,10 @@ if (typeof window !== 'undefined') {
   window.stopSatellite = stopSatellite;
   window.startSnowCover = startSnowCover;
   window.stopSnowCover = stopSnowCover;
+  window.startAlertMap = startAlertMap;
+  window.stopAlertMap = stopAlertMap;
+  window.addAlertMapCities = addAlertMapCities;
+  window.getAlertColorTheme = getAlertColorTheme;
   window.createMaps = createMaps;
   window.createRegionalMaps = createRegionalMaps;
   window.createLocalMaps = createLocalMaps;
@@ -1599,6 +2045,10 @@ if (typeof module !== 'undefined' && module.exports) {
     stopSatellite,
     startSnowCover,
     stopSnowCover,
+    startAlertMap,
+    stopAlertMap,
+    addAlertMapCities,
+    getAlertColorTheme,
     createMaps,
     createRegionalMaps,
     destroyRegionalMaps,

@@ -330,7 +330,9 @@ function fitAlertHeader($nameEl, displayName, city, maxWidth) {
         if (headerCities.length > 2) {
             twoCities += ` +${headerCities.length - 2}`;
         }
-        candidates.push(`${displayName} — ${twoCities.toUpperCase()}`);
+        var headerCity = twoCities;
+        var headerName = `${displayName} — ${headerCity.toUpperCase()}`;
+        candidates.push(headerName);
 
         if (headerCities.length > 1) {
             var oneCity = `${headerCities[0]} +${headerCities.length - 1}`;

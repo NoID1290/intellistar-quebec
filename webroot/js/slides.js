@@ -30,6 +30,8 @@ var slideDivs = {
     "daypartForecast": ".daypart-forecast",
     "almanac": ".almanac",
     "bulletin": ".bulletin",
+    "bulletinMap": ".bulletin-map",
+    "alertMap": ".bulletin-map",
     "outdoorActivity": ".outdoor-activity",
     "mapCurrent": ".map",
     "mapForecast": ".map",
@@ -128,6 +130,8 @@ var slideHeaders = {
     "neigeAuSol12": "Neige au Sol",
     "canadaNeigeAuSol": "Neige au Sol",
     "snowCover": "Neige au Sol",
+    "bulletinMap": "",
+    "alertMap": "",
     "environmentCanada": ""
 };
 
@@ -162,6 +166,12 @@ function hideAllSlides(exceptSelector) {
         $('.air-quality .qualityarrow').stop(true, true).css('bottom', '270px').hide();
         $('.qualitybar span.text').stop(true, true).hide();
     }
+    if (!exceptSelector || !$(exceptSelector).is('.bulletin-map')) {
+        $('.bulletin-map .alertmap-banner, .bulletin-map .alertmap-subbar, .alertmap-cities, .alertmap-cities-trans').stop(true, true).hide();
+        if (typeof stopAlertMap === 'function') {
+            stopAlertMap();
+        }
+    }
 }
 
 function slideKickOff() {
@@ -179,6 +189,9 @@ function stopSlides() {
     currentSlideToken++;
     if (typeof stopSatellite === 'function') {
         stopSatellite("radarsat");
+    }
+    if (typeof stopAlertMap === 'function') {
+        stopAlertMap();
     }
     hideAllSlides();
 }
@@ -1301,7 +1314,12 @@ var slidePrograms = {
                     $('.bulletin .alerts').fadeOut(167, 'linear');
                     setTimeout(() => {
                         $('.bulletin').hide();
-                        slideCallBack();
+                        var nextOrderSlide = (slideFlavor && slideFlavor.order && slideFlavor.order[nidx]) ? slideFlavor.order[nidx].function : '';
+                        if (nextOrderSlide === 'bulletinMap' || nextOrderSlide === 'alertMap') {
+                            slideCallBack();
+                        } else {
+                            slidePrograms.bulletinMap();
+                        }
                     }, 167);
                 } else {
                     $('.bulletin .alerts').fadeOut(167, 'linear');
@@ -1339,6 +1357,46 @@ var slidePrograms = {
         probe.onerror = () => { console.warn('[Slides] Bulletin TTS unavailable, using default narration.'); proceed(0); };
         setTimeout(() => proceed(0), 8000); // synthesis timeout safeguard
         probe.src = ttsUrl;
+    },
+    async bulletinMap() {
+        if (typeof checkAlertExpiration === 'function') {
+            checkAlertExpiration();
+        }
+        if (!weatherInfo.bulletin || !Array.isArray(weatherInfo.bulletin.alerts) || weatherInfo.bulletin.alerts.length === 0) {
+            console.warn('[Slides] Bulletin map called with no active bulletin alerts. Skipping slide.');
+            $('.bulletin-map').hide();
+            slideCallBack();
+            return;
+        }
+
+        $('.bulletin-map').show();
+        $('.bulletin-map .alertmap-banner').fadeIn(167, 'linear');
+        $('.bulletin-map .alertmap-subbar').fadeIn(167, 'linear');
+        $('.alertmap-cities').fadeIn(167, 'linear');
+        $('.alertmap-cities-trans').fadeIn(167, 'linear');
+
+        if (typeof startAlertMap === 'function') {
+            await startAlertMap('alertmap-canvas', weatherInfo.bulletin.alerts);
+        }
+
+        var mapDuration = (typeof slideLength !== 'undefined' && slideLength) ? Math.max(8000, slideLength) : 9000;
+
+        setTimeout(() => {
+            $('.bulletin-map .alertmap-banner').fadeOut(167, 'linear');
+            $('.bulletin-map .alertmap-subbar').fadeOut(167, 'linear');
+            $('.alertmap-cities').fadeOut(167, 'linear');
+            $('.alertmap-cities-trans').fadeOut(167, 'linear');
+            if (typeof stopAlertMap === 'function') {
+                stopAlertMap();
+            }
+            setTimeout(() => {
+                $('.bulletin-map').hide();
+                slideCallBack();
+            }, 167);
+        }, mapDuration - 167);
+    },
+    async alertMap() {
+        return slidePrograms.bulletinMap();
     },
     mapTest() {
         $('.map').show();

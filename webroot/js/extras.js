@@ -1496,6 +1496,7 @@ var slideFlavors = {
             precip: false,
             order: [
                 { function: "bulletin", slideDelay: 7500 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 7500 },
                 { function: "mapCurrent", slideDelay: 7500 },
                 { function: "radarDoppler", slideDelay: 7500 },
@@ -1509,6 +1510,7 @@ var slideFlavors = {
             precip: false,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "mapCurrent", slideDelay: 8000 },
                 { function: "radarDoppler", slideDelay: 8000 },
@@ -1552,6 +1554,7 @@ var slideFlavors = {
             precip: true,
             order: [
                 { function: "bulletin", slideDelay: 7000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 7000 },
                 { function: "radarDoppler", slideDelay: 7000 },
                 { function: "localDoppler", slideDelay: 11000 },
@@ -1567,6 +1570,7 @@ var slideFlavors = {
             precip: true,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "radarDoppler", slideDelay: 8000 },
                 { function: "localDoppler", slideDelay: 12000 },
@@ -1615,6 +1619,7 @@ var slideFlavors = {
             precip: false,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "nearbyCities", slides: 2, slideDelay: 6000 },
                 { function: "radarDoppler", slideDelay: 8000 },
@@ -1630,6 +1635,7 @@ var slideFlavors = {
             precip: false,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "mapCurrent", slideDelay: 8000 },
                 { function: "radarDoppler", slideDelay: 8000 },
@@ -1664,6 +1670,7 @@ var slideFlavors = {
             precip: true,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "mapCurrent", slideDelay: 8000 },
                 { function: "radarDoppler", slideDelay: 8000 },
@@ -1736,6 +1743,7 @@ var slideFlavors = {
             precip: false,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "regionalForecast", slides: 3, slideDelay: 8000 },
                 { function: "localDoppler", slideDelay: 9000 },
@@ -1836,6 +1844,7 @@ var slideFlavors = {
             precip: true,
             order: [
                 { function: "bulletin", slideDelay: 8000 },
+                { function: "bulletinMap", slideDelay: 8000 },
                 { function: "currentConditions", slideDelay: 8000 },
                 { function: "regionalForecast", slides: 3, slideDelay: 8000 },
                 { function: "localDoppler", slideDelay: 9000 },

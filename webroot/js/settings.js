@@ -829,8 +829,12 @@ function flavorPicker(time, modes) {
         var manualOrder = filterUnsupportedSlides(normalizeToLocalDoppler(slideSettings.order));
         if (modes && modes.bulletin) {
             var hasBulletin = manualOrder.some(slide => slide && slide.function === "bulletin");
+            var hasBulletinMap = manualOrder.some(slide => slide && (slide.function === "bulletinMap" || slide.function === "alertMap"));
             if (!hasBulletin) {
-                manualOrder = [{ function: "bulletin", slideDelay: 22000 }, ...manualOrder];
+                manualOrder = [{ function: "bulletin", slideDelay: 22000 }, { function: "bulletinMap", slideDelay: 9000 }, ...manualOrder];
+            } else if (!hasBulletinMap) {
+                var bIdx = manualOrder.findIndex(slide => slide && slide.function === "bulletin");
+                manualOrder.splice(bIdx + 1, 0, { function: "bulletinMap", slideDelay: 9000 });
             }
         }
         return {
@@ -859,8 +863,13 @@ function flavorPicker(time, modes) {
 
     var flavor = usableFlavors.length > 0 ? usableFlavors[Math.floor(Math.random() * usableFlavors.length)] : { order: [] };
     var filteredOrder = filterUnsupportedSlides(normalizeToLocalDoppler(flavor.order || []));
-    if (modes.bulletin && !filteredOrder.some(s => s && s.function === "bulletin")) {
-        filteredOrder.unshift({ function: "bulletin", slideDelay: 22000 });
+    if (modes.bulletin) {
+        if (!filteredOrder.some(s => s && s.function === "bulletin")) {
+            filteredOrder.unshift({ function: "bulletin", slideDelay: 22000 }, { function: "bulletinMap", slideDelay: 9000 });
+        } else if (!filteredOrder.some(s => s && (s.function === "bulletinMap" || s.function === "alertMap"))) {
+            var bIdx = filteredOrder.findIndex(s => s && s.function === "bulletin");
+            filteredOrder.splice(bIdx + 1, 0, { function: "bulletinMap", slideDelay: 9000 });
+        }
     }
 
     return {
