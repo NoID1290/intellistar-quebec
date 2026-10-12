@@ -1189,6 +1189,7 @@ var slidePrograms = {
             $('.bulletin').show();
             $('.bulletin .box').show();
             $('.bulletin .header').show();
+            $('.bulletin .eccc-logo, .bulletin .noaalogo').show();
             $('.bulletin .alerts').show();
         } else {
             $('.bulletin .alerts').fadeIn(167, 'linear');
@@ -1296,6 +1297,7 @@ var slidePrograms = {
             setTimeout(() => {
                 if (pageIdx === totalPages - 1) {
                     $('.bulletin .header').fadeOut(167, 'linear');
+                    $('.bulletin .eccc-logo, .bulletin .noaalogo').fadeOut(167, 'linear');
                     $('.bulletin .alerts').fadeOut(167, 'linear');
                     setTimeout(() => {
                         $('.bulletin').hide();

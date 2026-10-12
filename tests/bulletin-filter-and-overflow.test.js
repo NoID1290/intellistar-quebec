@@ -100,4 +100,25 @@ test('Bulletin Météo Spécial filtering, deduplication, and overflow containme
         assert.ok(ttsCode.includes('Veuillez continuer'));
         assert.ok(ttsCode.includes('Pour signaler du temps violent'));
     });
+
+    await t.test('7. ECCC logo is positioned at the top right on warning slide', () => {
+        const indexHtml = fs.readFileSync(path.join(rootDir, 'webroot', 'index.html'), 'utf8');
+        const previewHtml = fs.readFileSync(path.join(rootDir, 'webroot', 'preview.html'), 'utf8');
+
+        // Assets exist
+        assert.ok(fs.existsSync(path.join(rootDir, 'webroot', 'images', 'ecccLogo.svg')), 'ecccLogo.svg must exist');
+        assert.ok(fs.existsSync(path.join(rootDir, 'webroot', 'images', '2026', 'ecccLogo.svg')), '2026 ecccLogo.svg must exist');
+
+        // Markup includes .eccc-logo in bulletin slide
+        assert.ok(indexHtml.includes('class="eccc-logo"'), 'index.html includes eccc-logo');
+        assert.ok(previewHtml.includes('class="eccc-logo"'), 'preview.html includes eccc-logo');
+
+        // CSS positions logo at top right of bulletin slide
+        assert.match(css2026, /\.bulletin\s+\.eccc-logo[\s\S]*?right:\s*144px/);
+        assert.match(mainCss, /\.bulletin\s+\.eccc-logo[\s\S]*?right:\s*144px/);
+
+        // slides.js manages logo lifecycle with bulletin slide
+        assert.ok(slidesCode.includes('.eccc-logo'), 'slides.js manages eccc-logo display');
+    });
 });
+

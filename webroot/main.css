@@ -228,10 +228,19 @@ body, html {
     background-size: cover;
     /* opacity: 0; */
 }
+.bulletin .eccc-logo,
 .bulletin .noaalogo {
     position: absolute;
-    background-image: url(images/noaaLogo.png);
-    background-size: cover;
+    background-image: url(images/ecccLogo.svg);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: right center;
+    top: 84px;
+    right: 144px;
+    height: 42px;
+    width: 680px;
+    z-index: 10;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
 }
 .bulletin .alerts {
     max-height: 520px;
