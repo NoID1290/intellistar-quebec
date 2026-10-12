@@ -43,10 +43,38 @@ function engineInfo() {
     return { engine: null };
 }
 
-// Make text read more naturally (units, abbreviations commonly found in alerts).
+// Make text read more naturally (units, abbreviations, boilerplate filtering).
 function normalizeText(text) {
-    return String(text || '')
-        .replace(/<[^>]*>/g, ' ')
+    let t = String(text || '').replace(/<[^>]*>/g, ' ');
+
+    // Filter boilerplate reporting and contact sentences for natural TTS narration
+    const sentenceEnd = '(?:(?<=[a-z0-9_#)])\\.\\s+(?=[A-ZÀ-ÖØ-ß])|\\.$|$)';
+    const boilerplate = [
+        new RegExp('Veuillez continuer [àa] surveiller.*?' + sentenceEnd, 'gi'),
+        new RegExp('Please continue to monitor.*?' + sentenceEnd, 'gi'),
+        new RegExp('Continuez [àa] surveiller.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour signaler du temps violent.*?' + sentenceEnd, 'gi'),
+        new RegExp('To report severe weather.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour signaler (?:des|une) inondations?.*?' + sentenceEnd, 'gi'),
+        new RegExp('To report flooding.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Faites parvenir|Envoyez) un courriel.*?' + sentenceEnd, 'gi'),
+        new RegExp('Send an email.*?' + sentenceEnd, 'gi'),
+        new RegExp('Publiez un message sur les r[ée]seaux sociaux.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Post|Tweet) reports.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Appelez au|Call) 1-[0-9-]+.*?' + sentenceEnd, 'gi'),
+        new RegExp('Consultez les pr[ée]visions locales.*?' + sentenceEnd, 'gi'),
+        new RegExp('Check local forecasts.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Consultez le site|Visit) (?:meteo|weather)\\.gc\\.ca.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour (?:de plus amples|obtenir de plus amples) renseignements.*?' + sentenceEnd, 'gi'),
+        new RegExp('For more information.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Une mise [àa] jour|Des mises [àa] jour) (?:sera|seront) [ée]mise.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:An update|Updates) will be issued.*?' + sentenceEnd, 'gi')
+    ];
+    for (const b of boilerplate) {
+        t = t.replace(b, '');
+    }
+
+    return t
         .replace(/(\d+)\s*km\/h/gi, '$1 kilomètres à l\'heure')
         .replace(/(\d+)\s*mm\b/gi, '$1 millimètres')
         .replace(/(\d+)\s*cm\b/gi, '$1 centimètres')

@@ -498,6 +498,67 @@ window.translateAlertHeadline = translateAlertHeadline;
 window.formatAreaNameFr = formatAreaNameFr;
 window.translateAlertText = translateAlertText;
 
+function filterAlertWarningText(text, alertName) {
+    if (!text) return "";
+    var t = String(text);
+
+    // 1. Remove standard boilerplate reporting, contact, and disclaimer sentences (ECCC & NWS, FR & EN)
+    var sentenceEnd = '(?:(?<=[a-z0-9_#)])\\.\\s+(?=[A-ZÀ-ÖØ-ß])|\\.$|$)';
+    var boilerplatePatterns = [
+        new RegExp('Veuillez continuer [àa] surveiller.*?' + sentenceEnd, 'gi'),
+        new RegExp('Please continue to monitor.*?' + sentenceEnd, 'gi'),
+        new RegExp('Continuez [àa] surveiller.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour signaler du temps violent.*?' + sentenceEnd, 'gi'),
+        new RegExp('To report severe weather.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour signaler (?:des|une) inondations?.*?' + sentenceEnd, 'gi'),
+        new RegExp('To report flooding.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Faites parvenir|Envoyez) un courriel.*?' + sentenceEnd, 'gi'),
+        new RegExp('Send an email.*?' + sentenceEnd, 'gi'),
+        new RegExp('Publiez un message sur les r[ée]seaux sociaux.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Post|Tweet) reports.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Appelez au|Call) 1-[0-9-]+.*?' + sentenceEnd, 'gi'),
+        new RegExp('Consultez les pr[ée]visions locales.*?' + sentenceEnd, 'gi'),
+        new RegExp('Check local forecasts.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Consultez le site|Visit) (?:meteo|weather)\\.gc\\.ca.*?' + sentenceEnd, 'gi'),
+        new RegExp('Pour (?:de plus amples|obtenir de plus amples) renseignements.*?' + sentenceEnd, 'gi'),
+        new RegExp('For more information.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:Une mise [àa] jour|Des mises [àa] jour) (?:sera|seront) [ée]mise.*?' + sentenceEnd, 'gi'),
+        new RegExp('(?:An update|Updates) will be issued.*?' + sentenceEnd, 'gi')
+    ];
+
+    boilerplatePatterns.forEach(function(re) {
+        t = t.replace(re, '');
+    });
+
+    // 2. Remove redundant alert name prefix at start of text if it repeats the title
+    if (alertName) {
+        var escapedName = String(alertName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var nameRe = new RegExp('^\\s*(?:' + escapedName + '|Bulletin m[ée]t[ée]orologique sp[ée]cial|Avertissement de [^:]+|Avis de [^:]+|Veille d\'[^:]+)(?:\\s+(?:en vigueur|[ée]mis)(?:\\s+pour[^:]+)?)?\\s*[:\\-–—]\\s*', 'i');
+        t = t.replace(nameRe, '');
+    }
+
+    // 3. Clean up whitespace and line runs
+    t = t.replace(/[\r\t]+/g, ' ').replace(/\n{3,}/g, '\n\n').replace(/[ ]{2,}/g, ' ').trim();
+
+    // 4. Deduplicate identical sentences
+    var rawSentences = t.split(/(?<=[.!?])\s+/);
+    var seen = new Set();
+    var deduped = [];
+    for (var i = 0; i < rawSentences.length; i++) {
+        var s = rawSentences[i].trim();
+        if (!s) continue;
+        var norm = s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+        if (norm && seen.has(norm)) continue;
+        if (norm) seen.add(norm);
+        deduped.push(s);
+    }
+    t = deduped.join(' ');
+
+    return t.trim();
+}
+window.filterAlertWarningText = filterAlertWarningText;
+
+
 function normalizeDisasterAlertName(typeOrName) {
     if (!typeOrName) {
         return null;
@@ -3551,14 +3612,32 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
             var priority = rule ? rule.priority : (isWatch ? 44 : 25);
             var severe = rule ? !!rule.severe : isRed;
 
-            var desc = String(p.alert_text_fr || p.alert_text_en || "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+            var rawText = String(p.alert_text_fr || p.alert_text_en || "").trim();
+            var extractedHeadline = "";
+            var desc = rawText;
+
+            // Check if alert text begins with a short summary headline (e.g. "Journée pluvieuse mardi")
+            var firstBreak = rawText.search(/\r?\n|(?=\b(?:Quoi|Quand|Où|Impacts|Informations supplémentaires|Conseils)\s*:)/i);
+            if (firstBreak > 0) {
+                var candidateHl = rawText.substring(0, firstBreak).replace(/[\r\n\t]+/g, " ").trim();
+                if (candidateHl && candidateHl.length <= 80 && !candidateHl.toLowerCase().includes(displayName.toLowerCase()) && !displayName.toLowerCase().includes(candidateHl.toLowerCase())) {
+                    extractedHeadline = candidateHl;
+                    desc = rawText.substring(firstBreak).trim();
+                }
+            }
+
+            desc = desc.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+            if (typeof filterAlertWarningText === 'function') {
+                desc = filterAlertWarningText(desc, displayName);
+            }
+
             var city = resp.cityName || p.feature_name_fr || "";
             var key = `${displayName}|${desc}`;
             if (!grouped[key]) {
                 grouped[key] = {
                     name: displayName,
-                    headline: displayName,
-                    desc: displayName,
+                    headline: extractedHeadline || "",
+                    desc: extractedHeadline || "",
                     description: desc,
                     areas: city ? [city] : [],
                     cities: city ? [city] : [],
@@ -3736,6 +3815,15 @@ async function grabAlerts() {
             area = targetCity;
         }
 
+        if (headline) {
+            var normHl = headline.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            var normDisp = displayName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            var normName = alertName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            if (normHl === normDisp || normHl === normName || normDisp.includes(normHl) || normHl.includes(normDisp)) {
+                headline = "";
+            }
+        }
+
         var alertDesc = "";
         if (detail) {
             var frText = detail.texts && detail.texts.find(t => t && t.languageCode && t.languageCode.toLowerCase().startsWith('fr'));
@@ -3744,6 +3832,9 @@ async function grabAlerts() {
                 var parts = rawText.split('###');
                 var candidate = (parts[0] || rawText).replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
                 alertDesc = translateAlertText(candidate);
+                if (typeof filterAlertWarningText === 'function') {
+                    alertDesc = filterAlertWarningText(alertDesc, displayName);
+                }
             }
         }
         if (!alertDesc && headline) {

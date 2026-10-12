@@ -468,7 +468,7 @@ body, html {
 
 .bulletin .box {
     width: 1397.25px;
-    height: 726.75px;
+    height: 610px;
     left: 7%;
     top: 16%;
     background-image: url(../images/boxes/2026/nws_headlines_box.png) !important;
@@ -2161,12 +2161,14 @@ body, html {
 .bulletin .alerts {
     position: absolute;
     width: 1350px;
-    font-size: 54px;
+    max-height: 520px;
+    overflow: hidden;
+    font-size: 32px;
     font-family: "Interstate Bold", sans-serif;
     color: #ffffff;
-    margin-top: 268px;
+    margin-top: 255px;
     margin-left: 139px;
-    line-height: 68px;
+    line-height: 42px;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
 }
 

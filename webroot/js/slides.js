@@ -1206,16 +1206,70 @@ var slidePrograms = {
         var city = item.cityName || (Array.isArray(item.areas) && item.areas.length > 0 ? item.areas.join(", ") : "");
         var area = item.areaText || (city ? `Secteurs : ${city}` : (item.area ? `Secteurs : ${item.area}` : ""));
         var rawDesc = item.description || "";
+
+        // Check if headline duplicates title or item name
+        var isRedundantHeadline = function(hl, tit, nm) {
+            if (!hl) return true;
+            var norm = function(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, ''); };
+            var nHl = norm(hl);
+            var nTit = norm(tit);
+            var nNm = norm(nm);
+            if (!nHl) return true;
+            if (nHl === nTit || nHl === nNm) return true;
+            if (nTit && (nTit.includes(nHl) || nHl.includes(nTit))) return true;
+            return false;
+        };
+
+        if (headline && isRedundantHeadline(headline, title, item.name)) {
+            headline = "";
+        }
+
+        // If headline is empty, check if rawDesc starts with a concise summary sentence before section headers (e.g. "Journée pluvieuse mardi")
+        if (!headline && rawDesc) {
+            var sectionMatch = rawDesc.search(/\b(?:Quoi|Quand|Où|Impacts|Informations supplémentaires|Conseils)\s*:/i);
+            if (sectionMatch > 0 && sectionMatch <= 80) {
+                var candidate = rawDesc.substring(0, sectionMatch).replace(/[\r\n\t]+/g, ' ').trim();
+                if (!isRedundantHeadline(candidate, title, item.name)) {
+                    headline = candidate;
+                    rawDesc = rawDesc.substring(sectionMatch).trim();
+                }
+            }
+        }
+
         var description = typeof translateAlertText === 'function' ? translateAlertText(rawDesc) : rawDesc;
+        if (typeof filterAlertWarningText === 'function') {
+            description = filterAlertWarningText(description, title);
+        }
+
+        // If description still starts with headline, strip it from description
+        if (headline) {
+            var normHl = headline.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            var descStart = description.substring(0, Math.min(description.length, headline.length + 15));
+            var normStart = descStart.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+            if (normStart.startsWith(normHl)) {
+                var matchLen = headline.length;
+                description = description.slice(matchLen).replace(/^[\s.:\-–—]+/, '').trim();
+            }
+        }
+
         var isRed = (item.color === 'red' || item.severe);
         var titleColor = isRed ? '#ff4d4d' : '#ffe066';
+
+        // Format sections (Quoi :, Quand :, Où :, Informations supplémentaires :, etc.) for clear visual presentation
+        var formattedDesc = description
+            .replace(/\b(Quoi|Quand|Où|Informations supplémentaires|Impacts|Conseils)\s*:\s*/gi, '<br><span class="bulletin-label">$1 :</span> ')
+            .replace(/^<br>/, '')
+            .trim();
+
+        var isLongText = (title + " " + headline + " " + description).length > 320;
+        var descClass = isLongText ? 'bulletin-desc compact' : 'bulletin-desc';
 
         var html = `
             <div class="bulletin-card">
                 <div class="bulletin-title" style="color: ${titleColor};">${title}</div>
                 ${headline ? `<div class="bulletin-headline">${headline}</div>` : ''}
                 ${area ? `<div class="bulletin-area">${area}</div>` : ''}
-                ${description ? `<div class="bulletin-desc">${description}</div>` : ''}
+                ${formattedDesc ? `<div class="${descClass}">${formattedDesc}</div>` : ''}
             </div>
         `;
 
@@ -1228,7 +1282,10 @@ var slidePrograms = {
         // French TTS narration of this page (server-rendered WAV, see tts.js).
         // Set window.BULLETIN_TTS = false to disable.
         var ttsEnabled = typeof window === 'undefined' || window.BULLETIN_TTS !== false;
-        var speech = [title.charAt(0) + title.slice(1).toLowerCase(), headline, area, description]
+        var plainDesc = description
+            .replace(/\b(Quoi|Quand|Où|Informations supplémentaires|Impacts|Conseils)\s*:\s*/gi, '$1 : ')
+            .trim();
+        var speech = [title.charAt(0) + title.slice(1).toLowerCase(), headline, area, plainDesc]
             .map(s => String(s || '').replace(/<[^>]*>/g, ' ').trim())
             .filter(Boolean)
             .map(s => /[.!?:]$/.test(s) ? s : s + '.')
