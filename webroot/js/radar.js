@@ -1816,7 +1816,16 @@ const QUEBEC_ALERT_COORDS = {
   "blainville": { lon: -73.883, lat: 45.667 },
   "mirabel": { lon: -74.083, lat: 45.650 },
   "châteauguay": { lon: -73.750, lat: 45.367 },
-  "chateauguay": { lon: -73.750, lat: 45.367 }
+  "chateauguay": { lon: -73.750, lat: 45.367 },
+  "coaticook": { lon: -71.800, lat: 45.133 },
+  "windsor": { lon: -72.000, lat: 45.567 },
+  "richmond": { lon: -72.150, lat: 45.667 },
+  "cookshire-eaton": { lon: -71.633, lat: 45.333 },
+  "east angus": { lon: -71.667, lat: 45.483 },
+  "bromont": { lon: -72.650, lat: 45.317 },
+  "cowansville": { lon: -72.750, lat: 45.200 },
+  "lac-mégantic": { lon: -70.883, lat: 45.583 },
+  "lac-megantic": { lon: -70.883, lat: 45.583 }
 };
 const CANADIAN_ALERT_COORDS = QUEBEC_ALERT_COORDS;
 
@@ -2041,11 +2050,13 @@ function extractWarningRegions(alerts, defaultLoc) {
         clusters.sort((a, b) => b.ringCount - a.ringCount);
 
         for (const cl of clusters) {
-          const dLon = Math.max(0.18, cl.maxLon - cl.minLon);
-          const dLat = Math.max(0.12, cl.maxLat - cl.minLat);
-          const zoomLon = Math.log2(360 / dLon) - 1.25;
-          const zoomLat = Math.log2(180 / dLat) - 1.25;
-          const zoom = Math.max(8.3, Math.min(9.3, Math.min(zoomLon, zoomLat)));
+          const dLon = Math.max(0.12, cl.maxLon - cl.minLon);
+          const dLat = Math.max(0.08, cl.maxLat - cl.minLat);
+          // Scale camera tightly to frame the alert area while keeping context
+          const zoomLon = Math.log2((1150 / 256) * (360 / dLon));
+          const zoomLat = Math.log2((650 / 256) * (180 / dLat));
+          const fittedZoom = Math.min(zoomLon, zoomLat);
+          const zoom = Math.max(9.2, Math.min(10.6, Number(fittedZoom.toFixed(1))));
           const bestCity = findBestQuebecCity(cl.centerLon, cl.centerLat, alert.cityName);
 
           alertRegions.push({
@@ -2071,7 +2082,7 @@ function extractWarningRegions(alerts, defaultLoc) {
             alertRegions.push({
               lon: coords.lon,
               lat: coords.lat,
-              zoom: 8.8,
+              zoom: 9.8,
               name: key.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
               alert
             });
@@ -2084,7 +2095,7 @@ function extractWarningRegions(alerts, defaultLoc) {
         alertRegions.push({
           lon: coords.lon,
           lat: coords.lat,
-          zoom: 8.8,
+          zoom: 9.8,
           name: alert.cityName || "Région sous alerte",
           alert
         });
@@ -2120,7 +2131,7 @@ function extractWarningRegions(alerts, defaultLoc) {
     sequenced.push({
       lon: defaultLoc.lon || -73.573,
       lat: defaultLoc.lat || 45.503,
-      zoom: 8.8,
+      zoom: 9.8,
       name: "Montréal",
       alert: activeAlerts[0] || null
     });
