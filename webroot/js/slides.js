@@ -1358,7 +1358,7 @@ var slidePrograms = {
         setTimeout(() => proceed(0), 8000); // synthesis timeout safeguard
         probe.src = ttsUrl;
     },
-    async bulletinMap() {
+    async bulletinMap(pageIdx = 0) {
         if (typeof checkAlertExpiration === 'function') {
             checkAlertExpiration();
         }
@@ -1369,34 +1369,84 @@ var slidePrograms = {
             return;
         }
 
-        $('.bulletin-map').show();
-        $('.bulletin-map .alertmap-banner').fadeIn(167, 'linear');
-        $('.bulletin-map .alertmap-subbar').fadeIn(167, 'linear');
-        $('.alertmap-cities').fadeIn(167, 'linear');
-        $('.alertmap-cities-trans').fadeIn(167, 'linear');
-
-        if (typeof startAlertMap === 'function') {
-            await startAlertMap('alertmap-canvas', weatherInfo.bulletin.alerts);
+        var defaultCenterLon = -73.573;
+        var defaultCenterLat = 45.503;
+        if (typeof locationConfig !== 'undefined' && locationConfig) {
+            var main = (typeof normalizeCity === 'function') ? normalizeCity(locationConfig.mainCity) : locationConfig.mainCity;
+            if (main && main.lon != null && main.lat != null && (typeof isQuebecCityCoord === 'function' ? isQuebecCityCoord(main.lon, main.lat) : true)) {
+                defaultCenterLon = main.lon;
+                defaultCenterLat = main.lat;
+            }
         }
 
-        var mapDuration = (typeof slideLength !== 'undefined' && slideLength) ? Math.max(8000, slideLength) : 9000;
+        var regions = (typeof extractWarningRegions === 'function')
+            ? extractWarningRegions(weatherInfo.bulletin.alerts, { lon: defaultCenterLon, lat: defaultCenterLat })
+            : [{ lon: defaultCenterLon, lat: defaultCenterLat, zoom: 8.8, name: "Montréal", alert: weatherInfo.bulletin.alerts[0] }];
 
-        setTimeout(() => {
-            $('.bulletin-map .alertmap-banner').fadeOut(167, 'linear');
-            $('.bulletin-map .alertmap-subbar').fadeOut(167, 'linear');
-            $('.alertmap-cities').fadeOut(167, 'linear');
-            $('.alertmap-cities-trans').fadeOut(167, 'linear');
+        var totalPages = Math.max(1, regions.length);
+        if (pageIdx >= totalPages) {
+            $('.bulletin-map').hide();
             if (typeof stopAlertMap === 'function') {
                 stopAlertMap();
             }
-            setTimeout(() => {
-                $('.bulletin-map').hide();
-                slideCallBack();
-            }, 167);
-        }, mapDuration - 167);
+            slideCallBack();
+            return;
+        }
+
+        var currentRegion = regions[pageIdx];
+
+        if (pageIdx === 0) {
+            $('.bulletin-map').show();
+            $('.bulletin-map .alertmap-banner').fadeIn(200, 'linear');
+            $('.bulletin-map .alertmap-subbar').fadeIn(200, 'linear');
+            $('.alertmap-canvas').fadeIn(200, 'linear');
+            $('.alertmap-cities').fadeIn(200, 'linear');
+            $('.alertmap-cities-trans').fadeIn(200, 'linear');
+        } else {
+            $('.alertmap-canvas').fadeIn(250, 'linear');
+            $('.alertmap-cities').fadeIn(250, 'linear');
+            $('.alertmap-cities-trans').fadeIn(250, 'linear');
+            $('.bulletin-map .alertmap-subtitle').fadeIn(250, 'linear');
+            $('.bulletin-map .alertmap-legend').fadeIn(250, 'linear');
+        }
+
+        if (typeof renderAlertMapSector === 'function') {
+            await renderAlertMapSector('alertmap-canvas', currentRegion, weatherInfo.bulletin.alerts);
+        } else if (typeof startAlertMap === 'function') {
+            await startAlertMap('alertmap-canvas', weatherInfo.bulletin.alerts);
+        }
+
+        var baseSlideLen = (typeof slideLength !== 'undefined' && slideLength) ? slideLength : 7500;
+        var pageDuration = Math.max(6500, baseSlideLen);
+
+        setTimeout(() => {
+            if (pageIdx === totalPages - 1) {
+                $('.bulletin-map .alertmap-banner').fadeOut(250, 'linear');
+                $('.bulletin-map .alertmap-subbar').fadeOut(250, 'linear');
+                $('.alertmap-canvas').fadeOut(250, 'linear');
+                $('.alertmap-cities').fadeOut(250, 'linear');
+                $('.alertmap-cities-trans').fadeOut(250, 'linear');
+                if (typeof stopAlertMap === 'function') {
+                    stopAlertMap();
+                }
+                setTimeout(() => {
+                    $('.bulletin-map').hide();
+                    slideCallBack();
+                }, 250);
+            } else {
+                $('.alertmap-canvas').fadeOut(250, 'linear');
+                $('.alertmap-cities').fadeOut(250, 'linear');
+                $('.alertmap-cities-trans').fadeOut(250, 'linear');
+                $('.bulletin-map .alertmap-subtitle').fadeOut(250, 'linear');
+                $('.bulletin-map .alertmap-legend').fadeOut(250, 'linear');
+                setTimeout(() => {
+                    slidePrograms.bulletinMap(pageIdx + 1);
+                }, 250);
+            }
+        }, pageDuration - 250);
     },
-    async alertMap() {
-        return slidePrograms.bulletinMap();
+    async alertMap(pageIdx = 0) {
+        return slidePrograms.bulletinMap(pageIdx);
     },
     mapTest() {
         $('.map').show();

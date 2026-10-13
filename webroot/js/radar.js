@@ -8,6 +8,15 @@ if (typeof window !== 'undefined') {
   window.__iptvMapsAvailable = true;
 }
 
+let quebecBoundaryData = null;
+if (typeof window !== 'undefined' && window.QUEBEC_BOUNDARY) {
+  quebecBoundaryData = window.QUEBEC_BOUNDARY;
+} else if (typeof require === 'function') {
+  try {
+    quebecBoundaryData = require('./quebec-boundary.js');
+  } catch (e) {}
+}
+
 function destroyCanvas(canvas) {
   if (!canvas) return;
   try {
@@ -434,7 +443,44 @@ const radarEngine = {
     return canvas;
   },
 
-  // Pre-render high-resolution satellite basemap with reference boundaries for alert maps
+  // Draw official vector boundary of Quebec (eliminates external state/provincial text)
+  drawQuebecBoundary(ctx, loc) {
+    const boundary = (typeof window !== 'undefined' && window.QUEBEC_BOUNDARY) 
+      ? window.QUEBEC_BOUNDARY 
+      : quebecBoundaryData;
+    if (!boundary || !Array.isArray(boundary) || !loc) return;
+
+    ctx.save();
+    ctx.beginPath();
+    for (let pIdx = 0; pIdx < boundary.length; pIdx++) {
+      const poly = boundary[pIdx];
+      for (let rIdx = 0; rIdx < poly.length; rIdx++) {
+        const ring = poly[rIdx];
+        if (!ring || ring.length < 2) continue;
+        let started = false;
+        for (let i = 0; i < ring.length; i++) {
+          const pt = this.latLonToScreen(ring[i][0], ring[i][1], loc.lon, loc.lat, loc.zoom, 1620, 1080);
+          if (pt) {
+            if (!started) {
+              ctx.moveTo(pt.x, pt.y);
+              started = true;
+            } else {
+              ctx.lineTo(pt.x, pt.y);
+            }
+          }
+        }
+      }
+    }
+    ctx.shadowColor = 'rgba(0, 229, 255, 0.75)';
+    ctx.shadowBlur = 8;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  },
+
+  // Pre-render high-resolution satellite basemap with Quebec boundary for alert maps
   async bakeAlertBasemap(loc) {
     const key = `alert_${Number(loc.lon).toFixed(2)}_${Number(loc.lat).toFixed(2)}_${Number(loc.zoom).toFixed(1)}`;
     if (this.basemapCache.has(key)) {
@@ -453,24 +499,21 @@ const radarEngine = {
 
     const tileUrls = [];
     const satDrawInfo = [];
-    const refDrawInfo = [];
     for (let ty = bounds.minTileY; ty <= bounds.maxTileY; ty++) {
       for (let tx = bounds.minTileX; tx <= bounds.maxTileX; tx++) {
         const satUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`;
-        const refUrl = `https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`;
         const dx = Math.floor((tx * 256 - bounds.leftPixel) * bounds.scale);
         const dy = Math.floor((ty * 256 - bounds.topPixel) * bounds.scale);
         const dw = Math.ceil(256 * bounds.scale);
         const dh = Math.ceil(256 * bounds.scale);
-        tileUrls.push(satUrl, refUrl);
+        tileUrls.push(satUrl);
         satDrawInfo.push({ url: satUrl, dx, dy, dw, dh });
-        refDrawInfo.push({ url: refUrl, dx, dy, dw, dh });
       }
     }
 
     await this.loadTilesInBatches(tileUrls, 8);
 
-    // 1. Draw Satellite Terrain
+    // 1. Draw Satellite Terrain (clean imagery, no baked labels)
     for (const info of satDrawInfo) {
       const img = this.imageCache.get(info.url);
       if (img && img.complete && img.naturalWidth > 0) {
@@ -478,16 +521,8 @@ const radarEngine = {
       }
     }
 
-    // 2. Draw Boundaries & Regional Reference Overlay
-    ctx.save();
-    ctx.globalAlpha = 0.82;
-    for (const info of refDrawInfo) {
-      const img = this.imageCache.get(info.url);
-      if (img && img.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, info.dx, info.dy, info.dw, info.dh);
-      }
-    }
-    ctx.restore();
+    // 2. Draw Quebec Provincial Boundary Vector
+    this.drawQuebecBoundary(ctx, loc);
 
     // 3. Subtle top atmospheric horizon gradient for broadcast aesthetic
     const grad = ctx.createLinearGradient(0, 0, 0, 240);
@@ -502,10 +537,11 @@ const radarEngine = {
   },
 
   // Draw GeoJSON or synthesized alert sector polygons onto canvas
-  drawAlertPolygons(ctx, alerts, loc) {
+  drawAlertPolygons(ctx, alerts, loc, focusedAlert = null) {
     if (!alerts || !Array.isArray(alerts) || alerts.length === 0) return;
 
     alerts.forEach((alert) => {
+      const isFocused = (focusedAlert && (focusedAlert === alert || (alert.detailKey && focusedAlert.detailKey === alert.detailKey)));
       const style = (typeof getAlertColorTheme === 'function') 
         ? getAlertColorTheme(alert) 
         : { fill: 'rgba(239, 68, 68, 0.48)', stroke: '#ff1744', glow: 'rgba(255, 23, 68, 0.85)' };
@@ -542,18 +578,18 @@ const radarEngine = {
             // 1. Radiant semi-transparent fill with broadcast glow
             ctx.fillStyle = style.fill;
             ctx.shadowColor = style.glow;
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = isFocused ? 28 : 18;
             ctx.fill();
 
             // 2. Vibrant neon boundary stroke
-            ctx.lineWidth = 3.5;
+            ctx.lineWidth = isFocused ? 4.5 : 3.5;
             ctx.strokeStyle = style.stroke;
             ctx.stroke();
 
             // 3. Crisp inner boundary accent line
             ctx.shadowBlur = 0;
             ctx.lineWidth = 1.2;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
             ctx.stroke();
           }
           ctx.restore();
@@ -1711,7 +1747,11 @@ async function addSnowCities(dopplerIdx = null, dConfig = null) {
 // Active Weather Alert Regions Map Engine (Slide 14b)
 // ═══════════════════════════════════════════════════════════════════════
 
-const CANADIAN_ALERT_COORDS = {
+// ═══════════════════════════════════════════════════════════════════════
+// Active Weather Alert Regions Map Engine (Slide 14b - Quebec Focused)
+// ═══════════════════════════════════════════════════════════════════════
+
+const QUEBEC_ALERT_COORDS = {
   "montréal": { lon: -73.573, lat: 45.503 },
   "montreal": { lon: -73.573, lat: 45.503 },
   "québec": { lon: -71.211, lat: 46.813 },
@@ -1719,42 +1759,83 @@ const CANADIAN_ALERT_COORDS = {
   "laval": { lon: -73.753, lat: 45.570 },
   "longueuil": { lon: -73.518, lat: 45.531 },
   "gatineau": { lon: -75.701, lat: 45.476 },
-  "ottawa": { lon: -75.697, lat: 45.421 },
   "sherbrooke": { lon: -71.890, lat: 45.401 },
   "trois-rivières": { lon: -72.548, lat: 46.343 },
+  "trois-rivieres": { lon: -72.548, lat: 46.343 },
+  "shawinigan": { lon: -72.748, lat: 46.567 },
   "saguenay": { lon: -71.068, lat: 48.427 },
+  "chicoutimi": { lon: -71.068, lat: 48.427 },
+  "jonquière": { lon: -71.248, lat: 48.416 },
+  "jonquiere": { lon: -71.248, lat: 48.416 },
+  "alma": { lon: -71.650, lat: 48.550 },
   "lévis": { lon: -71.178, lat: 46.800 },
+  "levis": { lon: -71.178, lat: 46.800 },
   "joliette": { lon: -73.442, lat: 46.027 },
   "saint-jérôme": { lon: -74.004, lat: 45.778 },
+  "saint-jerome": { lon: -74.004, lat: 45.778 },
   "saint-jean-sur-richelieu": { lon: -73.256, lat: 45.308 },
   "drummondville": { lon: -72.484, lat: 45.883 },
   "granby": { lon: -72.730, lat: 45.400 },
   "victoriaville": { lon: -71.956, lat: 46.059 },
+  "saint-hyacinthe": { lon: -72.957, lat: 45.631 },
+  "sorel-tracy": { lon: -73.117, lat: 46.033 },
+  "salaberry-de-valleyfield": { lon: -74.132, lat: 45.257 },
+  "valleyfield": { lon: -74.132, lat: 45.257 },
+  "vaudreuil-dorion": { lon: -74.033, lat: 45.400 },
+  "saint-rémi": { lon: -73.618, lat: 45.261 },
+  "saint-remi": { lon: -73.618, lat: 45.261 },
+  "mont-laurier": { lon: -75.501, lat: 46.551 },
+  "montebello": { lon: -74.942, lat: 45.650 },
+  "lachute": { lon: -74.333, lat: 45.650 },
+  "thetford mines": { lon: -71.300, lat: 46.083 },
+  "magog": { lon: -72.150, lat: 45.267 },
+  "mont-tremblant": { lon: -74.583, lat: 46.117 },
+  "sainte-agathe-des-monts": { lon: -74.283, lat: 46.050 },
   "rouyn-noranda": { lon: -79.022, lat: 48.243 },
   "val-d'or": { lon: -77.783, lat: 48.100 },
+  "val d'or": { lon: -77.783, lat: 48.100 },
+  "amos": { lon: -78.116, lat: 48.569 },
+  "la sarre": { lon: -79.200, lat: 48.800 },
+  "chibougamau": { lon: -74.367, lat: 49.917 },
   "rimouski": { lon: -68.524, lat: 48.449 },
+  "rivière-du-loup": { lon: -69.537, lat: 47.836 },
+  "riviere-du-loup": { lon: -69.537, lat: 47.836 },
+  "matane": { lon: -67.533, lat: 48.850 },
+  "gaspé": { lon: -64.483, lat: 48.833 },
+  "gaspe": { lon: -64.483, lat: 48.833 },
+  "baie-comeau": { lon: -68.150, lat: 49.217 },
   "sept-îles": { lon: -66.383, lat: 50.217 },
-  "toronto": { lon: -79.383, lat: 43.653 },
-  "winnipeg": { lon: -97.138, lat: 49.895 },
-  "brandon": { lon: -99.953, lat: 49.848 },
-  "dauphin": { lon: -100.049, lat: 51.149 },
-  "thompson": { lon: -97.856, lat: 55.743 },
-  "flin flon": { lon: -101.877, lat: 54.766 },
-  "regina": { lon: -104.619, lat: 50.445 },
-  "saskatoon": { lon: -106.670, lat: 52.133 },
-  "yorkton": { lon: -102.463, lat: 51.214 },
-  "estevan": { lon: -102.986, lat: 49.139 },
-  "nipawin": { lon: -104.015, lat: 53.363 },
-  "redvers": { lon: -101.681, lat: 49.578 },
-  "berens river": { lon: -97.020, lat: 52.361 },
-  "sandy lake": { lon: -93.344, lat: 53.056 },
-  "red lake": { lon: -93.817, lat: 51.017 },
-  "calgary": { lon: -114.071, lat: 51.045 },
-  "edmonton": { lon: -113.491, lat: 53.544 },
-  "vancouver": { lon: -123.121, lat: 49.283 },
-  "halifax": { lon: -63.575, lat: 44.649 },
-  "moncton": { lon: -64.778, lat: 46.088 }
+  "sept-iles": { lon: -66.383, lat: 50.217 },
+  "saint-georges": { lon: -70.667, lat: 46.117 },
+  "baie-saint-paul": { lon: -70.500, lat: 47.433 },
+  "la malbaie": { lon: -70.150, lat: 47.650 },
+  "sainte-marie": { lon: -71.017, lat: 46.433 },
+  "brossard": { lon: -73.467, lat: 45.467 },
+  "repentigny": { lon: -73.450, lat: 45.733 },
+  "terrebonne": { lon: -73.633, lat: 45.700 },
+  "blainville": { lon: -73.883, lat: 45.667 },
+  "mirabel": { lon: -74.083, lat: 45.650 },
+  "châteauguay": { lon: -73.750, lat: 45.367 },
+  "chateauguay": { lon: -73.750, lat: 45.367 }
 };
+const CANADIAN_ALERT_COORDS = QUEBEC_ALERT_COORDS;
+
+function normalizeCityKey(name) {
+  return String(name || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function isQuebecCityCoord(lon, lat) {
+  if (lon == null || lat == null) return false;
+  const nLat = Number(lat);
+  const nLon = Number(lon);
+  if (!Number.isFinite(nLat) || !Number.isFinite(nLon)) return false;
+  // Bounding box for Quebec territory
+  return (nLat >= 44.8 && nLat <= 62.5 && nLon >= -80.0 && nLon <= -57.0);
+}
 
 function getAlertColorTheme(alert) {
   const name = String(alert && (alert.name || alert.headline) || '').toLowerCase();
@@ -1849,7 +1930,7 @@ function getCoordinatesForAlert(alert, defaultLoc) {
   const names = [alert.cityName, ...(alert.areas || []), ...(alert.cities || [])].filter(Boolean);
   for (const n of names) {
     const norm = String(n).toLowerCase().replace(/^secteurs?\s*:\s*/i, '').trim();
-    for (const [key, coords] of Object.entries(CANADIAN_ALERT_COORDS)) {
+    for (const [key, coords] of Object.entries(QUEBEC_ALERT_COORDS)) {
       if (norm.includes(key) || key.includes(norm)) {
         return { lon: coords.lon, lat: coords.lat };
       }
@@ -1859,24 +1940,232 @@ function getCoordinatesForAlert(alert, defaultLoc) {
   return defaultLoc;
 }
 
+// Extract and cluster distinct Quebec warning regions from active alerts for real-time camera tracking
+function extractWarningRegions(alerts, defaultLoc) {
+  const activeAlerts = Array.isArray(alerts) ? alerts.filter(Boolean) : [];
+  if (activeAlerts.length === 0) {
+    return [{
+      lon: defaultLoc.lon || -73.573,
+      lat: defaultLoc.lat || 45.503,
+      zoom: 8.8,
+      name: "Montréal",
+      alert: null
+    }];
+  }
+
+  const findBestQuebecCity = (cLon, cLat, fallbackName) => {
+    let bestCity = fallbackName || "Québec";
+    let bestDist = Infinity;
+    for (const [qcName, qcCoord] of Object.entries(QUEBEC_ALERT_COORDS)) {
+      const dist = Math.hypot(qcCoord.lon - cLon, qcCoord.lat - cLat);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestCity = qcName.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+    }
+    if (fallbackName && /montr[eé]al/i.test(fallbackName) && (bestCity === 'Laval' || bestCity === 'Longueuil' || bestCity === 'Montréal')) {
+      return 'Grand Montréal / Laval';
+    }
+    return bestCity;
+  };
+
+  // Group regions per distinct active alert to ensure every alert is featured
+  const perAlertRegions = [];
+
+  for (let aIdx = 0; aIdx < activeAlerts.length; aIdx++) {
+    const alert = activeAlerts[aIdx];
+    const alertRegions = [];
+    const geoms = alert.geometries || (alert.geometry ? [alert.geometry] : null);
+
+    if (geoms && geoms.length > 0) {
+      // Gather all valid Quebec polygon outer rings for this alert
+      const alertRings = [];
+      for (const geom of geoms) {
+        let polyList = [];
+        if (geom.type === 'Polygon') polyList = [geom.coordinates];
+        else if (geom.type === 'MultiPolygon') polyList = geom.coordinates;
+
+        for (const rings of polyList) {
+          if (!rings || !rings[0] || rings[0].length < 3) continue;
+          const outer = rings[0];
+          let sumLon = 0, sumLat = 0, count = 0;
+          let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+          for (const pt of outer) {
+            const lon = pt[0], lat = pt[1];
+            sumLon += lon;
+            sumLat += lat;
+            count++;
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+          }
+          if (count > 0) {
+            const cLon = sumLon / count;
+            const cLat = sumLat / count;
+            if (isQuebecCityCoord(cLon, cLat)) {
+              alertRings.push({ cLon, cLat, minLon, maxLon, minLat, maxLat });
+            }
+          }
+        }
+      }
+
+      if (alertRings.length > 0) {
+        // Cluster rings belonging to this alert that are within ~0.8 degrees of each other
+        const clusters = [];
+        for (const r of alertRings) {
+          let targetCluster = clusters.find(cl => Math.hypot(cl.centerLon - r.cLon, cl.centerLat - r.cLat) < 0.85);
+          if (!targetCluster) {
+            targetCluster = {
+              centerLon: r.cLon,
+              centerLat: r.cLat,
+              minLon: r.minLon,
+              maxLon: r.maxLon,
+              minLat: r.minLat,
+              maxLat: r.maxLat,
+              ringCount: 1
+            };
+            clusters.push(targetCluster);
+          } else {
+            targetCluster.minLon = Math.min(targetCluster.minLon, r.minLon);
+            targetCluster.maxLon = Math.max(targetCluster.maxLon, r.maxLon);
+            targetCluster.minLat = Math.min(targetCluster.minLat, r.minLat);
+            targetCluster.maxLat = Math.max(targetCluster.maxLat, r.maxLat);
+            targetCluster.centerLon = (targetCluster.minLon + targetCluster.maxLon) / 2;
+            targetCluster.centerLat = (targetCluster.minLat + targetCluster.maxLat) / 2;
+            targetCluster.ringCount++;
+          }
+        }
+
+        // Sort clusters by number of rings descending (primary sector first)
+        clusters.sort((a, b) => b.ringCount - a.ringCount);
+
+        for (const cl of clusters) {
+          const dLon = Math.max(0.18, cl.maxLon - cl.minLon);
+          const dLat = Math.max(0.12, cl.maxLat - cl.minLat);
+          const zoomLon = Math.log2(360 / dLon) - 1.25;
+          const zoomLat = Math.log2(180 / dLat) - 1.25;
+          const zoom = Math.max(8.3, Math.min(9.3, Math.min(zoomLon, zoomLat)));
+          const bestCity = findBestQuebecCity(cl.centerLon, cl.centerLat, alert.cityName);
+
+          alertRegions.push({
+            lon: cl.centerLon,
+            lat: cl.centerLat,
+            zoom,
+            name: bestCity,
+            alert
+          });
+        }
+      }
+    }
+
+    // Fallback if no polygon geometry was extracted
+    if (alertRegions.length === 0) {
+      const names = [alert.cityName, ...(alert.areas || []), ...(alert.cities || [])].filter(Boolean);
+      const handled = new Set();
+      for (const n of names) {
+        const norm = String(n).toLowerCase().replace(/^secteurs?\s*:\s*/i, '').trim();
+        for (const [key, coords] of Object.entries(QUEBEC_ALERT_COORDS)) {
+          if ((norm.includes(key) || key.includes(norm)) && !handled.has(key)) {
+            handled.add(key);
+            alertRegions.push({
+              lon: coords.lon,
+              lat: coords.lat,
+              zoom: 8.8,
+              name: key.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+              alert
+            });
+            break;
+          }
+        }
+      }
+      if (alertRegions.length === 0) {
+        const coords = getCoordinatesForAlert(alert, defaultLoc);
+        alertRegions.push({
+          lon: coords.lon,
+          lat: coords.lat,
+          zoom: 8.8,
+          name: alert.cityName || "Région sous alerte",
+          alert
+        });
+      }
+    }
+
+    perAlertRegions.push(alertRegions);
+  }
+
+  // Interleave regions across alerts: primary region of each active alert first, then secondaries
+  const sequenced = [];
+  let hasMore = true;
+  let round = 0;
+  while (hasMore) {
+    hasMore = false;
+    for (let i = 0; i < perAlertRegions.length; i++) {
+      if (round < perAlertRegions[i].length) {
+        const reg = perAlertRegions[i][round];
+        // Deduplicate if virtually identical coordinate from the same alert
+        const isDuplicate = sequenced.some(s => s.alert === reg.alert && Math.hypot(s.lon - reg.lon, s.lat - reg.lat) < 0.25);
+        if (!isDuplicate) {
+          sequenced.push(reg);
+        }
+        if (round + 1 < perAlertRegions[i].length) {
+          hasMore = true;
+        }
+      }
+    }
+    round++;
+  }
+
+  if (sequenced.length === 0) {
+    sequenced.push({
+      lon: defaultLoc.lon || -73.573,
+      lat: defaultLoc.lat || 45.503,
+      zoom: 8.8,
+      name: "Montréal",
+      alert: activeAlerts[0] || null
+    });
+  }
+
+  return sequenced;
+}
+
+function getAlertRegionsCount(alerts) {
+  const regions = extractWarningRegions(alerts, { lon: -73.573, lat: 45.503 });
+  return (regions && regions.length) || 1;
+}
+
 function addAlertMapCities(alerts, loc) {
+  if (typeof $ === 'undefined') return;
   $('.alertmap-cities').empty();
   $('.alertmap-cities-trans').empty();
 
   let candidatePool = [];
+  const seenKeys = new Set();
 
-  for (const [cName, cCoords] of Object.entries(CANADIAN_ALERT_COORDS)) {
+  const addCandidate = (name, lon, lat, meta = {}) => {
+    if (!name || lon == null || lat == null) return;
+    if (!isQuebecCityCoord(lon, lat)) return;
+    const key = normalizeCityKey(name);
+    if (!key || seenKeys.has(key)) return;
+    seenKeys.add(key);
+    candidatePool.push({
+      name: name.trim(),
+      lon: Number(lon),
+      lat: Number(lat),
+      ...meta
+    });
+  };
+
+  // 1. Quebec Alert candidate cities
+  for (const [cName, cCoords] of Object.entries(QUEBEC_ALERT_COORDS)) {
     const pt = radarEngine.latLonToScreen(cCoords.lon, cCoords.lat, loc.lon, loc.lat, loc.zoom, 1620, 1080);
-    if (pt && pt.x >= 60 && pt.x <= 1540 && pt.y >= 240 && pt.y <= 830) {
+    if (pt && pt.x >= 60 && pt.x <= 1540 && pt.y >= 235 && pt.y <= 835) {
       const capName = cName.split(/[\s-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      candidatePool.push({
-        name: capName,
-        lon: cCoords.lon,
-        lat: cCoords.lat
-      });
+      addCandidate(capName, cCoords.lon, cCoords.lat);
     }
   }
 
+  // 2. Configured user cities (strictly Quebec)
   if (typeof locationConfig !== 'undefined' && locationConfig) {
     const configCities = [
       locationConfig.mainCity,
@@ -1885,7 +2174,13 @@ function addAlertMapCities(alerts, loc) {
       ...(locationConfig.regionalMap?.map || []),
       ...(locationConfig.regionalForecasts || [])
     ].filter(Boolean);
-    candidatePool.push(...configCities);
+
+    for (const c of configCities) {
+      const norm = normalizeCity(c);
+      if (norm && norm.lon != null && norm.lat != null) {
+        addCandidate(norm.name, norm.lon, norm.lat, norm);
+      }
+    }
   }
 
   const placed = resolvePlacements(candidatePool, loc, 12);
@@ -1906,9 +2201,64 @@ function addAlertMapCities(alerts, loc) {
   }
 }
 
-var activeAlertMapCanvas = null;
+// Dynamically updates top broadcast banner, status icon badge, and subbar legend for the current alert
+function updateAlertMapUI(alert, regionName) {
+  if (typeof $ === 'undefined' || !alert) return;
 
-async function startAlertMap(targetCanvasId = 'alertmap-canvas', alerts = null) {
+  const alertTheme = getAlertColorTheme(alert);
+  const lang = (typeof locationConfig !== 'undefined' && locationConfig && locationConfig.vocalLanguage) ? locationConfig.vocalLanguage : 'fr';
+  const isEn = (lang === 'en');
+
+  let bannerTitle = isEn ? "WATCHES & WARNINGS" : "AVERTISSEMENTS EN VIGUEUR";
+  if (alert.color === 'yellow' || (!alert.severe && !alert.color)) {
+    bannerTitle = isEn ? "YELLOW WATCHES & WARNINGS" : "SURVEILLANCE ET AVERTISSEMENTS";
+  }
+
+  let bannerSub = "";
+  if (regionName) {
+    bannerSub = `Secteur : ${regionName}`;
+  } else if (alert.cityName) {
+    bannerSub = `Secteurs : ${alert.cityName}`;
+  } else {
+    bannerSub = isEn ? alertTheme.subtitleEn : alertTheme.subtitleFr;
+  }
+
+  const displayName = typeof getAlertDisplayNameFr === 'function' 
+    ? getAlertDisplayNameFr(alert.name) 
+    : (alert.name || "Avertissement météo");
+
+  $('.alertmap-title').text(bannerTitle);
+  $('.alertmap-subtitle').text(bannerSub);
+
+  // Update Status Icon Badge (Gradient & Glow)
+  $('.alertmap-icon-box').css({
+    'background': (alert.severe || alert.color === 'red')
+      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 60%, #991b1b 100%)'
+      : (alert.color === 'orange')
+        ? 'linear-gradient(135deg, #f97316 0%, #ea580c 60%, #c2410c 100%)'
+        : (alertTheme.swatch === '#ff1493' || alert.type === 'Heat Warning')
+          ? 'linear-gradient(135deg, #ff1493 0%, #e91e63 60%, #ad1457 100%)'
+          : 'linear-gradient(135deg, #facc15 0%, #eab308 60%, #ca8a04 100%)',
+    'box-shadow': (alert.severe || alert.color === 'red')
+      ? '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(239, 68, 68, 0.6)'
+      : (alertTheme.swatch === '#ff1493' || alert.type === 'Heat Warning')
+        ? '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(233, 30, 99, 0.6)'
+        : '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(250, 204, 21, 0.5)'
+  });
+
+  // Update Subbar Legend Pill
+  $('.alertmap-legend-color').css({
+    'background-color': alertTheme.swatch,
+    'box-shadow': `0 0 12px ${alertTheme.glow}`
+  });
+  $('.alertmap-legend-text').text(displayName);
+}
+
+var activeAlertMapCanvas = null;
+var activeAlertMapRaf = null;
+var activeAlertMapTimer = null;
+
+function renderAlertMapSector(targetCanvasId = 'alertmap-canvas', region = null, alerts = null) {
   let canvas = document.getElementById(targetCanvasId);
   if (!canvas) {
     const wrap = document.querySelector('.alertmap-canvas-wrap');
@@ -1921,7 +2271,7 @@ async function startAlertMap(targetCanvasId = 'alertmap-canvas', alerts = null) 
       wrap.appendChild(canvas);
     }
   }
-  if (!canvas) return;
+  if (!canvas) return null;
 
   activeAlertMapCanvas = canvas;
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -1930,81 +2280,152 @@ async function startAlertMap(targetCanvasId = 'alertmap-canvas', alerts = null) 
     ? alerts
     : ((weatherInfo && weatherInfo.bulletin && Array.isArray(weatherInfo.bulletin.alerts)) ? weatherInfo.bulletin.alerts : []);
 
-  const topAlert = activeAlerts[0] || { name: "Avertissement d'orages violents", color: "red", severe: true };
-  const alertTheme = getAlertColorTheme(topAlert);
-
-  const lang = (typeof locationConfig !== 'undefined' && locationConfig && locationConfig.vocalLanguage) ? locationConfig.vocalLanguage : 'fr';
-  const isEn = (lang === 'en');
-
-  let bannerTitle = isEn ? "WATCHES & WARNINGS" : "AVERTISSEMENTS EN VIGUEUR";
-  if (topAlert.color === 'yellow' || (!topAlert.severe && !topAlert.color)) {
-    bannerTitle = isEn ? "YELLOW WATCHES & WARNINGS" : "SURVEILLANCE ET AVERTISSEMENTS";
-  }
-  let bannerSub = isEn ? alertTheme.subtitleEn : alertTheme.subtitleFr;
-
-  $('.alertmap-title').text(bannerTitle);
-  $('.alertmap-subtitle').text(bannerSub);
-
-  // Update Icon Badge
-  $('.alertmap-icon-box').css({
-    'background': (topAlert.severe || topAlert.color === 'red')
-      ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 60%, #991b1b 100%)'
-      : (topAlert.color === 'orange')
-        ? 'linear-gradient(135deg, #f97316 0%, #ea580c 60%, #c2410c 100%)'
-        : 'linear-gradient(135deg, #facc15 0%, #eab308 60%, #ca8a04 100%)',
-    'box-shadow': (topAlert.severe || topAlert.color === 'red')
-      ? '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(239, 68, 68, 0.6)'
-      : '0 4px 14px rgba(0, 0, 0, 0.6), 0 0 16px rgba(250, 204, 21, 0.5)'
-  });
-
-  // Update Legend Pill
-  const displayName = typeof getAlertDisplayNameFr === 'function' ? getAlertDisplayNameFr(topAlert.name) : topAlert.name;
-  $('.alertmap-legend-color').css({
-    'background-color': alertTheme.swatch,
-    'box-shadow': `0 0 12px ${alertTheme.glow}`
-  });
-  $('.alertmap-legend-text').text(displayName);
-
-  // Determine Map Center & Zoom
-  let centerLon = -73.573;
-  let centerLat = 45.503;
-  let zoom = 7.5;
-
+  let defaultCenterLon = -73.573;
+  let defaultCenterLat = 45.503;
   if (typeof locationConfig !== 'undefined' && locationConfig) {
-    if (locationConfig.radar && locationConfig.radar.regionalCoords && locationConfig.radar.regionalCoords.lon != null) {
-      centerLon = Number(locationConfig.radar.regionalCoords.lon) || centerLon;
-      centerLat = Number(locationConfig.radar.regionalCoords.lat) || centerLat;
-    } else if (locationConfig.mainCity && locationConfig.mainCity.lon != null) {
-      centerLon = Number(locationConfig.mainCity.lon) || centerLon;
-      centerLat = Number(locationConfig.mainCity.lat) || centerLat;
+    const main = normalizeCity(locationConfig.mainCity);
+    if (main && main.lon != null && main.lat != null && isQuebecCityCoord(main.lon, main.lat)) {
+      defaultCenterLon = main.lon;
+      defaultCenterLat = main.lat;
     }
   }
 
-  const alertCoords = getCoordinatesForAlert(topAlert, { lon: centerLon, lat: centerLat });
-  if (alertCoords && alertCoords.lon != null && alertCoords.lat != null) {
-    centerLon = alertCoords.lon;
-    centerLat = alertCoords.lat;
+  const activeRegion = region || extractWarningRegions(activeAlerts, { lon: defaultCenterLon, lat: defaultCenterLat })[0];
+
+  // 1. Update UI (Banner title, sector subtitle, badge glow, legend pill)
+  updateAlertMapUI(activeRegion.alert, activeRegion.name);
+
+  // 2. Pre-load satellite tiles for this sector
+  const bounds = radarEngine.getTileBounds(activeRegion.lon, activeRegion.lat, activeRegion.zoom, 1620, 1080);
+  const tileUrls = [];
+  for (let ty = bounds.minTileY; ty <= bounds.maxTileY; ty++) {
+    for (let tx = bounds.minTileX; tx <= bounds.maxTileX; tx++) {
+      tileUrls.push(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`);
+    }
+  }
+  if (tileUrls.length > 0) {
+    radarEngine.loadTilesInBatches([...new Set(tileUrls)], 8).catch(() => {});
   }
 
-  const mapLoc = {
-    key: 'alert_map',
-    lon: centerLon,
-    lat: centerLat,
-    zoom: zoom
-  };
+  // 3. Render crisp static map on render buffer
+  const renderBuf = radarEngine.getRenderBuffer(1620, 1080);
+  const bufCtx = renderBuf ? renderBuf.getContext('2d', { alpha: false }) : null;
+  const drawCtx = bufCtx || ctx;
 
-  const basemap = await radarEngine.bakeAlertBasemap(mapLoc);
-  if (canvas && activeAlertMapCanvas === canvas) {
-    ctx.drawImage(basemap, 0, 0);
-    radarEngine.drawAlertPolygons(ctx, activeAlerts, mapLoc);
-    addAlertMapCities(activeAlerts, mapLoc);
+  // Deep space background
+  drawCtx.fillStyle = '#030a16';
+  drawCtx.fillRect(0, 0, 1620, 1080);
+
+  // High-res satellite tiles
+  for (let ty = bounds.minTileY; ty <= bounds.maxTileY; ty++) {
+    for (let tx = bounds.minTileX; tx <= bounds.maxTileX; tx++) {
+      const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${bounds.baseZoom}/${ty}/${tx}`;
+      const img = radarEngine.imageCache.get(url);
+      if (img && img.complete && img.naturalWidth > 0) {
+        const dx = Math.floor((tx * 256 - bounds.leftPixel) * bounds.scale);
+        const dy = Math.floor((ty * 256 - bounds.topPixel) * bounds.scale);
+        const dw = Math.ceil(256 * bounds.scale);
+        const dh = Math.ceil(256 * bounds.scale);
+        drawCtx.drawImage(img, dx, dy, dw, dh);
+      }
+    }
+  }
+
+  // Quebec provincial boundary
+  radarEngine.drawQuebecBoundary(drawCtx, activeRegion);
+
+  // Warning sector polygons (focused alert highlighted with neon glow)
+  radarEngine.drawAlertPolygons(drawCtx, activeAlerts, activeRegion, activeRegion.alert);
+
+  // Broadcast atmospheric gradient
+  const grad = drawCtx.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, 'rgba(3, 10, 22, 0.82)');
+  grad.addColorStop(0.5, 'rgba(3, 10, 22, 0.40)');
+  grad.addColorStop(1, 'rgba(3, 10, 22, 0)');
+  drawCtx.fillStyle = grad;
+  drawCtx.fillRect(0, 0, 1620, 240);
+
+  // Blit to target canvas
+  if (bufCtx && ctx && canvas) {
+    ctx.drawImage(renderBuf, 0, 0);
+  }
+
+  // 4. Place Quebec cities for this sector cleanly
+  addAlertMapCities(activeAlerts, activeRegion);
+
+  return activeRegion;
+}
+
+async function startAlertMap(targetCanvasId = 'alertmap-canvas', alerts = null, duration = null) {
+  stopAlertMap(); // Ensure previous transitions and timers are cleared
+
+  const activeAlerts = (Array.isArray(alerts) && alerts.length > 0)
+    ? alerts
+    : ((weatherInfo && weatherInfo.bulletin && Array.isArray(weatherInfo.bulletin.alerts)) ? weatherInfo.bulletin.alerts : []);
+
+  let defaultCenterLon = -73.573;
+  let defaultCenterLat = 45.503;
+  if (typeof locationConfig !== 'undefined' && locationConfig) {
+    const main = normalizeCity(locationConfig.mainCity);
+    if (main && main.lon != null && main.lat != null && isQuebecCityCoord(main.lon, main.lat)) {
+      defaultCenterLon = main.lon;
+      defaultCenterLat = main.lat;
+    }
+  }
+
+  const warningRegions = extractWarningRegions(activeAlerts, { lon: defaultCenterLon, lat: defaultCenterLat });
+
+  // Render initial sector sharply
+  renderAlertMapSector(targetCanvasId, warningRegions[0], activeAlerts);
+
+  // If multiple warning sectors exist, schedule professional broadcast slide transitions
+  if (warningRegions.length > 1) {
+    const N = warningRegions.length;
+    const holdDuration = (typeof duration === 'number' && duration > 0)
+      ? Math.max(5000, Math.floor(duration / N))
+      : 7000;
+
+    let currentSectorIdx = 0;
+
+    const scheduleNextSector = () => {
+      activeAlertMapTimer = setTimeout(() => {
+        currentSectorIdx = (currentSectorIdx + 1) % N;
+        const nextRegion = warningRegions[currentSectorIdx];
+
+        // Professional broadcast cross-dissolve transition (250ms fade-out -> update sector -> 250ms fade-in)
+        if (typeof $ !== 'undefined') {
+          $('.alertmap-canvas, .alertmap-cities, .alertmap-cities-trans, .alertmap-subtitle, .alertmap-legend').fadeOut(250, () => {
+            renderAlertMapSector(targetCanvasId, nextRegion, activeAlerts);
+            $('.alertmap-canvas, .alertmap-cities, .alertmap-cities-trans, .alertmap-subtitle, .alertmap-legend').fadeIn(250);
+            scheduleNextSector();
+          });
+        } else {
+          renderAlertMapSector(targetCanvasId, nextRegion, activeAlerts);
+          scheduleNextSector();
+        }
+      }, Math.max(2000, holdDuration - 250));
+    };
+
+    scheduleNextSector();
   }
 }
 
 function stopAlertMap() {
+  if (activeAlertMapTimer) {
+    clearTimeout(activeAlertMapTimer);
+    activeAlertMapTimer = null;
+  }
+  if (activeAlertMapRaf) {
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(activeAlertMapRaf);
+    }
+    activeAlertMapRaf = null;
+  }
   activeAlertMapCanvas = null;
-  $('.alertmap-cities').empty();
-  $('.alertmap-cities-trans').empty();
+  if (typeof $ !== 'undefined') {
+    $('.alertmap-cities').empty();
+    $('.alertmap-cities-trans').empty();
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -2018,8 +2439,12 @@ if (typeof window !== 'undefined') {
   window.stopSnowCover = stopSnowCover;
   window.startAlertMap = startAlertMap;
   window.stopAlertMap = stopAlertMap;
+  window.renderAlertMapSector = renderAlertMapSector;
   window.addAlertMapCities = addAlertMapCities;
   window.getAlertColorTheme = getAlertColorTheme;
+  window.extractWarningRegions = extractWarningRegions;
+  window.getAlertRegionsCount = getAlertRegionsCount;
+  window.updateAlertMapUI = updateAlertMapUI;
   window.createMaps = createMaps;
   window.createRegionalMaps = createRegionalMaps;
   window.createLocalMaps = createLocalMaps;
@@ -2047,8 +2472,12 @@ if (typeof module !== 'undefined' && module.exports) {
     stopSnowCover,
     startAlertMap,
     stopAlertMap,
+    renderAlertMapSector,
     addAlertMapCities,
     getAlertColorTheme,
+    extractWarningRegions,
+    getAlertRegionsCount,
+    updateAlertMapUI,
     createMaps,
     createRegionalMaps,
     destroyRegionalMaps,

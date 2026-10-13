@@ -629,6 +629,26 @@ function buildTestBulletinAlert(name, index, expiresAt) {
     var city = (locationConfig.mainCity && (locationConfig.mainCity.displayname || locationConfig.mainCity.name)) || "Montréal";
     var testLat = (locationConfig.mainCity && Number(locationConfig.mainCity.lat)) || 45.503;
     var testLon = (locationConfig.mainCity && Number(locationConfig.mainCity.lon)) || -73.573;
+
+    // Distribute multi-alert test cases across configured Quebec cities
+    if (index > 0 && locationConfig.eightCities && Array.isArray(locationConfig.eightCities.cities)) {
+        var altCity = locationConfig.eightCities.cities[index - 1];
+        if (altCity) {
+            var altName = altCity.displayname || altCity.name;
+            var aLat = altCity.lat, aLon = altCity.lon;
+            if ((!aLat || !aLon) && typeof altCity.val === 'string' && altCity.val.includes(',')) {
+                var parts = altCity.val.split(',');
+                aLat = parseFloat(parts[0]);
+                aLon = parseFloat(parts[1]);
+            }
+            if (altName && aLat != null && aLon != null && !isNaN(Number(aLat)) && !isNaN(Number(aLon))) {
+                city = altName;
+                testLat = Number(aLat);
+                testLon = Number(aLon);
+            }
+        }
+    }
+
     var testGeom = generateSectorPolygon(testLon, testLat, 45 + (index * 12));
     return {
         name: frName,
@@ -3714,18 +3734,35 @@ async function grabAlerts() {
 
     var geocodes = [];
     var geocodeCityMap = {};
-    if (locationConfig.mainCity && locationConfig.mainCity.lat !== "" && locationConfig.mainCity.lon !== "") {
-        var mainKey = `${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}`;
-        geocodes.push(mainKey);
-        geocodeCityMap[mainKey] = locationConfig.mainCity.displayname || locationConfig.mainCity.name || "Montréal";
+
+    const resolveCoords = (c) => {
+        if (!c) return null;
+        let lat = c.lat, lon = c.lon;
+        if ((lat == null || lat === "" || lon == null || lon === "") && typeof c.val === "string" && c.val.includes(",")) {
+            const parts = c.val.split(",");
+            lat = parseFloat(parts[0]);
+            lon = parseFloat(parts[1]);
+        }
+        if (lat != null && lon != null && !isNaN(Number(lat)) && !isNaN(Number(lon))) {
+            return { lat: Number(lat), lon: Number(lon) };
+        }
+        return null;
+    };
+
+    if (locationConfig.mainCity) {
+        const mc = resolveCoords(locationConfig.mainCity);
+        if (mc) {
+            var mainKey = `${mc.lat},${mc.lon}`;
+            geocodes.push(mainKey);
+            geocodeCityMap[mainKey] = locationConfig.mainCity.displayname || locationConfig.mainCity.name || "Montréal";
+        }
     }
     if (locationConfig.eightCities && Array.isArray(locationConfig.eightCities.cities)) {
         for (let i = 0; i < locationConfig.eightCities.cities.length; i++) {
             var city = locationConfig.eightCities.cities[i];
-            if (!city || city.lat === "" || city.lon === "") {
-                continue;
-            }
-            var cityKey = `${city.lat},${city.lon}`;
+            const cc = resolveCoords(city);
+            if (!cc) continue;
+            var cityKey = `${cc.lat},${cc.lon}`;
             geocodes.push(cityKey);
             geocodeCityMap[cityKey] = city.displayname || city.name || "";
         }
