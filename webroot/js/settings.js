@@ -721,6 +721,47 @@ function isMatchingCloudSlide(cloudFn, candidateFn) {
     return false;
 }
 
+function getWindSlideForCloud(fn) {
+    if (!fn || typeof fn !== 'string') return null;
+    if (fn === 'couvertureNuageuse' || fn === 'couvertureNuageuse1' || fn === 'satellite' || fn === 'satellite1' || fn === 'cloudCover') return 'carteVents';
+    var match = fn.match(/^couvertureNuageuse(\d+)$/);
+    if (match) {
+        var num = parseInt(match[1], 10);
+        return (num === 1) ? 'carteVents' : `carteVents${num}`;
+    }
+    var satMatch = fn.match(/^satellite(\d+)$/);
+    if (satMatch) {
+        var num = parseInt(satMatch[1], 10);
+        return (num === 1) ? 'carteVents' : `carteVents${num}`;
+    }
+    if (fn === 'canadaSatellite') return 'canadaVents';
+    return null;
+}
+
+function isMatchingWindSlide(windFn, candidateFn) {
+    if (!windFn || !candidateFn) return false;
+    if (candidateFn === windFn) return true;
+    if (windFn === 'carteVents' && (candidateFn === 'carteVents1' || candidateFn === 'windMap' || candidateFn === 'windMap1')) return true;
+    if (windFn === 'carteVents1' && (candidateFn === 'carteVents' || candidateFn === 'windMap' || candidateFn === 'windMap1')) return true;
+    var matchWind = windFn.match(/^(?:carteVents|windMap)(\d+)$/);
+    var matchCandidate = candidateFn.match(/^(?:carteVents|windMap)(\d+)$/);
+    if (matchWind && matchCandidate && matchWind[1] === matchCandidate[1]) return true;
+    if (windFn === 'canadaVents' && (candidateFn === 'canadaVents' || candidateFn === 'canadaWindMap' || candidateFn === 'carteVents11' || candidateFn === 'windMap11')) return true;
+    return false;
+}
+
+function getSnowSlideForWind(fn) {
+    if (!fn || typeof fn !== 'string') return null;
+    if (fn === 'carteVents' || fn === 'carteVents1' || fn === 'windMap' || fn === 'windMap1') return 'neigeAuSol';
+    var match = fn.match(/^(?:carteVents|windMap)(\d+)$/);
+    if (match) {
+        var num = parseInt(match[1], 10);
+        return (num === 1) ? 'neigeAuSol' : `neigeAuSol${num}`;
+    }
+    if (fn === 'canadaVents' || fn === 'canadaWindMap') return 'canadaNeigeAuSol';
+    return null;
+}
+
 function getSnowSlideForCloud(fn) {
     if (!fn || typeof fn !== 'string') return null;
     if (fn === 'couvertureNuageuse' || fn === 'couvertureNuageuse1' || fn === 'satellite' || fn === 'satellite1' || fn === 'cloudCover') return 'neigeAuSol';
@@ -770,17 +811,42 @@ function normalizeToLocalDoppler(order) {
                     function: cloudCompanion,
                     slideDelay: 8500
                 });
-                var snowForCloud = getSnowSlideForCloud(cloudCompanion);
-                if (snowForCloud && (!next || !isMatchingSnowSlide(snowForCloud, next.function))) {
+                var windForCloud = getWindSlideForCloud(cloudCompanion);
+                if (windForCloud && (!next || !isMatchingWindSlide(windForCloud, next.function))) {
                     normalized.push({
-                        function: snowForCloud,
+                        function: windForCloud,
+                        slideDelay: 8500
+                    });
+                    var snowForWind = getSnowSlideForWind(windForCloud);
+                    if (snowForWind && (!next || !isMatchingSnowSlide(snowForWind, next.function))) {
+                        normalized.push({
+                            function: snowForWind,
+                            slideDelay: 8500
+                        });
+                    }
+                }
+            }
+        }
+
+        var windCompanion = getWindSlideForCloud(current.function);
+        if (windCompanion) {
+            var next = (i + 1 < validSlides.length) ? validSlides[i + 1] : null;
+            if (!next || !isMatchingWindSlide(windCompanion, next.function)) {
+                normalized.push({
+                    function: windCompanion,
+                    slideDelay: 8500
+                });
+                var snowForWind = getSnowSlideForWind(windCompanion);
+                if (snowForWind && (!next || !isMatchingSnowSlide(snowForWind, next.function))) {
+                    normalized.push({
+                        function: snowForWind,
                         slideDelay: 8500
                     });
                 }
             }
         }
 
-        var snowCompanion = getSnowSlideForCloud(current.function);
+        var snowCompanion = getSnowSlideForWind(current.function);
         if (snowCompanion) {
             var next = (i + 1 < validSlides.length) ? validSlides[i + 1] : null;
             if (!next || !isMatchingSnowSlide(snowCompanion, next.function)) {
@@ -814,13 +880,14 @@ function flavorPicker(time, modes) {
         var disabledSlides = new Set([
             "mapCurrent", "mapForecast", "mapTest", "radarDoppler", "canadaDoppler",
             "couvertureNuageuse", "canadaSatellite", "satellite", "cloudCover",
+            "carteVents", "canadaVents", "windMap",
             "neigeAuSol", "canadaNeigeAuSol", "snowCover"
         ]);
         console.warn('[IPTV] Skipping map and radar slides because WebGL maps are unavailable.');
         return order.filter(slide => {
             if (!slide || !slide.function) return false;
             if (disabledSlides.has(slide.function)) return false;
-            if (/^(localDoppler|couvertureNuageuse|satellite|neigeAuSol)\d+$/.test(slide.function)) return false;
+            if (/^(localDoppler|couvertureNuageuse|satellite|carteVents|windMap|neigeAuSol)\d+$/.test(slide.function)) return false;
             return true;
         });
     }
@@ -1424,7 +1491,10 @@ if (typeof window !== 'undefined') {
     window.normalizeToLocalDoppler = normalizeToLocalDoppler;
     window.getCloudSlideForDoppler = getCloudSlideForDoppler;
     window.isMatchingCloudSlide = isMatchingCloudSlide;
+    window.getWindSlideForCloud = getWindSlideForCloud;
+    window.isMatchingWindSlide = isMatchingWindSlide;
     window.getSnowSlideForCloud = getSnowSlideForCloud;
+    window.getSnowSlideForWind = getSnowSlideForWind;
     window.isMatchingSnowSlide = isMatchingSnowSlide;
 }
 
@@ -1434,7 +1504,10 @@ if (typeof module !== 'undefined' && module.exports) {
         normalizeToLocalDoppler,
         getCloudSlideForDoppler,
         isMatchingCloudSlide,
+        getWindSlideForCloud,
+        isMatchingWindSlide,
         getSnowSlideForCloud,
+        getSnowSlideForWind,
         isMatchingSnowSlide
     };
 }

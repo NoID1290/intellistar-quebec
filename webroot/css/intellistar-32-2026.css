@@ -2575,7 +2575,7 @@ body, html {
    SLIDE 16 & 17: RADAR & SATELLITE LOOP
    ========================================================================== */
 
-#locradar, #regradar, #radarsat, #radarsnow {
+#locradar, #regradar, #radarsat, #radarsnow, #radarwind {
     position: absolute;
     width: 1620px;
     height: 1080px;
@@ -2584,7 +2584,7 @@ body, html {
     z-index: 6;
 }
 
-.reg-cities, .loc-cities, .sat-cities, .snow-cities {
+.reg-cities, .loc-cities, .sat-cities, .snow-cities, .wind-cities {
     position: absolute;
     z-index: 12;
     pointer-events: none;
@@ -2594,7 +2594,7 @@ body, html {
     left: 0;
 }
 
-.reg-cities-trans, .loc-cities-trans, .sat-cities-trans, .snow-cities-trans {
+.reg-cities-trans, .loc-cities-trans, .sat-cities-trans, .snow-cities-trans, .wind-cities-trans {
     position: absolute;
     z-index: 13;
     pointer-events: none;
@@ -2675,7 +2675,7 @@ body, html {
     z-index: 15 !important;
 }
 
-.radar .key, .satellite .key, .snow-cover .key {
+.radar .key, .satellite .key, .snow-cover .key, .wind-map .key {
     position: absolute !important;
     font-family: "Interstate Bold", sans-serif !important;
     font-size: 24px !important;
@@ -2691,14 +2691,21 @@ body, html {
     text-shadow: 0 2px 4px #000000 !important;
 }
 
-.radar .key img, .satellite .key img, .snow-cover .key img {
-    width: 220px !important;
-    height: 20px !important;
-    border-radius: 4px !important;
+.radar .key img {
+    width: 540px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
     border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
-.radar .hourloop, .satellite .hourloop, .snow-cover .hourloop {
+.satellite .key img, .snow-cover .key img, .wind-map .key img {
+    width: 280px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+.radar .hourloop, .satellite .hourloop, .snow-cover .hourloop, .wind-map .hourloop {
     position: absolute !important;
     font-family: "Interstate Bold", sans-serif !important;
     font-size: 26px !important;
@@ -2746,6 +2753,73 @@ body, html {
 }
 
 @keyframes snowBadgeBloom {
+    0% {
+        opacity: 0;
+        transform: scale(0.65) translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Wind Map (Champ des Vents) City Pins and Wind Flow Badges */
+.wind-map .radar-city-dot.wind-dot {
+    width: 14px !important;
+    height: 14px !important;
+    border-radius: 50% !important;
+    background: #00e5ff !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 0 10px #00e5ff, 0 0 20px rgba(0, 229, 255, 0.8) !important;
+}
+
+.wind-map .city-wind-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    margin-left: 10px !important;
+    padding: 1px 10px !important;
+    height: 28px !important;
+    border-radius: 6px !important;
+    background: linear-gradient(135deg, rgba(8, 28, 56, 0.9), rgba(16, 44, 87, 0.85)) !important;
+    border: 1.5px solid rgba(0, 229, 255, 0.75) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 229, 255, 0.35) !important;
+    backdrop-filter: blur(4px) !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 20px !important;
+    font-weight: 900 !important;
+    color: #e0f2fe !important;
+    animation: windBadgeBloom 0.7s cubic-bezier(0.16, 1, 0.3, 1) both !important;
+    gap: 6px !important;
+}
+
+.wind-map .city-wind-arrow {
+    display: inline-block !important;
+    font-size: 16px !important;
+    line-height: 1 !important;
+    color: #00e5ff !important;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.9) !important;
+    transform-origin: center center !important;
+}
+
+.wind-map .city-gust-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    vertical-align: middle !important;
+    margin-left: 4px !important;
+    padding: 0 6px !important;
+    height: 22px !important;
+    border-radius: 4px !important;
+    font-family: "Interstate Bold", sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    background: rgba(239, 68, 68, 0.4) !important;
+    border: 1px solid rgba(248, 113, 113, 0.8) !important;
+    color: #fecaca !important;
+    text-shadow: 0 1px 2px #000000 !important;
+}
+
+@keyframes windBadgeBloom {
     0% {
         opacity: 0;
         transform: scale(0.65) translateY(4px);

@@ -64,6 +64,34 @@ var slideDivs = {
     "satellite11": ".satellite",
     "satellite12": ".satellite",
     "cloudCover": ".satellite",
+    "carteVents": ".wind-map",
+    "carteVents1": ".wind-map",
+    "carteVents2": ".wind-map",
+    "carteVents3": ".wind-map",
+    "carteVents4": ".wind-map",
+    "carteVents5": ".wind-map",
+    "carteVents6": ".wind-map",
+    "carteVents7": ".wind-map",
+    "carteVents8": ".wind-map",
+    "carteVents9": ".wind-map",
+    "carteVents10": ".wind-map",
+    "carteVents11": ".wind-map",
+    "carteVents12": ".wind-map",
+    "canadaVents": ".wind-map",
+    "windMap": ".wind-map",
+    "windMap1": ".wind-map",
+    "windMap2": ".wind-map",
+    "windMap3": ".wind-map",
+    "windMap4": ".wind-map",
+    "windMap5": ".wind-map",
+    "windMap6": ".wind-map",
+    "windMap7": ".wind-map",
+    "windMap8": ".wind-map",
+    "windMap9": ".wind-map",
+    "windMap10": ".wind-map",
+    "windMap11": ".wind-map",
+    "windMap12": ".wind-map",
+    "canadaWindMap": ".wind-map",
     "neigeAuSol": ".snow-cover",
     "neigeAuSol1": ".snow-cover",
     "neigeAuSol2": ".snow-cover",
@@ -796,6 +824,73 @@ var slidePrograms = {
     async satellite11() { return slidePrograms.couvertureNuageuse(10); },
     async satellite12() { return slidePrograms.couvertureNuageuse(11); },
     async cloudCover() { return slidePrograms.couvertureNuageuse(); },
+    async carteVents(dopplerIdx = 0) {
+        var dConfig = (dopplerIdx !== null && locationConfig.localDopplers && locationConfig.localDopplers[dopplerIdx]) ? locationConfig.localDopplers[dopplerIdx] : null;
+
+        $('.wind-map').show();
+        $('#radarwind').show();
+        if (typeof addWindCities === 'function') {
+            await addWindCities(dopplerIdx, dConfig);
+        }
+        $(".wind-cities").show();
+        $(".wind-cities-trans").show();
+
+        var headerText = "Champ des Vents";
+        if (dConfig && dConfig.name) {
+            var regionName = dConfig.name.replace(/^doppler\s+local\s*[-—–:]\s*/i, '').trim();
+            $('.wind-map .hourloop').text(regionName.toUpperCase() + " • VENTS EN DIRECT");
+        } else {
+            $('.wind-map .hourloop').text("Écoulement des vents • En direct");
+        }
+        $('.wind-map .header').text(headerText);
+        $('.wind-map .header').fadeIn(167);
+        if (typeof startWindMap === 'function') {
+            startWindMap("radarwind", dopplerIdx, dConfig);
+        }
+
+        setTimeout(() => {
+            $(".wind-cities").hide();
+            $(".wind-cities-trans").hide();
+            $('.wind-map .header').hide();
+            if (typeof stopWindMap === 'function') {
+                stopWindMap("radarwind");
+            }
+            $('.wind-map').hide();
+            $('#radarwind').hide();
+
+            slideCallBack();
+        }, slideLength);
+    },
+    async carteVents1() { return slidePrograms.carteVents(0); },
+    async carteVents2() { return slidePrograms.carteVents(1); },
+    async carteVents3() { return slidePrograms.carteVents(2); },
+    async carteVents4() { return slidePrograms.carteVents(3); },
+    async carteVents5() { return slidePrograms.carteVents(4); },
+    async carteVents6() { return slidePrograms.carteVents(5); },
+    async carteVents7() { return slidePrograms.carteVents(6); },
+    async carteVents8() { return slidePrograms.carteVents(7); },
+    async carteVents9() { return slidePrograms.carteVents(8); },
+    async carteVents10() { return slidePrograms.carteVents(9); },
+    async carteVents11() { return slidePrograms.carteVents(10); },
+    async carteVents12() { return slidePrograms.carteVents(11); },
+    async canadaVents() {
+        var canadaIdx = (locationConfig.localDopplers || []).findIndex(d => d.name && d.name.toLowerCase().includes('canada'));
+        return slidePrograms.carteVents(canadaIdx >= 0 ? canadaIdx : 10);
+    },
+    async windMap() { return slidePrograms.carteVents(); },
+    async windMap1() { return slidePrograms.carteVents(0); },
+    async windMap2() { return slidePrograms.carteVents(1); },
+    async windMap3() { return slidePrograms.carteVents(2); },
+    async windMap4() { return slidePrograms.carteVents(3); },
+    async windMap5() { return slidePrograms.carteVents(4); },
+    async windMap6() { return slidePrograms.carteVents(5); },
+    async windMap7() { return slidePrograms.carteVents(6); },
+    async windMap8() { return slidePrograms.carteVents(7); },
+    async windMap9() { return slidePrograms.carteVents(8); },
+    async windMap10() { return slidePrograms.carteVents(9); },
+    async windMap11() { return slidePrograms.carteVents(10); },
+    async windMap12() { return slidePrograms.carteVents(11); },
+    async canadaWindMap() { return slidePrograms.canadaVents(); },
     async neigeAuSol(dopplerIdx = 0) {
         var dConfig = (dopplerIdx !== null && locationConfig.localDopplers && locationConfig.localDopplers[dopplerIdx]) ? locationConfig.localDopplers[dopplerIdx] : null;
 

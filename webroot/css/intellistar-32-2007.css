@@ -289,7 +289,7 @@
     margin-left: 1050px;
     z-index: 10;
 }
-.radar .key, .satellite .key, .snow-cover .key {
+.radar .key, .satellite .key, .snow-cover .key, .wind-map .key {
     position: absolute;
     display: flex;
     color: #304976;
@@ -299,16 +299,16 @@
     margin-left: 135px;
     z-index: 10;
 }
-.satellite .key, .snow-cover .key {
+.satellite .key, .snow-cover .key, .wind-map .key {
     margin-top: 155px;
 }
-.radar .key img, .satellite .key img, .snow-cover .key img {
+.radar .key img, .satellite .key img, .snow-cover .key img, .wind-map .key img {
     width: 169px;
     height: 27px;
     margin-left: 11px;
     margin-top: 8px;
 }
-.radar .key span, .satellite .key span, .snow-cover .key span {
+.radar .key span, .satellite .key span, .snow-cover .key span, .wind-map .key span {
     margin-left: 11px;
 }
 .radar .header {
@@ -316,12 +316,12 @@
     left: 20px;
     text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.9), 1px 1px 3px #000000;
 }
-.satellite .header, .snow-cover .header {
+.satellite .header, .snow-cover .header, .wind-map .header {
     z-index: 6;
     left: 15px;
     top: 3px;
 }
-#locradar, #regradar, #radarsat, #radarsnow {
+#locradar, #regradar, #radarsat, #radarsnow, #radarwind {
     position: absolute;
     width: 1620px;
     height: 1080px;

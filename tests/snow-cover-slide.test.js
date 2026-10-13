@@ -16,7 +16,7 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
     const indexHtmlPath = path.join(rootDir, 'webroot', 'index.html');
     const previewHtmlPath = path.join(rootDir, 'webroot', 'preview.html');
 
-    await t.test('MYCONFIG.json pairs every couvertureNuageuse slide with a corresponding neigeAuSol slide', () => {
+    await t.test('MYCONFIG.json pairs every couvertureNuageuse slide with carteVents and neigeAuSol', () => {
         const myConfig = JSON.parse(fs.readFileSync(myConfigPath, 'utf8'));
         const order = myConfig.slideSettings.order;
         assert.ok(Array.isArray(order) && order.length > 0);
@@ -27,17 +27,23 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
         for (let i = 0; i < order.length; i++) {
             const slide = order[i];
             if (slide && typeof slide.function === 'string' && slide.function.startsWith('couvertureNuageuse')) {
-                const next = order[i + 1];
-                assert.ok(next, `Slide ${slide.function} at index ${i} must have a following slide`);
+                const nextWind = order[i + 1];
+                const nextSnow = order[i + 2];
+                assert.ok(nextWind, `Slide ${slide.function} at index ${i} must have a following wind slide`);
                 assert.ok(
-                    next.function.startsWith('neigeAuSol'),
-                    `Slide ${slide.function} must be directly followed by a neigeAuSol slide, but got ${next.function}`
+                    nextWind.function.startsWith('carteVents') || nextWind.function.startsWith('windMap'),
+                    `Slide ${slide.function} must be directly followed by carteVents, but got ${nextWind.function}`
+                );
+                assert.ok(nextSnow, `Slide ${slide.function} must have a following snow slide`);
+                assert.ok(
+                    nextSnow.function.startsWith('neigeAuSol'),
+                    `Slide ${nextWind.function} must be followed by neigeAuSol, but got ${nextSnow.function}`
                 );
             }
         }
     });
 
-    await t.test('config.js pairs every couvertureNuageuse slide with a corresponding neigeAuSol slide', () => {
+    await t.test('config.js pairs every couvertureNuageuse slide with carteVents and neigeAuSol', () => {
         const code = fs.readFileSync(configJsPath, 'utf8');
         const parsedSlideSettings = new Function(`${code}; return slideSettings;`)();
         const order = parsedSlideSettings.order;
@@ -46,17 +52,23 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
         for (let i = 0; i < order.length; i++) {
             const slide = order[i];
             if (slide && typeof slide.function === 'string' && slide.function.startsWith('couvertureNuageuse')) {
-                const next = order[i + 1];
-                assert.ok(next, `Slide ${slide.function} in config.js must have a following slide`);
+                const nextWind = order[i + 1];
+                const nextSnow = order[i + 2];
+                assert.ok(nextWind, `Slide ${slide.function} in config.js must have a following wind slide`);
                 assert.ok(
-                    next.function.startsWith('neigeAuSol'),
-                    `Slide ${slide.function} in config.js must be directly followed by neigeAuSol, but got ${next.function}`
+                    nextWind.function.startsWith('carteVents') || nextWind.function.startsWith('windMap'),
+                    `Slide ${slide.function} in config.js must be followed by carteVents, but got ${nextWind.function}`
+                );
+                assert.ok(nextSnow, `Slide ${slide.function} in config.js must have a following snow slide`);
+                assert.ok(
+                    nextSnow.function.startsWith('neigeAuSol'),
+                    `Slide ${nextWind.function} must be followed by neigeAuSol, but got ${nextSnow.function}`
                 );
             }
         }
     });
 
-    await t.test('extras.js flavor presets pair every couvertureNuageuse with neigeAuSol', () => {
+    await t.test('extras.js flavor presets pair every couvertureNuageuse with carteVents and neigeAuSol', () => {
         const code = fs.readFileSync(extrasJsPath, 'utf8');
         const flavors = new Function(`${code}; return slideFlavors;`)();
         assert.ok(flavors);
@@ -69,10 +81,15 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
                 for (let i = 0; i < preset.order.length; i++) {
                     const slide = preset.order[i];
                     if (slide && typeof slide.function === 'string' && slide.function.startsWith('couvertureNuageuse')) {
-                        const next = preset.order[i + 1];
+                        const nextWind = preset.order[i + 1];
+                        const nextSnow = preset.order[i + 2];
                         assert.ok(
-                            next && next.function.startsWith('neigeAuSol'),
-                            `Preset ${duration}[${p}] slide ${slide.function} must be directly followed by neigeAuSol, but got ${next ? next.function : 'none'}`
+                            nextWind && (nextWind.function.startsWith('carteVents') || nextWind.function.startsWith('windMap')),
+                            `Preset ${duration}[${p}] slide ${slide.function} must be followed by carteVents, but got ${nextWind ? nextWind.function : 'none'}`
+                        );
+                        assert.ok(
+                            nextSnow && nextSnow.function.startsWith('neigeAuSol'),
+                            `Preset ${duration}[${p}] slide ${nextWind.function} must be followed by neigeAuSol, but got ${nextSnow ? nextSnow.function : 'none'}`
                         );
                     }
                 }
@@ -80,7 +97,7 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
         }
     });
 
-    await t.test('settings.js normalizeToLocalDoppler automatically pairs neigeAuSol after couvertureNuageuse', () => {
+    await t.test('settings.js normalizeToLocalDoppler automatically pairs carteVents and neigeAuSol after couvertureNuageuse', () => {
         // Provide mock browser environment required by settings.js
         global.window = {};
         global.document = {
@@ -109,41 +126,63 @@ test('Neige au Sol (Snow accumulation) layout, sequence pairing, and radar integ
 
         const settings = require(settingsJsPath);
         assert.equal(typeof settings.normalizeToLocalDoppler, 'function');
+        assert.equal(typeof settings.getWindSlideForCloud, 'function');
         assert.equal(typeof settings.getSnowSlideForCloud, 'function');
+        assert.equal(typeof settings.getSnowSlideForWind, 'function');
 
-        // Test getSnowSlideForCloud mappings
-        assert.equal(settings.getSnowSlideForCloud('couvertureNuageuse'), 'neigeAuSol');
-        assert.equal(settings.getSnowSlideForCloud('couvertureNuageuse1'), 'neigeAuSol');
-        assert.equal(settings.getSnowSlideForCloud('couvertureNuageuse2'), 'neigeAuSol2');
-        assert.equal(settings.getSnowSlideForCloud('couvertureNuageuse10'), 'neigeAuSol10');
-        assert.equal(settings.getSnowSlideForCloud('canadaSatellite'), 'canadaNeigeAuSol');
+        // Test getWindSlideForCloud and getSnowSlide mappings
+        assert.equal(settings.getWindSlideForCloud('couvertureNuageuse'), 'carteVents');
+        assert.equal(settings.getWindSlideForCloud('couvertureNuageuse1'), 'carteVents');
+        assert.equal(settings.getWindSlideForCloud('couvertureNuageuse2'), 'carteVents2');
+        assert.equal(settings.getWindSlideForCloud('canadaSatellite'), 'canadaVents');
 
-        // Test normalizeToLocalDoppler pairing: when given only couvertureNuageuse, neigeAuSol is added
+        assert.equal(settings.getSnowSlideForWind('carteVents'), 'neigeAuSol');
+        assert.equal(settings.getSnowSlideForWind('carteVents2'), 'neigeAuSol2');
+        assert.equal(settings.getSnowSlideForWind('canadaVents'), 'canadaNeigeAuSol');
+
+        // Test normalizeToLocalDoppler pairing: when given only couvertureNuageuse, carteVents and neigeAuSol are added
         const testOrder1 = [
             { function: 'couvertureNuageuse', slideDelay: 8500 }
         ];
         const res1 = settings.normalizeToLocalDoppler(testOrder1);
-        assert.equal(res1.length, 2);
+        assert.equal(res1.length, 3);
         assert.equal(res1[0].function, 'couvertureNuageuse');
-        assert.equal(res1[1].function, 'neigeAuSol');
+        assert.equal(res1[1].function, 'carteVents');
+        assert.equal(res1[2].function, 'neigeAuSol');
 
-        // Test when given localDoppler alone: both couvertureNuageuse and neigeAuSol are added
+        // Test when given localDoppler alone: couvertureNuageuse, carteVents, and neigeAuSol are added
         const testOrder2 = [
             { function: 'localDoppler', slideDelay: 9000 }
         ];
         const res2 = settings.normalizeToLocalDoppler(testOrder2);
-        assert.equal(res2.length, 3);
+        assert.equal(res2.length, 4);
         assert.equal(res2[0].function, 'localDoppler');
         assert.equal(res2[1].function, 'couvertureNuageuse');
-        assert.equal(res2[2].function, 'neigeAuSol');
+        assert.equal(res2[2].function, 'carteVents');
+        assert.equal(res2[3].function, 'neigeAuSol');
 
-        // Test when already properly paired: no duplicate neigeAuSol added
+        // Test when couvertureNuageuse and neigeAuSol are given: carteVents is inserted between them
         const testOrder3 = [
             { function: 'couvertureNuageuse', slideDelay: 8500 },
             { function: 'neigeAuSol', slideDelay: 8500 }
         ];
         const res3 = settings.normalizeToLocalDoppler(testOrder3);
-        assert.equal(res3.length, 2);
+        assert.equal(res3.length, 3);
+        assert.equal(res3[0].function, 'couvertureNuageuse');
+        assert.equal(res3[1].function, 'carteVents');
+        assert.equal(res3[2].function, 'neigeAuSol');
+
+        // Test when already properly tri-paired: no duplicate carteVents or neigeAuSol added
+        const testOrder4 = [
+            { function: 'couvertureNuageuse', slideDelay: 8500 },
+            { function: 'carteVents', slideDelay: 8500 },
+            { function: 'neigeAuSol', slideDelay: 8500 }
+        ];
+        const res4 = settings.normalizeToLocalDoppler(testOrder4);
+        assert.equal(res4.length, 3);
+        assert.equal(res4[0].function, 'couvertureNuageuse');
+        assert.equal(res4[1].function, 'carteVents');
+        assert.equal(res4[2].function, 'neigeAuSol');
     });
 
     await t.test('editor-model.js includes Neige au Sol in slides catalog and validates correctly', () => {

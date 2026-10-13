@@ -304,15 +304,44 @@ async function generateAssets() {
     fs.copyFileSync(path.join(IMAGES_DIR, 'blueldl.png'), path.join(__dirname, '../webroot/images/2026/blueldl.png'));
 
     // --- 4. ACCENTS & BADGES ---
-    // 4.1 Radar Legend (240 x 30)
+    // 4.1 Radar Legend (540 x 32) with Pluie, Mixte & Neige indicators
     await renderSnippet(`
-        <div style="width: 240px; height: 30px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.4);
-                    background: linear-gradient(90deg, 
-                        #04e9e7 0%, #019ff4 15%, #0300f4 30%, 
-                        #02fd02 45%, #01c501 60%, #008e00 70%, 
-                        #fdf802 80%, #e5bc00 87%, #fd0000 93%, #d40000 97%, #fd00fd 100%);
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.5);"></div>
-    `, 240, 30, path.join(IMAGES_DIR, 'radarLegend.png'));
+        <div style="width: 540px; height: 32px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.35);
+                    background: linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(3,8,20,0.95) 100%);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: space-between;
+                    padding: 0 12px; font-family: 'Interstate', Arial, sans-serif;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: 900; color: #4ade80; letter-spacing: 0.5px;">PLUIE</span>
+                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FAIBLE</span>
+                <div style="width: 85px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #02fd02 0%, #fdf802 60%, #fd0000 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
+                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FORTE</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: 900; color: #f472b6; letter-spacing: 0.5px;">MIXTE</span>
+                <div style="width: 45px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #e040fb 0%, #fd00fd 50%, #9c27b0 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 13px; font-weight: 900; color: #38bdf8; letter-spacing: 0.5px;">NEIGE</span>
+                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FAIBLE</span>
+                <div style="width: 85px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #04e9e7 0%, #019ff4 45%, #0300f4 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
+                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FORTE</span>
+            </div>
+        </div>
+    `, 540, 32, path.join(IMAGES_DIR, 'radarLegend.png'));
+    fs.copyFileSync(path.join(IMAGES_DIR, 'radarLegend.png'), path.join(__dirname, '../webroot/images/radarLegend.png'));
+
+    // 4.1b Wind Legend (280 x 30)
+    await renderSnippet(`
+        <div style="width: 280px; height: 30px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.35);
+                    background: linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(3,8,20,0.95) 100%);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: space-between;
+                    padding: 0 10px; font-family: 'Interstate', Arial, sans-serif;">
+            <span style="font-size: 11px; font-weight: 900; color: #00e5ff; letter-spacing: 0.5px;">CALME</span>
+            <div style="width: 140px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #00d2ff 0%, #10b981 25%, #facc15 50%, #f97316 75%, #ef4444 90%, #d946ef 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
+            <span style="font-size: 11px; font-weight: 900; color: #d946ef; letter-spacing: 0.5px;">80+ KM/H</span>
+        </div>
+    `, 280, 30, path.join(IMAGES_DIR, 'windLegend.png'));
+    fs.copyFileSync(path.join(IMAGES_DIR, 'windLegend.png'), path.join(__dirname, '../webroot/images/windLegend.png'));
 
     // 4.2 Weekend Rectangle (190 x 50)
     await renderSnippet(`

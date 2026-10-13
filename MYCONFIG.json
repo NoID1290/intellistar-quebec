@@ -1536,6 +1536,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol",
 				"slideDelay": 8500
 			},
@@ -1545,6 +1549,10 @@
 			},
 			{
 				"function": "couvertureNuageuse2",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents2",
 				"slideDelay": 8500
 			},
 			{
@@ -1564,6 +1572,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents3",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol3",
 				"slideDelay": 8500
 			},
@@ -1573,6 +1585,10 @@
 			},
 			{
 				"function": "couvertureNuageuse4",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents4",
 				"slideDelay": 8500
 			},
 			{
@@ -1589,6 +1605,10 @@
 			},
 			{
 				"function": "couvertureNuageuse5",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents5",
 				"slideDelay": 8500
 			},
 			{
@@ -1609,6 +1629,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents6",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol6",
 				"slideDelay": 8500
 			},
@@ -1623,6 +1647,10 @@
 			},
 			{
 				"function": "couvertureNuageuse7",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents7",
 				"slideDelay": 8500
 			},
 			{
@@ -1643,6 +1671,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents8",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol8",
 				"slideDelay": 8500
 			},
@@ -1656,6 +1688,10 @@
 			},
 			{
 				"function": "couvertureNuageuse9",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents9",
 				"slideDelay": 8500
 			},
 			{
@@ -1676,6 +1712,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents10",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol10",
 				"slideDelay": 8500
 			},
@@ -1693,6 +1733,10 @@
 				"slideDelay": 8500
 			},
 			{
+				"function": "carteVents11",
+				"slideDelay": 8500
+			},
+			{
 				"function": "neigeAuSol11",
 				"slideDelay": 8500
 			},
@@ -1707,6 +1751,10 @@
 			},
 			{
 				"function": "couvertureNuageuse12",
+				"slideDelay": 8500
+			},
+			{
+				"function": "carteVents12",
 				"slideDelay": 8500
 			},
 			{

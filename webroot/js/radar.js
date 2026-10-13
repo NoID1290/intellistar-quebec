@@ -42,6 +42,9 @@ const radarEngine = {
   snowDataCache: new Map(),
   activeSnowCities: [],
   snowParticles: null,
+  windDataCache: new Map(),
+  activeWindCities: [],
+  windParticles: null,
   activeInterval: null,
   activeRaf: null,
   activeTarget: null,
@@ -961,6 +964,211 @@ const radarEngine = {
     ctx.restore();
   },
 
+  // Initialize wind flow particles for dynamic streamflow animation
+  initWindParticles(count = 320) {
+    if (this.windParticles && this.windParticles.length === count) return;
+    this.windParticles = [];
+    for (let i = 0; i < count; i++) {
+      this.windParticles.push({
+        x: Math.random() * 1620,
+        y: Math.random() * 1080,
+        age: Math.floor(Math.random() * 60),
+        maxLife: 45 + Math.floor(Math.random() * 45),
+        speedMult: 0.75 + Math.random() * 0.5,
+        trail: []
+      });
+    }
+  },
+
+  // Broadcast-quality animated wind velocity & streamflow engine
+  startWindAnimation(ctx, canvas, loc, basemap) {
+    this.initWindParticles(320);
+    const startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const rafFn = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame : (cb) => setTimeout(cb, 16);
+
+    const renderBuf = this.getRenderBuffer(1620, 1080);
+    const bufCtx = renderBuf ? renderBuf.getContext('2d', { alpha: false }) : null;
+    const drawCtx = bufCtx || ctx;
+
+    const tick = (now) => {
+      if (!this.activeTarget || this.activeCanvas !== canvas) return;
+      const curTime = now || ((typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now());
+      const elapsed = curTime - startTime;
+
+      // 1. Draw static satellite basemap (opaque)
+      if (basemap) {
+        drawCtx.drawImage(basemap, 0, 0);
+      } else {
+        drawCtx.fillStyle = '#060f1e';
+        drawCtx.fillRect(0, 0, 1620, 1080);
+      }
+
+      // 2. Animated Real-time Atmospheric Wind Field & Velocity Glow
+      this.renderWindField(drawCtx, loc, elapsed);
+
+      // 3. Dynamic Animated Wind Streamlines & Particle Trails
+      this.renderWindStreamlines(drawCtx, loc, elapsed, curTime);
+
+      // 4. Double-buffer blit to visible canvas (zero tearing)
+      if (bufCtx) {
+        ctx.drawImage(renderBuf, 0, 0);
+      }
+
+      this.activeRaf = rafFn(tick);
+    };
+
+    this.activeRaf = rafFn(tick);
+  },
+
+  // Calculate interpolated wind vector (u, v) and speed at canvas coordinates (x, y)
+  getInterpolatedWindAt(x, y) {
+    const cities = (this.activeWindCities && this.activeWindCities.length > 0) ? this.activeWindCities : [];
+    if (cities.length === 0) {
+      const rad = (240 * Math.PI) / 180;
+      const u = -Math.sin(rad) * 16;
+      const v = Math.cos(rad) * 16;
+      return { u, v, speed: 16 };
+    }
+
+    let sumW = 0;
+    let sumU = 0;
+    let sumV = 0;
+    let sumSpeed = 0;
+
+    for (let i = 0; i < cities.length; i++) {
+      const c = cities[i];
+      if (c.x == null || c.y == null) continue;
+      const dx = x - c.x;
+      const dy = y - c.y;
+      const distSq = dx * dx + dy * dy;
+      const w = 1 / (distSq + 1600);
+
+      const dirRad = ((c.windDirDeg != null ? c.windDirDeg : 240) * Math.PI) / 180;
+      const spd = c.windSpeed != null ? c.windSpeed : 16;
+      const u = -Math.sin(dirRad) * spd;
+      const v = Math.cos(dirRad) * spd;
+
+      sumW += w;
+      sumU += u * w;
+      sumV += v * w;
+      sumSpeed += spd * w;
+    }
+
+    if (sumW <= 0) return { u: 14, v: -7, speed: 16 };
+    const avgU = sumU / sumW;
+    const avgV = sumV / sumW;
+    const avgSpeed = sumSpeed / sumW;
+    return { u: avgU, v: avgV, speed: avgSpeed };
+  },
+
+  renderWindField(ctx, loc, elapsed) {
+    const cities = (this.activeWindCities && this.activeWindCities.length > 0) ? this.activeWindCities : [];
+    const progress = Math.min(1.0, elapsed / 2000);
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    ctx.save();
+    for (let i = 0; i < cities.length; i++) {
+      const c = cities[i];
+      if (c.x == null || c.y == null) continue;
+      const speed = c.windSpeed || 15;
+      const radius = 180 + Math.min(speed * 4, 220);
+
+      const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, radius);
+      if (speed >= 60) {
+        grad.addColorStop(0, `rgba(244, 63, 94, ${0.40 * ease})`);
+        grad.addColorStop(0.5, `rgba(251, 146, 60, ${0.25 * ease})`);
+        grad.addColorStop(1, 'rgba(251, 146, 60, 0)');
+      } else if (speed >= 40) {
+        grad.addColorStop(0, `rgba(251, 146, 60, ${0.35 * ease})`);
+        grad.addColorStop(0.5, `rgba(250, 204, 21, ${0.20 * ease})`);
+        grad.addColorStop(1, 'rgba(250, 204, 21, 0)');
+      } else if (speed >= 25) {
+        grad.addColorStop(0, `rgba(250, 204, 21, ${0.28 * ease})`);
+        grad.addColorStop(0.5, `rgba(52, 211, 153, ${0.16 * ease})`);
+        grad.addColorStop(1, 'rgba(52, 211, 153, 0)');
+      } else if (speed >= 12) {
+        grad.addColorStop(0, `rgba(52, 211, 153, ${0.24 * ease})`);
+        grad.addColorStop(0.5, `rgba(0, 229, 255, ${0.12 * ease})`);
+        grad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+      } else {
+        grad.addColorStop(0, `rgba(0, 229, 255, ${0.18 * ease})`);
+        grad.addColorStop(0.6, `rgba(0, 229, 255, ${0.06 * ease})`);
+        grad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+      }
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
+  renderWindStreamlines(ctx, loc, elapsed, curTime) {
+    if (!this.windParticles) this.initWindParticles(320);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    for (let i = 0; i < this.windParticles.length; i++) {
+      const p = this.windParticles[i];
+      const wind = this.getInterpolatedWindAt(p.x, p.y);
+      const mag = Math.sqrt(wind.u * wind.u + wind.v * wind.v) || 1;
+      const step = Math.min(14, Math.max(2.8, wind.speed * 0.28)) * p.speedMult;
+
+      const nextX = p.x + (wind.u / mag) * step;
+      const nextY = p.y + (wind.v / mag) * step;
+
+      p.trail.unshift({ x: p.x, y: p.y });
+      if (p.trail.length > 5) p.trail.pop();
+
+      p.x = nextX;
+      p.y = nextY;
+      p.age++;
+
+      if (p.age >= p.maxLife || p.x < -20 || p.x > 1640 || p.y < -20 || p.y > 1100) {
+        p.x = Math.random() * 1620;
+        p.y = Math.random() * 1080;
+        p.age = 0;
+        p.maxLife = 45 + Math.floor(Math.random() * 45);
+        p.trail = [];
+        continue;
+      }
+
+      if (p.trail.length < 2) continue;
+
+      const lifeFactor = Math.sin((Math.PI * p.age) / p.maxLife);
+      const spd = wind.speed;
+
+      let r = 0, g = 229, b = 255;
+      if (spd >= 60) {
+        r = 244; g = 63; b = 94;
+      } else if (spd >= 40) {
+        r = 251; g = 146; b = 60;
+      } else if (spd >= 25) {
+        r = 250; g = 204; b = 21;
+      } else if (spd >= 14) {
+        r = 52; g = 211; b = 153;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      for (let t = 0; t < p.trail.length; t++) {
+        ctx.lineTo(p.trail[t].x, p.trail[t].y);
+      }
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.75 * lifeFactor})`;
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.9 * lifeFactor})`;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  },
+
   // Pre-load basemaps & initial radar/satellite tiles at startup
   async preloadAll() {
     if (this.isPreloading) return;
@@ -1060,6 +1268,9 @@ const radarEngine = {
     } else if (containerId === 'radarsnow') {
       layerType = 'snow';
       if (!locKey || locKey === 'regional') locKey = 'satellite';
+    } else if (containerId === 'radarwind') {
+      layerType = 'wind';
+      if (!locKey || locKey === 'regional') locKey = 'satellite';
     }
 
     // Ensure a high-performance 2D Canvas exists inside the container
@@ -1092,6 +1303,11 @@ const radarEngine = {
 
     if (layerType === 'snow') {
       this.startSnowAnimation(ctx, canvas, loc, basemap);
+      return;
+    }
+
+    if (layerType === 'wind') {
+      this.startWindAnimation(ctx, canvas, loc, basemap);
       return;
     }
 
@@ -1283,6 +1499,21 @@ async function startSnowCover(target = 'radarsnow', dopplerIdx = null, dConfig =
 }
 
 function stopSnowCover(target = 'radarsnow') {
+  radarEngine.stopPlayback();
+}
+
+async function startWindMap(target = 'radarwind', dopplerIdx = null, dConfig = null) {
+  let targetId = typeof target === 'string' ? target : (target && target.id ? target.id : 'radarwind');
+  let locKey = 'satellite';
+  if (typeof dopplerIdx === 'string') {
+    locKey = dopplerIdx;
+  } else if (dopplerIdx !== null && dopplerIdx !== undefined && dopplerIdx !== false) {
+    locKey = `local_${dopplerIdx || 0}`;
+  }
+  radarEngine.startPlayback(targetId, locKey, 'wind');
+}
+
+function stopWindMap(target = 'radarwind') {
   radarEngine.stopPlayback();
 }
 
@@ -1741,6 +1972,178 @@ async function addSnowCities(dopplerIdx = null, dConfig = null) {
   }
 
   radarEngine.activeSnowCities = placedSnow;
+}
+
+async function fetchWindDataForCities(cities) {
+  if (!cities || !Array.isArray(cities)) return {};
+  const valid = cities.filter(c => c && c.lat != null && c.lon != null);
+  if (valid.length === 0) return {};
+
+  const cacheKey = valid.map(c => `${Number(c.lat).toFixed(2)},${Number(c.lon).toFixed(2)}`).sort().join(';');
+  const now = Date.now();
+  const cached = radarEngine.windDataCache.get(cacheKey);
+  if (cached && (now - cached.ts < 10 * 60 * 1000)) {
+    return cached.data;
+  }
+
+  try {
+    const lats = valid.map(c => Number(c.lat).toFixed(3)).join(',');
+    const lons = valid.map(c => Number(c.lon).toFixed(3)).join(',');
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&timezone=auto`;
+
+    let res = null;
+    if (typeof fetch !== 'undefined') {
+      const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+      const timeoutId = controller ? setTimeout(() => controller.abort(), 2500) : null;
+      try {
+        res = await fetch(url, controller ? { signal: controller.signal } : {});
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
+    }
+    if (!res || !res.ok) throw new Error(res ? `HTTP ${res.status}` : 'Fetch unavailable');
+    const data = await res.json();
+    const results = {};
+    const items = Array.isArray(data) ? data : [data];
+    items.forEach((item, idx) => {
+      const city = valid[idx];
+      if (!city) return;
+      const speed = Math.round(Number(item?.current?.wind_speed_10m) || 0);
+      const dirDeg = Math.round(Number(item?.current?.wind_direction_10m) || 0);
+      const gusts = Math.round(Number(item?.current?.wind_gusts_10m) || 0);
+      results[(city.name || '').toLowerCase()] = {
+        speedKmH: speed,
+        dirDeg: dirDeg,
+        gustsKmH: gusts
+      };
+    });
+    radarEngine.windDataCache.set(cacheKey, { ts: now, data: results });
+    return results;
+  } catch (err) {
+    console.warn('[RadarEngine] Wind data fetch notice:', err && err.message ? err.message : err);
+    const results = {};
+    valid.forEach(city => {
+      let speed = 15;
+      let dirDeg = 240;
+      let gusts = 0;
+      if (typeof weatherInfo !== 'undefined' && weatherInfo && weatherInfo.currentConditions && weatherInfo.currentConditions.windRaw) {
+        speed = Number(weatherInfo.currentConditions.windRaw.speed) || speed;
+      }
+      results[(city.name || '').toLowerCase()] = {
+        speedKmH: speed,
+        dirDeg: dirDeg,
+        gustsKmH: gusts
+      };
+    });
+    return results;
+  }
+}
+
+async function addWindCities(dopplerIdx = null, dConfig = null) {
+  $('.wind-cities').empty();
+  $('.wind-cities-trans').empty();
+
+  let loc = null;
+  let source = null;
+
+  if (dopplerIdx === null || dopplerIdx === undefined || dopplerIdx === false) {
+    const satLoc = radarEngine.getLocationByKey('satellite');
+    loc = satLoc;
+    if (typeof locationConfig !== 'undefined' && locationConfig && locationConfig.radarCities && Array.isArray(locationConfig.radarCities.regional) && locationConfig.radarCities.regional.length > 0) {
+      source = locationConfig.radarCities.regional;
+    } else if (typeof locationConfig !== 'undefined' && locationConfig) {
+      source = [
+        locationConfig.mainCity,
+        ...(locationConfig.eightCities?.cities || []),
+        ...(locationConfig.quebecCities || []),
+        ...(locationConfig.regionalMap?.map || []),
+        ...(locationConfig.regionalForecasts || []),
+      ].filter(Boolean);
+    }
+  } else {
+    const locKey = `local_${dopplerIdx || 0}`;
+    if (!dConfig && typeof locationConfig !== 'undefined' && locationConfig && Array.isArray(locationConfig.localDopplers) && locationConfig.localDopplers[dopplerIdx]) {
+      dConfig = locationConfig.localDopplers[dopplerIdx];
+    }
+    const engineLoc = radarEngine.getLocationByKey(locKey);
+    loc = {
+      lon: (dConfig && dConfig.lon != null) ? Number(dConfig.lon) : engineLoc.lon,
+      lat: (dConfig && dConfig.lat != null) ? Number(dConfig.lat) : engineLoc.lat,
+      zoom: (dConfig && dConfig.zoom != null) ? Number(dConfig.zoom) : (engineLoc.zoom || 9.8),
+    };
+
+    if (dConfig && Array.isArray(dConfig.cities) && dConfig.cities.length > 0) {
+      source = dConfig.cities;
+    } else if (dopplerIdx === 0 && typeof locationConfig !== 'undefined' && locationConfig && locationConfig.radarCities && Array.isArray(locationConfig.radarCities.local) && locationConfig.radarCities.local.length > 0) {
+      source = locationConfig.radarCities.local;
+    } else if (typeof locationConfig !== 'undefined' && locationConfig) {
+      source = [
+        locationConfig.mainCity,
+        ...(locationConfig.eightCities?.cities || []),
+        ...(locationConfig.quebecCities || []),
+        ...(locationConfig.regionalMap?.map || []),
+        ...(locationConfig.regionalForecasts || []),
+        ...(locationConfig.canadaCities || []),
+      ].filter(Boolean);
+    }
+  }
+
+  const placedWind = resolvePlacements(source, loc, 10);
+
+  let windDataMap = {};
+  try {
+    windDataMap = await fetchWindDataForCities(placedWind);
+  } catch (e) {}
+
+  const isMet = (typeof isMetric === 'function') ? isMetric() : true;
+
+  for (let i = 0; i < placedWind.length; i++) {
+    const c = placedWind[i];
+    const cityKey = (c.name || '').toLowerCase();
+    const wInfo = windDataMap[cityKey] || null;
+    const speed = wInfo ? wInfo.speedKmH : 15;
+    const dirDeg = wInfo ? wInfo.dirDeg : 240;
+    const gusts = wInfo ? wInfo.gustsKmH : 0;
+    c.windSpeed = speed;
+    c.windDirDeg = dirDeg;
+    c.windGusts = gusts;
+
+    let formattedSpeed = isMet ? `${speed} km/h` : `${Math.round(speed / 1.609)} mph`;
+    c.windFormatted = formattedSpeed;
+
+    const word = (typeof numToWord === 'function' && numToWord(i)) ? numToWord(i) : `city-${i}`;
+    const sideClass = c.side === 'left' ? 'label-left' : 'label-right';
+    const arrowDeg = (dirDeg + 180) % 360;
+    const gustHtml = (gusts > speed && gusts >= 25) ? `<span class="city-gust-badge">RAF ${gusts}</span>` : '';
+
+    $('.wind-cities').append(`
+      <div class="radar-city wind-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot wind-dot"></div>
+        <div class="city-name" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
+          <span>${c.name}</span>
+          <span class="city-wind-badge" data-speed="${speed}">
+            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">➔</span>
+            <span class="wind-badge-val">${formattedSpeed}</span>
+            ${gustHtml}
+          </span>
+        </div>
+      </div>`);
+
+    $('.wind-cities-trans').append(`
+      <div class="radar-city wind-city ${word} ${sideClass}" style="top: ${c.y}px; left: ${c.x}px;">
+        <div class="radar-city-dot wind-dot"></div>
+        <div class="city-name-trans" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
+          <span>${c.name}</span>
+          <span class="city-wind-badge" data-speed="${speed}">
+            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">➔</span>
+            <span class="wind-badge-val">${formattedSpeed}</span>
+            ${gustHtml}
+          </span>
+        </div>
+      </div>`);
+  }
+
+  radarEngine.activeWindCities = placedWind;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2448,6 +2851,8 @@ if (typeof window !== 'undefined') {
   window.stopSatellite = stopSatellite;
   window.startSnowCover = startSnowCover;
   window.stopSnowCover = stopSnowCover;
+  window.startWindMap = startWindMap;
+  window.stopWindMap = stopWindMap;
   window.startAlertMap = startAlertMap;
   window.stopAlertMap = stopAlertMap;
   window.renderAlertMapSector = renderAlertMapSector;
@@ -2464,6 +2869,8 @@ if (typeof window !== 'undefined') {
   window.addRadarCities = addRadarCities;
   window.addSatelliteCities = addSatelliteCities;
   window.addSnowCities = addSnowCities;
+  window.addWindCities = addWindCities;
+  window.fetchWindDataForCities = fetchWindDataForCities;
   window.preloadRadars = preloadRadars;
   window.releaseUnusedMemory = function() {
     if (radarEngine && typeof radarEngine.releaseMemory === 'function') {
@@ -2481,6 +2888,8 @@ if (typeof module !== 'undefined' && module.exports) {
     stopSatellite,
     startSnowCover,
     stopSnowCover,
+    startWindMap,
+    stopWindMap,
     startAlertMap,
     stopAlertMap,
     renderAlertMapSector,
@@ -2496,6 +2905,8 @@ if (typeof module !== 'undefined' && module.exports) {
     addRadarCities,
     addSatelliteCities,
     addSnowCities,
-    fetchSnowAccumulationForCities
+    addWindCities,
+    fetchSnowAccumulationForCities,
+    fetchWindDataForCities
   };
 }
