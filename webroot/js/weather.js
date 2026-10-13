@@ -540,7 +540,13 @@ function filterAlertWarningText(text, alertName) {
     // 3. Clean up whitespace and line runs
     t = t.replace(/[\r\t]+/g, ' ').replace(/\n{3,}/g, '\n\n').replace(/[ ]{2,}/g, ' ').trim();
 
-    // 4. Deduplicate identical sentences
+    // 4. Ensure section statements (Quoi, Quand, Où, Impacts, Conseils, Informations supplémentaires, etc.) terminate with a period
+    t = t.replace(/([^.!?:\s])\s*(?=\s*\b(?:Quoi|Quand|Où|Ou|Informations supplémentaires|Information supplémentaire|Impacts|Impact|Conseils|Conseil|Mesures de sécurité)\s*:)/gi, '$1. ');
+    if (t && !/[.!?:]$/.test(t.trim())) {
+        t = t.trim() + '.';
+    }
+
+    // 5. Deduplicate identical sentences
     var rawSentences = t.split(/(?<=[.!?])\s+/);
     var seen = new Set();
     var deduped = [];

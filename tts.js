@@ -96,6 +96,12 @@ function normalizeText(text) {
         t = t.replace(b, '');
     }
 
+    // Ensure section statements (Quoi, Quand, Où, etc.) terminate with a period before the next section
+    t = t.replace(/([^.!?:\s])\s*(?=\s*\b(?:Quoi|Quand|Où|Ou|Informations supplémentaires|Information supplémentaire|Impacts|Impact|Conseils|Conseil|Mesures de sécurité)\s*:)/gi, '$1. ');
+    if (t && !/[.!?:]$/.test(t.trim())) {
+        t = t.trim() + '.';
+    }
+
     // Weather unit expansions
     t = t
         .replace(/(\d+)\s*km\/h\b/gi, '$1 kilomètres à l\'heure')

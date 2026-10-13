@@ -270,7 +270,7 @@
     top: 68px;
     z-index: 5;
 }
-.satellite .banner, .snow-cover .banner {
+.satellite .banner, .snow-cover .banner, .wind-map .banner {
     position: absolute;
     height: 162px;
     width: 1512px;

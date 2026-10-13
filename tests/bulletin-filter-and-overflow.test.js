@@ -30,10 +30,10 @@ test('Bulletin Météo Spécial filtering, deduplication, and overflow containme
 
         const filtered = filterFn(userScreenshotRaw, "BULLETIN MÉTÉOROLOGIQUE SPÉCIAL");
 
-        // Meteorological threat info is fully preserved
+        // Meteorological threat info is fully preserved with periods for distinct sentence separation
         assert.ok(filtered.includes("des quantités de pluie pouvant atteindre de 40 à 60 millimètres"));
-        assert.ok(filtered.includes("mardi après-midi et mardi soir"));
-        assert.ok(filtered.includes("Montréal, la Montérégie, les Bois-Francs et l'Estrie"));
+        assert.ok(filtered.includes("mardi après-midi et mardi soir."));
+        assert.ok(filtered.includes("Montréal, la Montérégie, les Bois-Francs et l'Estrie."));
         assert.ok(filtered.includes("Un front chaud quasi-stationnaire"));
 
         // Boilerplate emails, hashtags, and generic monitoring messages are removed
@@ -93,12 +93,17 @@ test('Bulletin Météo Spécial filtering, deduplication, and overflow containme
         assert.match(mainCss, /\.bulletin\s+\.alerts\s+\.bulletin-label\s*\{/);
     });
 
-    await t.test('6. tts.js filters boilerplate reporting instructions before synthesis', () => {
+    await t.test('6. tts.js filters boilerplate reporting instructions and separates Quand and Ou sentences with periods', () => {
         const tts = require(ttsJsPath);
         const ttsCode = fs.readFileSync(ttsJsPath, 'utf8');
 
         assert.ok(ttsCode.includes('Veuillez continuer'));
         assert.ok(ttsCode.includes('Pour signaler du temps violent'));
+
+        const sample = "Quand : ce soir et cette nuit Où : Dans les Bois-Francs et l'Estrie";
+        const normalized = tts.normalizeText(sample);
+        assert.ok(normalized.includes("ce soir et cette nuit."), 'Quand sentence must end with a period');
+        assert.ok(normalized.includes("Dans les Bois-Francs et l'Estrie."), 'Où sentence must end with a period');
     });
 
     await t.test('7. ECCC logo is positioned at the top right on warning slide', () => {

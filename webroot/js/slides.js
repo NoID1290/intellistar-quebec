@@ -1364,9 +1364,17 @@ var slidePrograms = {
         var isRed = (item.color === 'red' || item.severe);
         var titleColor = isRed ? '#ff4d4d' : '#ffe066';
 
+        // Ensure section sentences (Quoi, Quand, Où, etc.) terminate with a period
+        description = description
+            .replace(/([^.!?:\s])\s*(?=\s*\b(?:Quoi|Quand|Où|Ou|Informations supplémentaires|Information supplémentaire|Impacts|Impact|Conseils|Conseil|Mesures de sécurité)\s*:)/gi, '$1. ')
+            .trim();
+        if (description && !/[.!?:]$/.test(description)) {
+            description += '.';
+        }
+
         // Format sections (Quoi :, Quand :, Où :, Informations supplémentaires :, etc.) for clear visual presentation
         var formattedDesc = description
-            .replace(/\b(Quoi|Quand|Où|Informations supplémentaires|Impacts|Conseils)\s*:\s*/gi, '<br><span class="bulletin-label">$1 :</span> ')
+            .replace(/\b(Quoi|Quand|Où|Ou|Informations supplémentaires|Information supplémentaire|Impacts|Impact|Conseils|Conseil|Mesures de sécurité)\s*:\s*/gi, '<br><span class="bulletin-label">$1 :</span> ')
             .replace(/^<br>/, '')
             .trim();
 
@@ -1392,7 +1400,7 @@ var slidePrograms = {
         // Set window.BULLETIN_TTS = false to disable.
         var ttsEnabled = typeof window === 'undefined' || window.BULLETIN_TTS !== false;
         var plainDesc = description
-            .replace(/\b(Quoi|Quand|Où|Informations supplémentaires|Impacts|Conseils)\s*:\s*/gi, '$1 : ')
+            .replace(/\b(Quoi|Quand|Où|Ou|Informations supplémentaires|Information supplémentaire|Impacts|Impact|Conseils|Conseil|Mesures de sécurité)\s*:\s*/gi, '$1 : ')
             .trim();
         var speech = [title.charAt(0) + title.slice(1).toLowerCase(), headline, area, plainDesc]
             .map(s => String(s || '').replace(/<[^>]*>/g, ' ').trim())

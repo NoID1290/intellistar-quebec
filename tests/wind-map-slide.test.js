@@ -141,20 +141,29 @@ test('Wind map (Champ des Vents) slide layout, streamflow engine, legend, and re
         const css2007 = fs.readFileSync(path.join(rootDir, 'webroot', 'css', 'intellistar-32-2007.css'), 'utf8');
         const css2008 = fs.readFileSync(path.join(rootDir, 'webroot', 'css', 'intellistar-32-2008.css'), 'utf8');
         const css2009 = fs.readFileSync(path.join(rootDir, 'webroot', 'css', 'intellistar-32-2009.css'), 'utf8');
+        const mainCss = fs.readFileSync(path.join(rootDir, 'webroot', 'main.css'), 'utf8');
 
         assert.ok(css2026.includes('.wind-map'));
         assert.ok(css2026.includes('#radarwind'));
         assert.ok(css2026.includes('.city-wind-badge'));
         assert.ok(css2026.includes('.city-wind-arrow'));
         assert.ok(css2026.includes('.city-gust-badge'));
+        assert.ok(css2026.includes('.wind-map .banner'), '2026 CSS must include .wind-map .banner for blue top header');
+        assert.ok(css2026.includes('.wind-map .header'), '2026 CSS must include .wind-map .header for title styling');
+
+        assert.ok(mainCss.includes('.wind-map .banner'), 'main.css must include .wind-map .banner');
+        assert.ok(mainCss.includes('.wind-map .header'), 'main.css must include .wind-map .header');
 
         assert.ok(css2007.includes('.wind-map'));
+        assert.ok(css2007.includes('.wind-map .banner'));
         assert.ok(css2007.includes('#radarwind'));
 
         assert.ok(css2008.includes('.wind-map'));
+        assert.ok(css2008.includes('.wind-map .banner'));
         assert.ok(css2008.includes('#radarwind'));
 
         assert.ok(css2009.includes('.wind-map'));
+        assert.ok(css2009.includes('.wind-map .banner'));
         assert.ok(css2009.includes('#radarwind'));
     });
 });

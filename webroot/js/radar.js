@@ -2113,6 +2113,9 @@ async function addWindCities(dopplerIdx = null, dConfig = null) {
 
     const word = (typeof numToWord === 'function' && numToWord(i)) ? numToWord(i) : `city-${i}`;
     const sideClass = c.side === 'left' ? 'label-left' : 'label-right';
+    // Meteorological wind dir is "coming from" degrees (0° = N, 90° = E, 180° = S, 270° = W).
+    // Wind blowing direction ("towards") is (dirDeg + 180) % 360.
+    // Using an upward arrow '↑' (0° / North), rotating by flowDir points exactly where the wind is blowing.
     const arrowDeg = (dirDeg + 180) % 360;
     const gustHtml = (gusts > speed && gusts >= 25) ? `<span class="city-gust-badge">RAF ${gusts}</span>` : '';
 
@@ -2122,7 +2125,7 @@ async function addWindCities(dopplerIdx = null, dConfig = null) {
         <div class="city-name" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
           <span>${c.name}</span>
           <span class="city-wind-badge" data-speed="${speed}">
-            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">➔</span>
+            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">↑</span>
             <span class="wind-badge-val">${formattedSpeed}</span>
             ${gustHtml}
           </span>
@@ -2135,7 +2138,7 @@ async function addWindCities(dopplerIdx = null, dConfig = null) {
         <div class="city-name-trans" style="margin-top: ${c.nameTopMargin}px; margin-left: ${c.nameLeftMargin}px;">
           <span>${c.name}</span>
           <span class="city-wind-badge" data-speed="${speed}">
-            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">➔</span>
+            <span class="city-wind-arrow" style="transform: rotate(${arrowDeg}deg);">↑</span>
             <span class="wind-badge-val">${formattedSpeed}</span>
             ${gustHtml}
           </span>

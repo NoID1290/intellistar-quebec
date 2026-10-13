@@ -421,7 +421,8 @@ body, html {
 
 .radar .banner,
 .satellite .banner,
-.snow-cover .banner {
+.snow-cover .banner,
+.wind-map .banner {
     position: absolute;
     height: 160px;
     width: 1512px;
@@ -438,14 +439,16 @@ body, html {
 }
 
 .satellite .banner,
-.snow-cover .banner {
+.snow-cover .banner,
+.wind-map .banner {
     background-image: url(../images/boxes/2026/radar_satellite_banner.png) !important;
     background-size: 100% 100% !important;
 }
 
 .radar .banner::before,
 .satellite .banner::before,
-.snow-cover .banner::before {
+.snow-cover .banner::before,
+.wind-map .banner::before {
     content: '';
     position: absolute;
     top: 0;
@@ -2660,7 +2663,7 @@ body, html {
     opacity: 0.85;
 }
 
-.radar .header, .satellite .header, .snow-cover .header {
+.radar .header, .satellite .header, .snow-cover .header, .wind-map .header {
     position: absolute !important;
     top: 86px !important;
     left: 180px !important;
