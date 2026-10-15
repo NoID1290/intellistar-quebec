@@ -18,9 +18,12 @@ async function main() {
   if (process.platform !== 'linux') throw new Error('The OBS launcher supports Linux desktop sessions only.');
   let launcherKey;
   try { launcherKey = require('./launcher').YOUTUBE_STREAM_KEY; } catch {}
+  const noAppFlag = process.argv.includes('--no-app') || process.env.OBS_NO_APP === '1' || process.env.OBS_NO_APP === 'true';
+  const outputArg = process.argv.slice(3).find(a => !a.startsWith('--'));
   const selectedEnv = {
     ...process.env,
-    ...(process.argv[3] ? { OBS_OUTPUT: process.argv[3] } : {}),
+    ...(outputArg ? { OBS_OUTPUT: outputArg } : {}),
+    ...(noAppFlag ? { OBS_NO_APP: '1' } : {}),
     YOUTUBE_STREAM_KEY: process.env.YOUTUBE_STREAM_KEY || launcherKey,
   };
   const env = ['start', 'check'].includes(action) ? resolveDesktopEnvironment(selectedEnv) : selectedEnv;

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#050b16">
-  <title>IntelliSTAR · Touch Launcher & Control</title>
+  <meta name="theme-color" content="#040914">
+  <title>IntelliSTAR · Touch Launcher & Master Control</title>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="stylesheet" href="css/launcher.css">
   <script defer src="js/hls.min.js"></script>
@@ -19,173 +19,277 @@
     <div class="brand-section">
       <img src="images/istarLogo.png" alt="IntelliSTAR" class="brand-logo" onerror="this.style.display='none'">
       <div class="brand-titles">
-        <h1>IntelliSTAR <span class="brand-tag">TOUCH UI</span></h1>
-        <span class="brand-sub">Steam Deck & Mobile Control Station</span>
+        <div class="brand-main-row">
+          <h1>IntelliSTAR</h1>
+          <span class="brand-tag">MASTER CONTROL</span>
+          <span class="brand-subtag">PRO 2026</span>
+        </div>
+        <span class="brand-sub">Canadian & Québec Broadcast Edition · Steam Deck Station</span>
       </div>
     </div>
 
+    <!-- Live LED Status Rack & Quick Actions -->
     <div class="header-status-group">
-      <div id="header-status-badge" class="status-badge stopped">
+      <div id="header-status-badge" class="status-badge stopped" title="OBS Video Streaming Encoder Status">
         <span class="status-dot"></span>
         <span id="status-text">OBS: CONNECTING...</span>
       </div>
-      <div id="header-app-badge" class="status-badge stopped">
+      <div id="header-app-badge" class="status-badge stopped" title="IntelliSTAR Weather Core Web Server">
         <span class="status-dot"></span>
         <span id="app-status-text">APP: DETECTING...</span>
       </div>
-      <div id="network-pill" class="network-pill">
-        Deck IP: <b>Detecting...</b>
+      <div id="network-pill" class="network-pill" title="Network IP and Port for remote browser control">
+        <span class="pill-dot"></span>
+        <span>Deck IP: <b>Detecting...</b></span>
       </div>
-      <button id="btn-header-sleep-monitors" class="pill-btn" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border-color: rgba(99, 102, 241, 0.4); font-weight: 700; cursor: pointer;" title="Put Steam Deck displays to sleep (touch screen to wake)">
-        <span>🌙</span> Sleep Displays
-      </button>
-      <button id="btn-header-close-instance" class="pill-btn" style="background: rgba(225, 29, 72, 0.2); color: #f43f5e; border-color: rgba(225, 29, 72, 0.4); font-weight: 700; cursor: pointer;" title="Completely close instance and stop services">
-        <span>⏻</span> Close Instance
-      </button>
+      <div class="header-action-group">
+        <button id="btn-header-sleep-monitors" class="header-btn header-btn-sleep" type="button" title="Turn off Steam Deck displays (tap screen to wake)">
+          <span class="btn-icon">🌙</span>
+          <span>Sleep Displays</span>
+        </button>
+        <button id="btn-header-close-instance" class="header-btn header-btn-power" type="button" title="Completely stop broadcast and close launcher">
+          <span class="btn-icon">⏻</span>
+          <span>Close Instance</span>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Active Alert Banner (shows when an alert is running) -->
-  <div id="active-alert-banner" style="display: none; background: #be123c; color: #fff; padding: 8px 16px; font-weight: 700; font-size: 13px; align-items: center; justify-content: space-between;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <span>🚨</span>
-      <span id="alert-banner-text">Active Alert: Tornado Warning</span>
+  <!-- Active Alert Banner (revealed when an emergency or simulation alert is running) -->
+  <div id="active-alert-banner" class="active-alert-banner" style="display: none;">
+    <div class="banner-content">
+      <span class="banner-pulse-icon">🚨</span>
+      <span class="banner-label">ON-AIR EMERGENCY ALERT:</span>
+      <span id="alert-banner-text" class="banner-title">Tornado Warning</span>
     </div>
-    <button class="pill-btn" style="background: rgba(0,0,0,0.4); color: #fff; border-color: #fff;" onclick="document.querySelector('.alert-card-btn[data-alert=clear]').click()">Dismiss</button>
+    <button class="banner-dismiss-btn" type="button" onclick="document.querySelector('.alert-card-btn[data-alert=clear]').click()">
+      <span>Dismiss Alert</span> ✕
+    </button>
   </div>
 
-  <!-- Main Touch Screen Layout -->
+  <!-- Main Master Control Layout -->
   <main class="launcher-layout">
     
-    <!-- Left / Main Column: Quick Controls, Alerts, Marquee -->
+    <!-- Left / Main Studio Deck: Transmission, Playout, Quality, EAS & LDL -->
     <div class="main-column">
 
-      <!-- Section: Broadcast Engine Controls -->
-      <section class="touch-card">
+      <!-- Master Broadcast Deck: OBS Transmission & Weather Core Controls -->
+      <section class="touch-card broadcast-deck-card">
         <div class="card-title-row">
           <div class="card-title">
-            <span class="card-title-icon">📡</span> Broadcast Controls
+            <span class="card-title-icon">📡</span> Master Broadcast Deck
           </div>
-          <div style="font-size: 11px; color: var(--muted);">
-            Forecast state: <strong id="forecast-state-text" style="color: var(--muted);">IDLE</strong>
+          <div class="broadcast-deck-tags">
+            <div class="deck-tag-pill">
+              <span class="deck-tag-dot" id="engine-mini-dot"></span>
+              <span>Core Server:</span> <strong id="engine-mini-status">DETECTING</strong>
+            </div>
+            <div class="deck-tag-pill">
+              <span class="deck-tag-dot" id="playout-mini-dot"></span>
+              <span>Presentation:</span> <strong id="forecast-state-text">IDLE</strong>
+            </div>
           </div>
         </div>
 
-        <div class="quick-control-grid">
-          <button id="btn-start-hls" class="touch-btn btn-primary" title="Start OBS HLS stream">
-            <span class="btn-icon">▶</span>
-            <span>Start OBS (HLS)</span>
-          </button>
+        <!-- Block 1: Live Stream Transmission (OBS Encoder Channels) -->
+        <div class="deck-block transmission-block">
+          <div class="deck-block-header">
+            <div class="block-title">
+              <span class="block-icon">📡</span>
+              <span>Stream Transmission (OBS Encoder)</span>
+            </div>
+            <span class="block-hint">Independent video output streaming · Runs even when engine is in standby</span>
+          </div>
 
-          <button id="btn-start-ndi" class="touch-btn btn-primary" title="Start OBS NDI broadcast">
-            <span class="btn-icon">⚡</span>
-            <span>Start OBS (NDI)</span>
-          </button>
+          <div class="stream-channels-grid quick-control-grid">
+            <!-- HLS Output -->
+            <button id="btn-start-hls" class="channel-card-btn channel-hls" title="Start OBS Local HLS Live Stream">
+              <div class="channel-card-header">
+                <span class="channel-chip chip-hls">LOCAL HLS</span>
+                <span class="channel-arrow">▶</span>
+              </div>
+              <div class="channel-main-title">Start HLS Stream</div>
+              <div class="channel-description">Local IPTV · VLC Player · Web Browser</div>
+            </button>
 
-          <button id="btn-start-youtube" class="touch-btn btn-primary" style="background: linear-gradient(135deg, rgba(220, 38, 38, 0.22), rgba(185, 28, 28, 0.42)); border-color: rgba(239, 68, 68, 0.6);" title="Start OBS streaming to YouTube (RTMP)">
-            <span class="btn-icon">🔴</span>
-            <span>Start YouTube (RTMP)</span>
-          </button>
+            <!-- YouTube Output -->
+            <button id="btn-start-youtube" class="channel-card-btn channel-youtube" title="Start OBS Streaming Live to YouTube via RTMP">
+              <div class="channel-card-header">
+                <span class="channel-chip chip-youtube">YOUTUBE LIVE</span>
+                <span class="channel-arrow">🔴</span>
+              </div>
+              <div class="channel-main-title">Start YouTube Live</div>
+              <div class="channel-description">Direct RTMP Ingest (1080p / 4K)</div>
+            </button>
 
-          <button id="btn-start-dual" class="touch-btn btn-primary" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.22), rgba(217, 70, 239, 0.42)); border-color: rgba(217, 70, 239, 0.6);" title="Stream simultaneously to YouTube (RTMP) and HLS with 1 encoding pass">
-            <span class="btn-icon">📡</span>
-            <span>Start Dual (YT + HLS)</span>
-          </button>
+            <!-- Dual Output -->
+            <button id="btn-start-dual" class="channel-card-btn channel-dual" title="Stream simultaneously to YouTube RTMP and Local HLS with 1 encoding pass">
+              <div class="channel-card-header">
+                <span class="channel-chip chip-dual">DUAL STREAM</span>
+                <span class="channel-arrow">📡</span>
+              </div>
+              <div class="channel-main-title">Start Dual (YT + HLS)</div>
+              <div class="channel-description">Simultaneous YouTube RTMP & Local IPTV</div>
+            </button>
 
-          <button id="btn-start-app" class="touch-btn btn-success" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.42)); border-color: rgba(16, 185, 129, 0.6);" title="Start IntelliSTAR web server">
-            <span class="btn-icon">⚡</span>
-            <span>Start IntelliSTAR</span>
-          </button>
+            <!-- NDI Output -->
+            <button id="btn-start-ndi" class="channel-card-btn channel-ndi" title="Start OBS NDI Video Output for Network Production">
+              <div class="channel-card-header">
+                <span class="channel-chip chip-ndi">NDI STUDIO</span>
+                <span class="channel-arrow">⚡</span>
+              </div>
+              <div class="channel-main-title">Start OBS (NDI)</div>
+              <div class="channel-description">Studio IP Video Network Delivery</div>
+            </button>
+          </div>
 
-          <button id="btn-stop-app" class="touch-btn btn-warning" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.42)); border-color: rgba(245, 158, 11, 0.6);" title="Stop IntelliSTAR (OBS keeps streaming black screen/standby message)">
-            <span class="btn-icon">⏸</span>
-            <span>Stop IntelliSTAR</span>
-          </button>
+          <!-- Master Cut / Stop Broadcast Bar -->
+          <div class="stop-broadcast-bar">
+            <button id="btn-stop-obs" class="touch-btn master-stop-btn" title="Stop active broadcast transmission">
+              <span class="btn-icon">⏹</span>
+              <span class="stop-text-main">STOP ACTIVE BROADCAST</span>
+              <span class="stop-text-sub">(Cut Transmission Off-Air)</span>
+            </button>
+          </div>
+        </div>
 
-          <button id="btn-restart-app" class="touch-btn btn-subtle" title="Restart IntelliSTAR server cleanly without stopping broadcast">
-            <span class="btn-icon">🔄</span>
-            <span>Restart IntelliSTAR</span>
-          </button>
+        <!-- Block 2: IntelliSTAR Weather Core & Playout Controls -->
+        <div class="deck-block playout-block">
+          <div class="deck-block-header">
+            <div class="block-title">
+              <span class="block-icon">⛅</span>
+              <span>IntelliSTAR Weather Core & Playout</span>
+            </div>
+            <span class="block-hint">Weather graphics engine, presentation cycle & live hot reload</span>
+          </div>
 
-          <button id="btn-forecast-start" class="touch-btn btn-success" title="Start weather forecast presentation">
-            <span class="btn-icon">⛅</span>
-            <span>Start Forecast</span>
-          </button>
+          <div class="playout-split-grid">
+            <!-- Server Engine Controls -->
+            <div class="playout-subpanel">
+              <div class="subpanel-header">
+                <span class="subpanel-title">CORE APP SERVER</span>
+                <span class="subpanel-tag">PROCESS LIFECYCLE</span>
+              </div>
+              <div class="subpanel-buttons">
+                <button id="btn-start-app" class="touch-btn btn-engine-start" title="Start IntelliSTAR web server">
+                  <span class="btn-icon">⚡</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Start IntelliSTAR</span>
+                    <span class="btn-sub-text">Launch App Server</span>
+                  </div>
+                </button>
+                <button id="btn-stop-app" class="touch-btn btn-engine-stop" title="Stop IntelliSTAR (OBS keeps streaming black standby message)">
+                  <span class="btn-icon">⏸</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Stop IntelliSTAR</span>
+                    <span class="btn-sub-text">Hold Standby Signal</span>
+                  </div>
+                </button>
+                <button id="btn-restart-app" class="touch-btn btn-engine-restart" title="Restart IntelliSTAR server cleanly without stopping broadcast">
+                  <span class="btn-icon">🔄</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Restart Core</span>
+                    <span class="btn-sub-text">Reboot App Process</span>
+                  </div>
+                </button>
+              </div>
+            </div>
 
-          <button id="btn-forecast-stop" class="touch-btn btn-warning" title="Return to color bars (keeps stream alive)">
-            <span class="btn-icon">⏸</span>
-            <span>Stop Forecast (Bars)</span>
-          </button>
+            <!-- Show Playout & Hot Reload -->
+            <div class="playout-subpanel">
+              <div class="subpanel-header">
+                <span class="subpanel-title">SHOW PLAYOUT</span>
+                <span class="subpanel-tag">ON-AIR PRESENTATION</span>
+              </div>
+              <div class="subpanel-buttons">
+                <button id="btn-forecast-start" class="touch-btn btn-playout-start" title="Start weather forecast presentation with radar & music">
+                  <span class="btn-icon">⛅</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Run Forecast</span>
+                    <span class="btn-sub-text">Go On-Air with Audio</span>
+                  </div>
+                </button>
+                <button id="btn-forecast-stop" class="touch-btn btn-playout-stop" title="Return to color bars (keeps stream alive)">
+                  <span class="btn-icon">⏸</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Standby Bars</span>
+                    <span class="btn-sub-text">Hold SMPTE Color Bars</span>
+                  </div>
+                </button>
+                <button id="btn-refresh" class="touch-btn btn-playout-reload" title="Hot reload frontend JS modules without restarting">
+                  <span class="btn-icon">🔄</span>
+                  <div class="btn-label-group">
+                    <span class="btn-main-text">Hot-Reload JS</span>
+                    <span class="btn-sub-text">Live Script Refresh</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <button id="btn-refresh" class="touch-btn btn-subtle" title="Hot reload frontend JS modules without restarting">
-            <span class="btn-icon">🔄</span>
-            <span>Hot-Reload JS</span>
-          </button>
-
-          <button id="btn-sleep-monitors" class="touch-btn btn-subtle" style="border-color: rgba(99, 102, 241, 0.4);" title="Put all Steam Deck monitors to sleep (touch screen or press any key to wake)">
-            <span class="btn-icon">🌙</span>
-            <span>Sleep Monitors</span>
-          </button>
-
-          <button id="btn-stop-obs" class="touch-btn btn-danger" title="Stop OBS broadcast backend">
-            <span class="btn-icon">⏹</span>
-            <span>Stop Broadcast</span>
-          </button>
-
-          <button id="btn-close-instance" class="touch-btn btn-danger" style="background: rgba(225, 29, 72, 0.18); border-color: #f43f5e;" title="Completely stop broadcast and close launcher">
-            <span class="btn-icon">⏻</span>
-            <span>Close Instance</span>
-          </button>
+        <!-- Hidden hooks for dialog triggers -->
+        <div style="display: none;">
+          <button id="btn-sleep-monitors"></button>
+          <button id="btn-close-instance"></button>
         </div>
       </section>
 
-      <!-- Section: Stream Encoding Preset -->
-      <section class="touch-card" id="encoding-preset-card">
+      <!-- Section: Stream Encoding & Quality Profiles -->
+      <section class="touch-card profile-deck-card" id="encoding-preset-card">
         <div class="card-title-row">
           <div class="card-title">
-            <span class="card-title-icon">⚙️</span> Encoding Preset
+            <span class="card-title-icon">⚙️</span> Encoding & Quality Profiles
           </div>
-          <span id="current-encoding-pill" class="network-pill" style="font-size: 11px;">1080p @ 60fps</span>
+          <span id="current-encoding-pill" class="network-pill encoding-active-pill">1080p @ 60fps</span>
         </div>
-        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--muted); min-width: 70px;">Resolution:</span>
-            <div style="display: flex; gap: 6px; flex: 1;">
-              <button class="pill-btn encoding-res-btn" data-res="720p">720p</button>
-              <button class="pill-btn encoding-res-btn active" data-res="1080p">1080p</button>
-              <button class="pill-btn encoding-res-btn" data-res="4k">4K</button>
+
+        <div class="profile-settings-bar">
+          <!-- Resolution -->
+          <div class="profile-setting-col">
+            <span class="setting-col-label">OUTPUT RESOLUTION</span>
+            <div class="segmented-control">
+              <button class="pill-btn encoding-res-btn" data-res="720p">720p HD</button>
+              <button class="pill-btn encoding-res-btn active" data-res="1080p">1080p FHD</button>
+              <button class="pill-btn encoding-res-btn" data-res="4k">4K UHD</button>
             </div>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--muted); min-width: 70px;">Frame Rate:</span>
-            <div style="display: flex; gap: 6px; flex: 1;">
+
+          <!-- Frame Rate -->
+          <div class="profile-setting-col">
+            <span class="setting-col-label">FRAME RATE</span>
+            <div class="segmented-control">
               <button class="pill-btn encoding-fps-btn" data-fps="24">24 fps</button>
               <button class="pill-btn encoding-fps-btn" data-fps="30">30 fps</button>
               <button class="pill-btn encoding-fps-btn active" data-fps="60">60 fps</button>
             </div>
           </div>
-          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--muted); min-width: 70px;">Interpolation:</span>
-            <div style="display: flex; gap: 6px; flex: 1;">
-              <button id="btn-interpolation-on" class="pill-btn interpolation-btn active" data-enabled="true">Enabled</button>
+
+          <!-- Interpolation -->
+          <div class="profile-setting-col">
+            <span class="setting-col-label">RADAR INTERPOLATION</span>
+            <div class="segmented-control">
+              <button id="btn-interpolation-on" class="pill-btn interpolation-btn" data-enabled="true">Enabled</button>
               <button id="btn-interpolation-off" class="pill-btn interpolation-btn" data-enabled="false">Disabled</button>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Section: Weather Alert Center -->
-      <section class="touch-card">
+      <!-- Section: Weather Alert Center (EAS / En Alerte) -->
+      <section class="touch-card alert-deck-card">
         <div class="card-title-row">
           <div class="card-title">
             <span class="card-title-icon">⚠️</span> Weather Alert Center
           </div>
           <div class="alert-duration-row">
-            <span>Duration:</span>
-            <button class="pill-btn active" data-dur="0">Indefinite</button>
-            <button class="pill-btn" data-dur="15">15s</button>
-            <button class="pill-btn" data-dur="30">30s</button>
-            <button class="pill-btn" data-dur="60">60s</button>
+            <span class="duration-label">DURATION:</span>
+            <div class="segmented-control duration-control">
+              <button class="pill-btn active" data-dur="0">Indefinite</button>
+              <button class="pill-btn" data-dur="15">15s</button>
+              <button class="pill-btn" data-dur="30">30s</button>
+              <button class="pill-btn" data-dur="60">60s</button>
+            </div>
           </div>
         </div>
 
@@ -193,15 +297,15 @@
         <div class="active-alerts-header-row">
           <div class="active-alerts-title">
             <span class="active-dot-status" id="active-alerts-indicator"></span>
-            <span>Active Fetched Alerts</span>
+            <span>Active Live Weather Alerts</span>
             <span class="stat-badge" id="active-alerts-count">0 Detected</span>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div class="alert-feed-actions">
             <button id="btn-manage-rules" class="pill-btn" type="button" title="Manage alert suppression rules">
               <span>🛡️ Rules</span> <span id="rules-count-badge" style="opacity: 0.8;">(0)</span>
             </button>
             <button id="btn-refresh-alerts" class="pill-btn" type="button" title="Refresh alert feed">
-              <span>🔄 Refresh</span>
+              <span>🔄 Refresh Feed</span>
             </button>
           </div>
         </div>
@@ -213,63 +317,100 @@
         </div>
 
         <div class="alert-section-divider">
-          <span>Simulation & Test Triggers</span>
+          <span>Simulation & Emergency Triggers</span>
         </div>
 
         <div class="alerts-grid">
           <button class="alert-card-btn alert-tornado" data-alert="Tornado Warning">
-            <span class="alert-icon">🌪️</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🌪️</span>
+              <span class="alert-cat">EXTREME</span>
+            </div>
             <span class="alert-name">Tornado Warning</span>
+            <span class="alert-sub">Severe Tornadic Rotation</span>
           </button>
 
           <button class="alert-card-btn alert-severe" data-alert="Severe Thunderstorm Warning">
-            <span class="alert-icon">⛈️</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">⛈️</span>
+              <span class="alert-cat">SEVERE</span>
+            </div>
             <span class="alert-name">Severe Storm</span>
+            <span class="alert-sub">Damaging Wind & Hail</span>
           </button>
 
           <button class="alert-card-btn alert-flood" data-alert="Flash Flood Warning">
-            <span class="alert-icon">🌊</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🌊</span>
+              <span class="alert-cat">HYDROLOGIC</span>
+            </div>
             <span class="alert-name">Flash Flood</span>
+            <span class="alert-sub">Torrential Inundation</span>
           </button>
 
           <button class="alert-card-btn alert-winter" data-alert="Winter Storm Warning">
-            <span class="alert-icon">🌨️</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🌨️</span>
+              <span class="alert-cat">WINTER</span>
+            </div>
             <span class="alert-name">Winter Storm</span>
+            <span class="alert-sub">Heavy Snow & Freezing Rain</span>
           </button>
 
-          <button class="alert-card-btn alert-winter" data-alert="Blizzard Warning">
-            <span class="alert-icon">❄️</span>
-            <span class="alert-name">Blizzard</span>
+          <button class="alert-card-btn alert-blizzard" data-alert="Blizzard Warning">
+            <div class="alert-card-header">
+              <span class="alert-icon">❄️</span>
+              <span class="alert-cat">BLIZZARD</span>
+            </div>
+            <span class="alert-name">Blizzard Warning</span>
+            <span class="alert-sub">Zero Visibility & High Wind</span>
           </button>
 
           <button class="alert-card-btn alert-amber" data-alert="AMBER Alert">
-            <span class="alert-icon">🚨</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🚨</span>
+              <span class="alert-cat">PUBLIC SAFETY</span>
+            </div>
             <span class="alert-name">AMBER Alert</span>
+            <span class="alert-sub">Child Abduction Emergency</span>
           </button>
 
           <button class="alert-card-btn alert-quebec" data-alert="quebec">
-            <span class="alert-icon">🇨🇦</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🇨🇦</span>
+              <span class="alert-cat">SÉCURITÉ CIVILE</span>
+            </div>
             <span class="alert-name">Québec En Alerte</span>
+            <span class="alert-sub">Système d'Alerte Provincial</span>
           </button>
 
           <button class="alert-card-btn alert-all" data-alert="all">
-            <span class="alert-icon">⚡</span>
-            <span class="alert-name">All Disaster Alerts</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">⚡</span>
+              <span class="alert-cat">MULTI-DISASTER</span>
+            </div>
+            <span class="alert-name">All Hazards Test</span>
+            <span class="alert-sub">Simultaneous Emergency Test</span>
           </button>
 
           <button class="alert-card-btn alert-clear" data-alert="clear">
-            <span class="alert-icon">🚫</span>
+            <div class="alert-card-header">
+              <span class="alert-icon">🚫</span>
+              <span class="alert-cat">RESET</span>
+            </div>
             <span class="alert-name">Clear Alert</span>
+            <span class="alert-sub">Dismiss Active Emergency</span>
           </button>
         </div>
       </section>
 
       <!-- Section: LDL Marquee Message Crawl -->
-      <section class="touch-card">
+      <section class="touch-card marquee-deck-card">
         <div class="card-title-row">
           <div class="card-title">
-            <span class="card-title-icon">💬</span> LDL Crawl Message
+            <span class="card-title-icon">💬</span> Lower Display Line (LDL) Crawler
           </div>
+          <span class="group-hint">Real-time ticker crawl text displayed on broadcast</span>
         </div>
 
         <div class="message-chips">
@@ -282,9 +423,10 @@
         <div class="message-input-group">
           <input id="message-input" type="text" class="touch-input" placeholder="Type custom crawler text to scroll across LDL..." maxlength="200">
           <button id="btn-send-message" class="touch-btn btn-primary" style="min-width: 110px;">
+            <span class="btn-icon">➤</span>
             <span>Send</span>
           </button>
-          <button id="btn-clear-message" class="touch-btn btn-subtle" title="Clear message">
+          <button id="btn-clear-message" class="touch-btn btn-subtle" title="Clear active crawler message">
             <span>Clear</span>
           </button>
         </div>
@@ -292,16 +434,16 @@
 
     </div>
 
-    <!-- Right / Side Column: PC Stats, Tools, Logs -->
+    <!-- Right / Side Column: PC Telemetry, Tools, Logs -->
     <div class="side-column">
 
-      <!-- Section: PC Hardware Stats -->
+      <!-- Section: PC Hardware Telemetry -->
       <section class="touch-card stats-card" id="pc-stats-card">
         <div class="card-title-row">
           <div class="card-title">
-            <span class="card-title-icon">📊</span> PC Stats
+            <span class="card-title-icon">📊</span> Hardware Telemetry
           </div>
-          <span id="stat-hostname" style="font-size: 11px; color: var(--muted); font-weight: 600;">Detecting...</span>
+          <span id="stat-hostname" class="stat-hostname-badge">Detecting...</span>
         </div>
 
         <div class="stats-grid">
@@ -341,8 +483,11 @@
           <!-- RAM -->
           <div class="stat-item">
             <div class="stat-header">
-              <span class="stat-label"><span class="stat-icon">🧠</span> RAM</span>
-              <span class="stat-value"><span id="stat-ram-detail" style="font-size: 12px; color: var(--muted); margin-right: 6px;">-- / -- GB</span><b id="stat-ram-pct" class="stat-badge">--%</b></span>
+              <span class="stat-label"><span class="stat-icon">🧠</span> RAM MEMORY</span>
+              <span class="stat-value">
+                <span id="stat-ram-detail" style="font-size: 11px; color: var(--muted); margin-right: 6px;">-- / -- GB</span>
+                <b id="stat-ram-pct" class="stat-badge">--%</b>
+              </span>
             </div>
             <div class="stat-bar-track">
               <div class="stat-bar-fill" id="stat-ram-bar" style="width: 0%;"></div>
@@ -352,8 +497,11 @@
           <!-- DISK -->
           <div class="stat-item">
             <div class="stat-header">
-              <span class="stat-label"><span class="stat-icon">💾</span> DISK</span>
-              <span class="stat-value"><span id="stat-disk-detail" style="font-size: 12px; color: var(--muted); margin-right: 6px;">-- / -- GB</span><b id="stat-disk-pct" class="stat-badge">--%</b></span>
+              <span class="stat-label"><span class="stat-icon">💾</span> DISK STORAGE</span>
+              <span class="stat-value">
+                <span id="stat-disk-detail" style="font-size: 11px; color: var(--muted); margin-right: 6px;">-- / -- GB</span>
+                <b id="stat-disk-pct" class="stat-badge">--%</b>
+              </span>
             </div>
             <div class="stat-bar-track">
               <div class="stat-bar-fill" id="stat-disk-bar" style="width: 0%;"></div>
@@ -363,37 +511,52 @@
       </section>
 
       <!-- Tools & Utilities Grid -->
-      <section class="touch-card">
+      <section class="touch-card tools-deck-card">
         <div class="card-title-row">
           <div class="card-title">
-            <span class="card-title-icon">🛠️</span> Tools & Setup
+            <span class="card-title-icon">🛠️</span> Studio Tools & Setup
           </div>
         </div>
 
         <div class="tools-grid">
-          <button id="btn-tool-editor" class="tool-btn">
+          <button id="btn-tool-editor" class="tool-btn" title="Open Studio Editor web interface">
             <span class="tool-icon">🎨</span>
-            <span>Studio Editor</span>
+            <div class="tool-texts">
+              <span class="tool-name">Studio Editor</span>
+              <span class="tool-sub">Visual Config & Slides</span>
+            </div>
           </button>
 
-          <button id="btn-tool-vlc" class="tool-btn">
+          <button id="btn-tool-vlc" class="tool-btn" title="Open local HLS live stream in VLC">
             <span class="tool-icon">🎬</span>
-            <span>Open VLC</span>
+            <div class="tool-texts">
+              <span class="tool-name">Open VLC</span>
+              <span class="tool-sub">Preview Stream Output</span>
+            </div>
           </button>
 
-          <button id="btn-tool-check" class="tool-btn">
+          <button id="btn-tool-check" class="tool-btn" title="Verify OBS profile, scene, and browser source settings">
             <span class="tool-icon">🔍</span>
-            <span>Check OBS</span>
+            <div class="tool-texts">
+              <span class="tool-name">Check OBS</span>
+              <span class="tool-sub">Verify Configurations</span>
+            </div>
           </button>
 
-          <button id="btn-tool-setup" class="tool-btn">
+          <button id="btn-tool-setup" class="tool-btn" title="Create or re-create OBS HLS broadcast profile">
             <span class="tool-icon">⚙️</span>
-            <span>Setup Profile</span>
+            <div class="tool-texts">
+              <span class="tool-name">Setup Profile</span>
+              <span class="tool-sub">Generate OBS Profile</span>
+            </div>
           </button>
 
-          <button id="btn-tool-scripts" class="tool-btn">
+          <button id="btn-tool-scripts" class="tool-btn" title="List and run all package.json commands">
             <span class="tool-icon">📜</span>
-            <span>All Scripts</span>
+            <div class="tool-texts">
+              <span class="tool-name">All Scripts</span>
+              <span class="tool-sub">Project Script Runner</span>
+            </div>
           </button>
         </div>
       </section>
@@ -407,7 +570,7 @@
           <div style="display: flex; gap: 6px;">
             <button id="btn-expand-logs" class="pill-btn" title="Expand log view">⛶ Expand</button>
             <button id="btn-autoscroll-logs" class="pill-btn">Scroll: ON</button>
-            <button id="btn-refresh-logs" class="pill-btn">🔄</button>
+            <button id="btn-refresh-logs" class="pill-btn" title="Refresh log">🔄</button>
           </div>
         </div>
 
@@ -420,10 +583,12 @@
   <!-- Stop Broadcast Confirmation Modal -->
   <dialog id="stop-modal" class="touch-modal">
     <div class="modal-header">
-      <span style="color: var(--rose);">⏹</span> Stop Broadcast?
+      <span style="color: var(--rose);">⏹</span> Stop Active Broadcast?
     </div>
     <div class="modal-body">
-      Are you sure you want to stop the active OBS broadcast? This will terminate the video output stream.
+      Are you sure you want to stop the active OBS broadcast?
+      <br><br>
+      This will terminate live video transmission across all streaming outputs.
     </div>
     <div class="modal-actions">
       <button id="btn-cancel-stop" class="touch-btn btn-subtle" style="min-height: 44px;">Cancel</button>
@@ -437,7 +602,7 @@
       <span style="color: #818cf8;">🌙</span> Put Monitors to Sleep?
     </div>
     <div class="modal-body">
-      This will turn off all Steam Deck screens (internal panel and external displays) to save power and protect OLED displays.
+      This will turn off all Steam Deck screens (internal OLED/LCD panel and external displays) to save power and prevent burn-in.
       <br><br>
       <b>The broadcast, web server, and all background tasks will remain running.</b>
       <br><br>
@@ -513,7 +678,7 @@
         <!-- Choice 1: Current alert only -->
         <button class="alert-option-btn" data-choice="instance">
           <span class="option-title">⚡ Current alert only (new alert not considered)</span>
-          <span class="option-sub">Hides this exact alert occurrence now. If Environment Canada or TWC issues an update or new alert, it will still broadcast.</span>
+          <span class="option-sub">Hides this exact alert occurrence now. If Environment Canada issues an update or new alert, it will still broadcast.</span>
         </button>
 
         <!-- Choice 2: Future current alert of this type -->
@@ -570,4 +735,3 @@
 
 </body>
 </html>
-

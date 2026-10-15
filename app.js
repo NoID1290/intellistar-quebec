@@ -17,6 +17,7 @@ app.get('/api/health', (req, res) => {
 
 app.all(['/api/app/stop', '/api/app/shutdown'], (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
+    currentForecastCommand = { id: Date.now(), action: 'stop', timestamp: Date.now() };
     res.json({ success: true, message: 'IntelliSTAR app server shutting down...' });
     logger.info('Received remote shutdown request via /api/app/stop. Exiting...');
     setTimeout(() => {
@@ -81,6 +82,40 @@ app.all('/api/interpolation', (req, res) => {
             }
             fs.writeFileSync(targetFile, JSON.stringify(raw, null, '\t'), 'utf8');
         }
+
+        // Also update presets/presets.json if active
+        try {
+            const presetsFile = path.join(__dirname, 'presets', 'presets.json');
+            if (fs.existsSync(presetsFile)) {
+                const pData = JSON.parse(fs.readFileSync(presetsFile, 'utf8'));
+                let modified = false;
+                if (pData.applied?.config?.appearanceSettings) {
+                    pData.applied.config.appearanceSettings.smoothRadar = enabled;
+                    modified = true;
+                }
+                if (pData.activeId && Array.isArray(pData.presets)) {
+                    const active = pData.presets.find(p => p.id === pData.activeId);
+                    if (active?.config?.appearanceSettings) {
+                        active.config.appearanceSettings.smoothRadar = enabled;
+                        modified = true;
+                    }
+                }
+                if (modified) {
+                    fs.writeFileSync(presetsFile, JSON.stringify(pData, null, 2), 'utf8');
+                }
+            }
+        } catch (e) {}
+
+        // Also update encoding-preset.json
+        try {
+            const encFile = path.join(__dirname, 'encoding-preset.json');
+            if (fs.existsSync(encFile)) {
+                const enc = JSON.parse(fs.readFileSync(encFile, 'utf8'));
+                enc.interpolation = enabled;
+                fs.writeFileSync(encFile, JSON.stringify(enc, null, 2), 'utf8');
+            }
+        } catch (e) {}
+
         // Notify running display pages (they poll /api/refresh every second).
         currentRefreshCommand = { id: Date.now(), action: 'interpolation', enabled, timestamp: Date.now() };
         res.json({ success: true, enabled, message: `Interpolation ${enabled ? 'enabled' : 'disabled'}` });

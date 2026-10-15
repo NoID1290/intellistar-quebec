@@ -387,7 +387,11 @@ function createBackend(options, overrides = {}) {
       }
       const existing = await dependencies.probeApp(options.port);
       assertStarting();
-      if (!existing) {
+      const shouldAutoStartApp = !existing && !dependencies.disableApp && !dependencies.noApp &&
+        dependencies.autoStartApp !== false &&
+        dependencies.env?.OBS_NO_APP !== '1' && dependencies.env?.OBS_NO_APP !== 'true' &&
+        dependencies.env?.OBS_AUTO_START_APP !== '0';
+      if (!existing && shouldAutoStartApp) {
         appChild = dependencies.spawn(process.execPath, [path.join(__dirname, 'app.js')], {
           cwd: __dirname, env: { ...dependencies.env, PORT: String(options.port), INTELLISTAR_IPTV_RUNNER: '1' }, stdio: 'inherit',
         });
@@ -420,6 +424,9 @@ function createBackend(options, overrides = {}) {
           if (dependencies.now() >= deadline) throw new Error('IntelliSTAR server startup timed out.');
           await dependencies.delay(100);
         }
+      } else if (!existing && standbyServer && !standbyServer.isListening()) {
+        await standbyServer.start();
+        dependencies.log('OBS encoder started without IntelliSTAR app (holding standby signal).');
       }
       assertStarting();
       const launch = obsCommand(options, installation);

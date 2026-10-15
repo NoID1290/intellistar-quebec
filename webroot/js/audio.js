@@ -393,6 +393,13 @@ class AudioManager {
         if (typeof spotifyManager !== 'undefined' && spotifyManager.player) {
             try { spotifyManager.pause(); } catch (e) {}
         }
+        try {
+            if (typeof $ !== 'undefined') {
+                $('audio').each(function() {
+                    try { this.pause(); this.currentTime = 0; } catch (e) {}
+                });
+            }
+        } catch (e) {}
     }
 
     stopPlaying() {

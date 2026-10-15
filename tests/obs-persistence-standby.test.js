@@ -205,9 +205,78 @@ test('Standby blackout overlay layout and audio muting integrity', () => {
   assert.match(css, /#standby-offline-screen\s*\{[^}]*width:\s*100vw\s*!important/);
   assert.match(css, /#standby-offline-screen\s*\{[^}]*height:\s*100vh\s*!important/);
 
-  // Verify settings.js cleanly hides color bars and stops test tone
+  // Verify settings.js cleanly hides color bars, stops test tone, and silences all background audio
   assert.match(settingsJs, /function showStandbyScreen\(\)/);
   assert.match(settingsJs, /\$\('#colorbar-screen'\)\.hide\(\)/);
   assert.match(settingsJs, /stopTestTone\(\)/);
+  assert.match(settingsJs, /audioPlayer\.stopAll\(\)/);
+  assert.match(settingsJs, /window\.speechSynthesis\.cancel\(\)/);
+  assert.match(settingsJs, /radarEngine\.stopPlayback\(\)/);
+});
+
+test('OBS backend with OBS_NO_APP=1 starts OBS without spawning IntelliSTAR app', async (t) => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'obs-no-app-test-'));
+  t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
+  const spawned = [];
+  const logs = [];
+
+  const backend = createBackend(obsOptions({ PORT: '7173', XDG_RUNTIME_DIR: tempDir }), {
+    env: { OBS_NO_APP: '1', XDG_RUNTIME_DIR: tempDir },
+    preflight: () => ({ installation: 'native' }),
+    probeApp: async () => false,
+    spawn: (command, args, options) => {
+      const child = fakeChild(spawned.length + 200);
+      spawned.push({ command, args, options, child });
+      return child;
+    },
+    stopChild: async child => {
+      if (child) child.kill('SIGINT');
+    },
+    log: msg => logs.push(msg),
+    disableStandby: true,
+  });
+
+  const status = await backend.start();
+  assert.equal(status.phase, 'running');
+  assert.equal(status.obs.processAlive, true);
+  assert.equal(status.app.processAlive, false);
+  assert.equal(status.app.owned, false);
+  // Verify only 1 process was spawned (OBS), not app.js
+  assert.equal(spawned.length, 1);
+  assert.match(spawned[0].command, /obs/);
+
+  await backend.stop();
+  assert.equal(backend.status().phase, 'stopped');
+});
+
+test('Interpolation settings synchronize across presets, MYCONFIG, and encoding-preset', (t) => {
+  const tempAppDir = fs.mkdtempSync(path.join(os.tmpdir(), 'interp-test-'));
+  fs.mkdirSync(path.join(tempAppDir, 'presets'), { recursive: true });
+  t.after(() => fs.rmSync(tempAppDir, { recursive: true, force: true }));
+
+  const { getSavedInterpolation, setSavedInterpolation } = require('../launcher-ui');
+
+  // Initial state: default is true
+  assert.equal(getSavedInterpolation(tempAppDir), true);
+
+  // Set to false
+  const updated1 = setSavedInterpolation(false, tempAppDir);
+  assert.equal(updated1, false);
+  assert.equal(getSavedInterpolation(tempAppDir), false);
+
+  // Check files were written
+  const presets = JSON.parse(fs.readFileSync(path.join(tempAppDir, 'presets', 'presets.json'), 'utf8'));
+  assert.equal(presets.applied.config.appearanceSettings.smoothRadar, false);
+
+  const myconfig = JSON.parse(fs.readFileSync(path.join(tempAppDir, 'MYCONFIG.json'), 'utf8'));
+  assert.equal(myconfig.appearanceSettings.smoothRadar, false);
+
+  // Set to true
+  const updated2 = setSavedInterpolation(true, tempAppDir);
+  assert.equal(updated2, true);
+  assert.equal(getSavedInterpolation(tempAppDir), true);
+
+  const presets2 = JSON.parse(fs.readFileSync(path.join(tempAppDir, 'presets', 'presets.json'), 'utf8'));
+  assert.equal(presets2.applied.config.appearanceSettings.smoothRadar, true);
 });
 

@@ -391,6 +391,41 @@ function showStandbyScreen() {
         try { window._testOscillator.stop(); } catch (e) {}
     }
 
+    // Stop all audioPlayer tracks (music, voice clips, narrations)
+    if (typeof audioPlayer !== 'undefined' && audioPlayer) {
+        if (typeof audioPlayer.stopAll === 'function') {
+            try { audioPlayer.stopAll(); } catch (e) {}
+        } else if (typeof audioPlayer.stopPlaying === 'function') {
+            try { audioPlayer.stopPlaying(); } catch (e) {}
+        }
+    }
+
+    // Stop and reset any HTML5 audio/video elements
+    try {
+        document.querySelectorAll('audio, video').forEach(el => {
+            try { el.pause(); el.currentTime = 0; } catch (e) {}
+        });
+    } catch (e) {}
+
+    // Cancel speech synthesis
+    if (window.speechSynthesis) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+
+    // Stop slide animations and presentation loops
+    if (typeof stopSlides === 'function') {
+        try { stopSlides(); } catch (e) {}
+    } else if (typeof hideAllSlides === 'function') {
+        try { hideAllSlides(); } catch (e) {}
+    }
+    if (typeof stopLoops === 'function') {
+        try { stopLoops(); } catch (e) {}
+    }
+    if (typeof radarEngine !== 'undefined' && radarEngine.stopPlayback) {
+        try { radarEngine.stopPlayback(); } catch (e) {}
+    }
+    window.isForecastRunning = false;
+
     // 3. Display full-screen black standby overlay (fixed, 100vw x 100vh)
     $('#standby-offline-screen').css({
         display: 'flex',

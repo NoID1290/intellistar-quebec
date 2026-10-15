@@ -163,7 +163,12 @@ async function startAppProcess(targetPort = obsPort) {
 
 // Helper: stop app.js process without touching OBS
 async function stopAppProcess(targetPort = obsPort) {
-  // 1. Try graceful HTTP shutdown request to app.js
+  // 1. First trigger forecast stop to silence audio/presentation
+  try {
+    await fetch(`http://127.0.0.1:${targetPort}/api/forecast/stop`, { method: 'POST', signal: AbortSignal.timeout(400) });
+  } catch (e) {}
+
+  // 2. Try graceful HTTP shutdown request to app.js
   try {
     const probe = await fetch(`http://127.0.0.1:${targetPort}/api/health`, { signal: AbortSignal.timeout(400) });
     if (probe.ok) {
@@ -175,7 +180,7 @@ async function stopAppProcess(targetPort = obsPort) {
     }
   } catch (e) {}
 
-  // 2. Locate and terminate any remaining app.js processes
+  // 3. Locate and terminate any remaining app.js processes
   const pids = findAppPids(targetPort);
   for (const pid of pids) {
     try { process.kill(pid, 'SIGTERM'); } catch (e) {}
@@ -188,7 +193,12 @@ async function stopAppProcess(targetPort = obsPort) {
     }
   }
 
-  // 3. Confirm app has shut down
+  // 4. Terminate any stray iptv or node processes running start-iptv
+  try {
+    execSync("pkill -9 -f 'node.*start-iptv\\.js' 2>/dev/null || true");
+  } catch (e) {}
+
+  // 5. Confirm app has shut down
   const alive = await probeApp(targetPort);
   if (!alive) {
     return { success: true, message: 'IntelliSTAR app server stopped. OBS encoder continues broadcasting.' };
@@ -201,6 +211,109 @@ async function restartAppProcess(targetPort = obsPort) {
   await stopAppProcess();
   await new Promise(r => setTimeout(r, 500));
   return await startAppProcess(targetPort);
+}
+
+// Helper: get saved interpolation setting across presets, config, and encoding presets
+function getSavedInterpolation(appDir = __dirname) {
+  // 1. Check presets/presets.json (active/applied preset in Studio Editor overrides base config)
+  try {
+    const presetsPath = path.join(appDir, 'presets', 'presets.json');
+    if (fs.existsSync(presetsPath)) {
+      const data = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+      if (data.applied?.config?.appearanceSettings?.smoothRadar !== undefined) {
+        return !!data.applied.config.appearanceSettings.smoothRadar;
+      }
+      if (data.activeId && Array.isArray(data.presets)) {
+        const active = data.presets.find(p => p.id === data.activeId);
+        if (active?.config?.appearanceSettings?.smoothRadar !== undefined) {
+          return !!active.config.appearanceSettings.smoothRadar;
+        }
+      }
+    }
+  } catch (e) {}
+
+  // 2. Check MYCONFIG.json / myConfig.json
+  try {
+    for (const fname of ['MYCONFIG.json', 'myConfig.json']) {
+      const cfgPath = path.join(appDir, fname);
+      if (fs.existsSync(cfgPath)) {
+        const raw = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        if (raw.appearanceSettings?.smoothRadar !== undefined) return !!raw.appearanceSettings.smoothRadar;
+        if (raw.smoothRadar !== undefined) return !!raw.smoothRadar;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Check encoding-preset.json
+  try {
+    const encFile = path.join(appDir, 'encoding-preset.json');
+    if (fs.existsSync(encFile)) {
+      const enc = JSON.parse(fs.readFileSync(encFile, 'utf8'));
+      if (enc.interpolation !== undefined) return !!enc.interpolation;
+    }
+  } catch (e) {}
+
+  return true;
+}
+
+// Helper: save interpolation setting across all persistent configuration files
+function setSavedInterpolation(isEnabled, appDir = __dirname) {
+  // 1. Update MYCONFIG.json and myConfig.json
+  let updatedConfig = false;
+  for (const fname of ['MYCONFIG.json', 'myConfig.json']) {
+    const cfgPath = path.join(appDir, fname);
+    try {
+      if (fs.existsSync(cfgPath)) {
+        const raw = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+        raw.smoothRadar = isEnabled;
+        if (!raw.appearanceSettings) raw.appearanceSettings = {};
+        raw.appearanceSettings.smoothRadar = isEnabled;
+        fs.writeFileSync(cfgPath, JSON.stringify(raw, null, '\t'), 'utf8');
+        updatedConfig = true;
+      }
+    } catch (e) {}
+  }
+  if (!updatedConfig) {
+    try {
+      const cfgPath = path.join(appDir, 'MYCONFIG.json');
+      const raw = { appearanceSettings: { smoothRadar: isEnabled }, smoothRadar: isEnabled };
+      fs.writeFileSync(cfgPath, JSON.stringify(raw, null, '\t'), 'utf8');
+    } catch (e) {}
+  }
+
+  // 2. Update presets/presets.json (active applied preset and presets list)
+  try {
+    const presetsPath = path.join(appDir, 'presets', 'presets.json');
+    let data;
+    if (fs.existsSync(presetsPath)) {
+      data = JSON.parse(fs.readFileSync(presetsPath, 'utf8'));
+      if (!data.applied) data.applied = { config: {} };
+      if (!data.applied.config) data.applied.config = {};
+      if (!data.applied.config.appearanceSettings) data.applied.config.appearanceSettings = {};
+      data.applied.config.appearanceSettings.smoothRadar = isEnabled;
+      if (data.activeId && Array.isArray(data.presets)) {
+        const active = data.presets.find(p => p.id === data.activeId);
+        if (active?.config?.appearanceSettings) {
+          active.config.appearanceSettings.smoothRadar = isEnabled;
+        }
+      }
+    } else {
+      data = { applied: { config: { appearanceSettings: { smoothRadar: isEnabled } } } };
+    }
+    fs.writeFileSync(presetsPath, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {}
+
+  // 3. Update encoding-preset.json
+  try {
+    const encFile = path.join(appDir, 'encoding-preset.json');
+    if (fs.existsSync(encFile)) {
+      const enc = JSON.parse(fs.readFileSync(encFile, 'utf8'));
+      enc.interpolation = isEnabled;
+      fs.writeFileSync(encFile, JSON.stringify(enc, null, 2), 'utf8');
+    }
+  } catch (e) {}
+
+  return isEnabled;
 }
 
 // -----------------------------------------------------------------------------
@@ -230,15 +343,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
       fetchLocal('/api/alerts/active'),
     ]);
 
-    let interpolation = true;
-    try {
-      const myCfgPath = path.join(__dirname, 'MYCONFIG.json');
-      if (fs.existsSync(myCfgPath)) {
-        const raw = JSON.parse(fs.readFileSync(myCfgPath, 'utf8'));
-        if (raw.smoothRadar !== undefined) interpolation = !!raw.smoothRadar;
-        else if (raw.appearanceSettings && raw.appearanceSettings.smoothRadar !== undefined) interpolation = !!raw.appearanceSettings.smoothRadar;
-      }
-    } catch (e) {}
+    const interpolation = getSavedInterpolation(__dirname);
 
     res.json({
       obs: obs || { phase: 'stopped', error: null, processAlive: false },
@@ -274,15 +379,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
 
         case 'set-interpolation': {
           const isEnabled = enabled === true || enabled === 'true';
-          const myCfgPath = path.join(__dirname, 'MYCONFIG.json');
-          try {
-            if (fs.existsSync(myCfgPath)) {
-              const raw = JSON.parse(fs.readFileSync(myCfgPath, 'utf8'));
-              raw.smoothRadar = isEnabled;
-              if (raw.appearanceSettings) raw.appearanceSettings.smoothRadar = isEnabled;
-              fs.writeFileSync(myCfgPath, JSON.stringify(raw, null, '\t'), 'utf8');
-            }
-          } catch (e) {}
+          setSavedInterpolation(isEnabled, __dirname);
 
           try {
             await fetchLocal(`/api/interpolation?enabled=${isEnabled}`);
@@ -336,7 +433,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
 
         case 'start-obs': {
           const selectedOutput = ['ndi', 'youtube', 'dual'].includes(output) ? output : 'hls';
-          const result = await startBackground(selectedOutput);
+          const result = await startBackground(selectedOutput, { ...process.env, OBS_NO_APP: '1' });
           return res.json({
             success: true,
             message: `OBS ${selectedOutput.toUpperCase()} started in background.`,
@@ -496,7 +593,7 @@ function createLauncherRouter(targetObsPort = obsPort) {
     const output = req.query.output || req.body?.output || 'youtube';
     const selectedOutput = ['ndi', 'youtube', 'dual'].includes(output) ? output : 'hls';
     try {
-      const result = await startBackground(selectedOutput);
+      const result = await startBackground(selectedOutput, { ...process.env, OBS_NO_APP: '1' });
       res.json({ success: true, message: `OBS ${selectedOutput.toUpperCase()} started.`, status: result.status });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -720,4 +817,4 @@ if (require.main === module) {
   startServer();
 }
 
-module.exports = { app, startServer, launchTouchWindow, createLauncherRouter };
+module.exports = { app, startServer, launchTouchWindow, createLauncherRouter, getSavedInterpolation, setSavedInterpolation };

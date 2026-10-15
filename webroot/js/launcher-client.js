@@ -134,11 +134,60 @@
     if (forecastStateEl) {
       const fState = (data.forecast && data.forecast.state) ? data.forecast.state.toUpperCase() : 'IDLE';
       forecastStateEl.textContent = fState;
-      forecastStateEl.style.color = fState === 'RUNNING' ? 'var(--emerald)' : 'var(--muted)';
+      forecastStateEl.style.color = fState === 'RUNNING' ? 'var(--emerald)' : (fState === 'STOP' || fState === 'STANDBY' ? 'var(--amber)' : 'var(--muted)');
+    }
+
+    // Mini status indicators in Master Broadcast Deck
+    const engineMini = document.getElementById('engine-mini-status');
+    const engineMiniDot = document.getElementById('engine-mini-dot');
+    if (engineMini) {
+      const appHealth = data.app?.health || 'unavailable';
+      if (appHealth === 'ready') {
+        engineMini.textContent = 'ONLINE';
+        engineMini.style.color = 'var(--emerald)';
+        if (engineMiniDot) { engineMiniDot.style.background = 'var(--emerald)'; engineMiniDot.style.boxShadow = '0 0 8px var(--emerald)'; }
+      } else if (appHealth === 'standby' || data.obs?.app?.standby) {
+        engineMini.textContent = 'STANDBY';
+        engineMini.style.color = 'var(--amber)';
+        if (engineMiniDot) { engineMiniDot.style.background = 'var(--amber)'; engineMiniDot.style.boxShadow = '0 0 8px var(--amber)'; }
+      } else {
+        engineMini.textContent = 'OFFLINE';
+        engineMini.style.color = 'var(--rose)';
+        if (engineMiniDot) { engineMiniDot.style.background = 'var(--rose)'; engineMiniDot.style.boxShadow = 'none'; }
+      }
+    }
+
+    const playoutMiniDot = document.getElementById('playout-mini-dot');
+    if (playoutMiniDot) {
+      const fState = (data.forecast && data.forecast.state) ? data.forecast.state.toLowerCase() : 'idle';
+      if (fState === 'running') {
+        playoutMiniDot.style.background = 'var(--emerald)';
+        playoutMiniDot.style.boxShadow = '0 0 8px var(--emerald)';
+      } else if (fState === 'stop' || fState === 'standby') {
+        playoutMiniDot.style.background = 'var(--amber)';
+        playoutMiniDot.style.boxShadow = '0 0 8px var(--amber)';
+      } else {
+        playoutMiniDot.style.background = 'var(--muted)';
+        playoutMiniDot.style.boxShadow = 'none';
+      }
+    }
+
+    // Active streaming channel highlights
+    const isLive = phase === 'running';
+    const activeOutput = (obs.output || '').toLowerCase();
+    document.getElementById('btn-start-hls')?.classList.toggle('channel-live-active', isLive && (activeOutput === 'hls' || activeOutput === 'dual'));
+    document.getElementById('btn-start-youtube')?.classList.toggle('channel-live-active', isLive && (activeOutput === 'youtube' || activeOutput === 'dual'));
+    document.getElementById('btn-start-dual')?.classList.toggle('channel-live-active', isLive && activeOutput === 'dual');
+    document.getElementById('btn-start-ndi')?.classList.toggle('channel-live-active', isLive && activeOutput === 'ndi');
+
+    // Update stop broadcast button state
+    const stopObsBtn = document.getElementById('btn-stop-obs');
+    if (stopObsBtn) {
+      stopObsBtn.classList.toggle('is-broadcasting', isLive);
     }
 
     if (networkPill && data.ips && data.ips.length) {
-      networkPill.innerHTML = `Deck IP: <b>${data.ips[0]}:${window.location.port || 7080}</b>`;
+      networkPill.innerHTML = `<span class="pill-dot"></span><span>Deck IP: <b>${data.ips[0]}:${window.location.port || 7080}</b></span>`;
     }
 
     // Active alert banner
