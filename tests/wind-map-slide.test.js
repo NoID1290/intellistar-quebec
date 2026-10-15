@@ -105,6 +105,51 @@ test('Wind map (Champ des Vents) slide layout, streamflow engine, legend, and re
         assert.ok(typeof vector.speed === 'number' && vector.speed > 0);
     });
 
+    await t.test('fetchWindDataForCities matches weatherInfo, API data, and produces non-identical variations', async () => {
+        const radar = require(radarJsPath);
+
+        // 1. Test weatherInfo matching
+        global.weatherInfo = {
+            currentConditions: {
+                wind: 'SO 14',
+                windRaw: { direction: 'SO', deg: 225, speed: 14 }
+            },
+            quebecCities: {
+                cities: [
+                    { name: 'Montréal', wind: 'SSO 18', windRaw: { direction: 'SSO', deg: 202.5, speed: 18 }, gusts: 28 },
+                    { name: 'Québec', wind: 'NE 25', windRaw: { direction: 'NE', deg: 45, speed: 25 }, gusts: 35 }
+                ]
+            }
+        };
+
+        const testCities = [
+            { name: 'Montréal', lat: 45.50, lon: -73.57 },
+            { name: 'Québec', lat: 46.81, lon: -71.21 },
+            { name: 'Sherbrooke', lat: 45.40, lon: -71.89 },
+            { name: 'Gatineau', lat: 45.43, lon: -75.70 }
+        ];
+
+        const data = await radar.fetchWindDataForCities(testCities);
+        assert.ok(data['montréal'], 'Montréal data exists');
+        assert.equal(data['montréal'].speedKmH, 18);
+        assert.equal(data['montréal'].dirDeg, 202.5);
+        assert.equal(data['montréal'].gustsKmH, 28);
+
+        assert.ok(data['québec'], 'Québec data exists');
+        assert.equal(data['québec'].speedKmH, 25);
+        assert.equal(data['québec'].dirDeg, 45);
+
+        // Cities not in weatherInfo have generated realistic localized variations (not identical lockstep)
+        assert.ok(data['sherbrooke']);
+        assert.ok(data['gatineau']);
+        assert.ok(data['sherbrooke'].speedKmH > 0);
+        assert.ok(data['gatineau'].speedKmH > 0);
+        // Verify that cities across different coordinates do NOT have identical wind vectors
+        const speeds = Object.values(data).map(d => d.speedKmH);
+        const uniqueSpeeds = new Set(speeds);
+        assert.ok(uniqueSpeeds.size > 1, 'Cities must show varied, realistic wind speeds, not all identical');
+    });
+
     await t.test('HTML templates and asset images exist for wind map and extended radar legend', () => {
         const indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
         assert.ok(indexHtml.includes('id="radarwind"'), 'index.html must have #radarwind');

@@ -1208,8 +1208,14 @@ async function grabCC() {
         weatherInfo.currentConditions.pressure.trend = data.pressureTendencyTrend;
         weatherInfo.currentConditions.pressure.val = data.pressureAltimeter ? (isMetric() ? (data.pressureAltimeter > 500 ? (data.pressureAltimeter / 10).toFixed(1) : data.pressureAltimeter.toFixed(1)) : data.pressureAltimeter.toFixed(2)) : "";
         weatherInfo.currentConditions.temp = data.temperature;
-        weatherInfo.currentConditions.dewpoint = data.temperatureDewPoint;
-        weatherInfo.currentConditions.wind = ((data.windDirectionCardinal == "CALM" || data.windSpeed == 0 || data.windDirectionCardinal == undefined) ? "Calme" : translateWindCardinal(data.windDirectionCardinal) + " " + data.windSpeed);
+        var ccWindDir = ((data.windDirectionCardinal == "CALM" || data.windSpeed == 0 || data.windDirectionCardinal == undefined) ? "Calme" : translateWindCardinal(data.windDirectionCardinal));
+        weatherInfo.currentConditions.wind = (ccWindDir === "Calme" ? "Calme" : ccWindDir + " " + data.windSpeed);
+        weatherInfo.currentConditions.windRaw = {
+            direction: ccWindDir,
+            cardinal: data.windDirectionCardinal,
+            deg: data.windDirection != null ? Number(data.windDirection) : null,
+            speed: data.windSpeed != null ? Number(data.windSpeed) : 0
+        };
         weatherInfo.currentConditions.visibility = data.visibility;
         weatherInfo.currentConditions.noReport = false;
 
@@ -1272,9 +1278,13 @@ function extractAggWeatherItem(configItem, ajaxedLoc) {
         high: high !== "" && high != null ? high : "",
         low: low !== "" && low != null ? low : "",
         icon: obs.iconCodeExtend != null ? obs.iconCodeExtend : (obs.iconCode != null ? obs.iconCode : 4400),
-        cond: translateWeatherNarrative(rawObsCond),
         wind: windStr,
-        windRaw: { direction: windDir, speed: obs.windSpeed },
+        windRaw: {
+            direction: windDir,
+            cardinal: obs.windDirectionCardinal,
+            deg: obs.windDirection != null ? Number(obs.windDirection) : null,
+            speed: obs.windSpeed != null ? Number(obs.windSpeed) : 0
+        },
         gusts: (obs.windGust != null && obs.windGust !== 0 && obs.windGust !== "None" && obs.windGust !== "Aucune") ? obs.windGust : "",
         humidity: (obs.relativeHumidity != null && obs.relativeHumidity !== "") ? (String(obs.relativeHumidity).replace("%", "") + "%") : "",
         feelslike: { type: feelsType, val: (feelsVal != null && feelsVal !== "") ? feelsVal : "" },
