@@ -279,7 +279,7 @@
     top: 68px;
     z-index: 3;
 }
-.radar .hourloop {
+.radar .hourloop, .satellite .hourloop, .snow-cover .hourloop, .wind-map .hourloop {
     position: absolute;
     color: #304976;
     font-family: "Interstate Bold Italic";

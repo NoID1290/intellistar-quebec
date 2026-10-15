@@ -158,6 +158,50 @@ var slideHeaders = {
     "neigeAuSol12": "Neige au Sol",
     "canadaNeigeAuSol": "Neige au Sol",
     "snowCover": "Neige au Sol",
+    "dopplerRadar": "Radar Doppler",
+    "radarDoppler": "Radar Doppler",
+    "canadaDoppler": "Radar Doppler",
+    "localDoppler": "Radar Doppler",
+    "localDoppler1": "Radar Doppler",
+    "localDoppler2": "Radar Doppler",
+    "localDoppler3": "Radar Doppler",
+    "localDoppler4": "Radar Doppler",
+    "localDoppler5": "Radar Doppler",
+    "localDoppler6": "Radar Doppler",
+    "localDoppler7": "Radar Doppler",
+    "localDoppler8": "Radar Doppler",
+    "localDoppler9": "Radar Doppler",
+    "localDoppler10": "Radar Doppler",
+    "localDoppler11": "Radar Doppler",
+    "localDoppler12": "Radar Doppler",
+    "carteVents": "Champ des Vents",
+    "carteVents1": "Champ des Vents",
+    "carteVents2": "Champ des Vents",
+    "carteVents3": "Champ des Vents",
+    "carteVents4": "Champ des Vents",
+    "carteVents5": "Champ des Vents",
+    "carteVents6": "Champ des Vents",
+    "carteVents7": "Champ des Vents",
+    "carteVents8": "Champ des Vents",
+    "carteVents9": "Champ des Vents",
+    "carteVents10": "Champ des Vents",
+    "carteVents11": "Champ des Vents",
+    "carteVents12": "Champ des Vents",
+    "canadaVents": "Champ des Vents",
+    "windMap": "Champ des Vents",
+    "windMap1": "Champ des Vents",
+    "windMap2": "Champ des Vents",
+    "windMap3": "Champ des Vents",
+    "windMap4": "Champ des Vents",
+    "windMap5": "Champ des Vents",
+    "windMap6": "Champ des Vents",
+    "windMap7": "Champ des Vents",
+    "windMap8": "Champ des Vents",
+    "windMap9": "Champ des Vents",
+    "windMap10": "Champ des Vents",
+    "windMap11": "Champ des Vents",
+    "windMap12": "Champ des Vents",
+    "canadaWindMap": "Champ des Vents",
     "bulletinMap": "",
     "alertMap": "",
     "environmentCanada": ""
@@ -694,7 +738,9 @@ var slidePrograms = {
         addRadarCities();
         $(".reg-cities").show();
         $(".reg-cities-trans").show();
-        $('.radar .header').text("Radar");
+        var headerText = "Radar Doppler";
+        $('.radar .hourloop').text("RADAR RÉGIONAL • EN DIRECT");
+        $('.radar .header').text(headerText);
         $('.radar .header').fadeIn(167);
         startRadar("regradar");
 
@@ -721,7 +767,13 @@ var slidePrograms = {
         addRadarCities(dopplerIdx, dConfig);
         $(".loc-cities").show();
         $(".loc-cities-trans").show();
-        var headerText = (dConfig && dConfig.name) ? dConfig.name.replace(/^doppler\s+local\s*[-—–:]\s*/i, '').trim() : "Doppler local";
+        var headerText = "Radar Doppler";
+        if (dConfig && dConfig.name) {
+            var regionName = dConfig.name.replace(/^doppler\s+local\s*[-—–:]\s*/i, '').trim();
+            $('.radar .hourloop').text(regionName.toUpperCase() + " • RADAR EN DIRECT");
+        } else {
+            $('.radar .hourloop').text("Radar en direct");
+        }
         $('.radar .header').text(headerText);
         $('.radar .header').fadeIn(167);
         startRadar("locradar", dopplerIdx, dConfig);

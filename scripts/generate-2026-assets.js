@@ -303,31 +303,12 @@ async function generateAssets() {
     // Also copy blueldl.png directly to webroot/images/2026/
     fs.copyFileSync(path.join(IMAGES_DIR, 'blueldl.png'), path.join(__dirname, '../webroot/images/2026/blueldl.png'));
 
-    // --- 4. ACCENTS & BADGES ---
-    // 4.1 Radar Legend (540 x 32) with Pluie, Mixte & Neige indicators
+    // 4.1 Radar Legend (75 x 10 gradient bar, matching cloudLegend, snowLegend, and windLegend)
+    // Supports PLUIE / MIXTE / NEIGE indicators and FAIBLE / FORTE precipitation intensity
     await renderSnippet(`
-        <div style="width: 540px; height: 32px; border-radius: 6px; border: 1.5px solid rgba(255,255,255,0.35);
-                    background: linear-gradient(180deg, rgba(15,23,42,0.9) 0%, rgba(3,8,20,0.95) 100%);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: space-between;
-                    padding: 0 12px; font-family: 'Interstate', Arial, sans-serif;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: 900; color: #4ade80; letter-spacing: 0.5px;">PLUIE</span>
-                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FAIBLE</span>
-                <div style="width: 85px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #02fd02 0%, #fdf802 60%, #fd0000 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
-                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FORTE</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: 900; color: #f472b6; letter-spacing: 0.5px;">MIXTE</span>
-                <div style="width: 45px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #e040fb 0%, #fd00fd 50%, #9c27b0 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-size: 13px; font-weight: 900; color: #38bdf8; letter-spacing: 0.5px;">NEIGE</span>
-                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FAIBLE</span>
-                <div style="width: 85px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, #04e9e7 0%, #019ff4 45%, #0300f4 100%); border: 1px solid rgba(255,255,255,0.3);"></div>
-                <span style="font-size: 10px; font-weight: 700; color: #94a3b8;">FORTE</span>
-            </div>
-        </div>
-    `, 540, 32, path.join(IMAGES_DIR, 'radarLegend.png'));
+        <div style="width: 75px; height: 10px;
+                    background: linear-gradient(90deg, #02fd02 0%, #4ade80 20%, #fdf802 55%, #fd0000 85%, #880000 100%);"></div>
+    `, 75, 10, path.join(IMAGES_DIR, 'radarLegend.png'));
     fs.copyFileSync(path.join(IMAGES_DIR, 'radarLegend.png'), path.join(__dirname, '../webroot/images/radarLegend.png'));
 
     // 4.1b Wind Legend (75 x 10 gradient bar, matching snowLegend and cloudLegend)
