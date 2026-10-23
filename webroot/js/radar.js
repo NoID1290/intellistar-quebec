@@ -656,16 +656,28 @@ const radarEngine = {
       const maxY = (ORIGIN - (bounds.topPixel / totalPx) * (2 * ORIGIN)).toFixed(2);
       const minY = (ORIGIN - (bottomPixel / totalPx) * (2 * ORIGIN)).toFixed(2);
 
-      let layerParam = 'LAYERS=RADAR_1KM_RRAI';
-      if (prod === 'ussat' || prod === 'sat' || prod === 'HRDPS.CONTINENTAL_NT') {
-        layerParam = 'LAYERS=HRDPS.CONTINENTAL_NT&STYLES=CLOUD';
+      const reqW = Math.round(bounds.width || 1620);
+      const reqH = Math.round(bounds.height || 1080);
+
+      let layerParam = 'LAYERS=RADAR_1KM_RRAI&STYLES=Radar-Rain_14colors';
+      if (prod === 'ussat' || prod === 'sat' || prod === 'HRDPS.CONTINENTAL_NT' || prod === 'RDPS_10km_TotalCloudCover' || prod === 'satellite') {
+        const isBroad = loc && (
+          loc.zoom <= 6.2 ||
+          (loc.name && /canada|national|couverture/i.test(loc.name)) ||
+          (loc.key && /satellite|national|canada/i.test(loc.key))
+        );
+        if (isBroad) {
+          layerParam = 'LAYERS=RDPS_10km_TotalCloudCover&STYLES=CLOUD';
+        } else {
+          layerParam = 'LAYERS=HRDPS.CONTINENTAL_NT&STYLES=CLOUD';
+        }
       } else if (prod === 'snow24hr' || prod === 'snowCoverageConus1hr' || prod === 'snow1hr' || prod === 'RADAR_1KM_RSNO') {
-        layerParam = 'LAYERS=RADAR_1KM_RSNO';
+        layerParam = 'LAYERS=RADAR_1KM_RSNO&STYLES=Radar-Snow_14colors';
       }
 
       const tsNum = Number(timestamp) || Math.floor(Date.now() / 1000);
       const isoTime = new Date(tsNum * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
-      const url = `https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX=${minX},${minY},${maxX},${maxY}&CRS=EPSG:3857&WIDTH=810&HEIGHT=540&${layerParam}&FORMAT=image/png&TRANSPARENT=TRUE&TIME=${isoTime}&ts=${timestamp}`;
+      const url = `https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX=${minX},${minY},${maxX},${maxY}&CRS=EPSG:3857&WIDTH=${reqW}&HEIGHT=${reqH}&${layerParam}&FORMAT=image/png&TRANSPARENT=TRUE&TIME=${isoTime}&ts=${timestamp}`;
       return [{ url, dx: 0, dy: 0, dw: bounds.width, dh: bounds.height }];
     }
 
@@ -706,6 +718,8 @@ const radarEngine = {
     if (!timestamp || alpha <= 0.005) return;
     const tiles = this.getTileDescriptors(loc, timestamp, prod);
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     for (const t of tiles) {
       let img = this.imageCache.get(t.url);
@@ -724,6 +738,8 @@ const radarEngine = {
     const prod = this.snowProduct || 'snow24hr';
     const tiles = this.getTileDescriptors(loc, timestamp, prod);
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     for (const t of tiles) {
       let img = this.imageCache.get(t.url);
@@ -741,6 +757,8 @@ const radarEngine = {
     if (!timestamp || alpha <= 0.005) return;
     const tiles = this.getTileDescriptors(loc, timestamp, 'twcRadarMosaic');
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     for (const t of tiles) {
       let img = this.imageCache.get(t.url);
@@ -758,6 +776,8 @@ const radarEngine = {
     if (!timestamp || alpha <= 0.005) return;
     const tiles = this.getTileDescriptors(loc, timestamp, 'twcRadarMosaic');
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    if (ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
     ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
     for (const t of tiles) {
       const img = this.imageCache.get(t.url);

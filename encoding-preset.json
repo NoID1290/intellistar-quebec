@@ -1,12 +1,12 @@
 {
-  "preset": "4k-24fps",
-  "resolution": "4k",
-  "label": "4K Ultra HD (3840x2160)",
-  "width": 3840,
-  "height": 2160,
-  "fps": 24,
-  "bitrateKbps": 16000,
-  "bitrate": "16000k",
-  "updatedAt": "2026-10-23T21:29:45.924Z",
-  "interpolation": false
+  "preset": "1080p-60fps",
+  "resolution": "1080p",
+  "label": "1080p Full HD (1920x1080)",
+  "width": 1920,
+  "height": 1080,
+  "fps": 60,
+  "bitrateKbps": 10000,
+  "bitrate": "10000k",
+  "updatedAt": "2026-10-23T21:55:00.243Z",
+  "interpolation": true
 }

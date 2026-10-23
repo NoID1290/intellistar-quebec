@@ -26,14 +26,27 @@ test('ECCC is used by default across newlocation.js, weather.js, and radar.js wi
         assert.equal(radarTiles.length, 1);
         assert.ok(radarTiles[0].url.startsWith('https://geo.weather.gc.ca/geomet?SERVICE=WMS'));
         assert.ok(radarTiles[0].url.includes('LAYERS=RADAR_1KM_RRAI'));
+        assert.ok(radarTiles[0].url.includes('STYLES=Radar-Rain_14colors'));
+        assert.ok(radarTiles[0].url.includes('WIDTH=1620&HEIGHT=1080'));
 
+        // Regional / local satellite uses 2.5km HRDPS
         const satTiles = radarEngine.getTileDescriptors(loc, radarEngine.satTimestamps[0], radarEngine.satProduct);
         assert.equal(satTiles.length, 1);
         assert.ok(satTiles[0].url.includes('LAYERS=HRDPS.CONTINENTAL_NT&STYLES=CLOUD'));
+        assert.ok(satTiles[0].url.includes('WIDTH=1620&HEIGHT=1080'));
+
+        // Broad national satellite uses RDPS_10km_TotalCloudCover (no Atlantic cutoff)
+        const nationalLoc = { lon: -96.0, lat: 56.0, zoom: 4.8, name: 'Radar National Canada' };
+        const nationalSatTiles = radarEngine.getTileDescriptors(nationalLoc, radarEngine.satTimestamps[0], 'satellite');
+        assert.equal(nationalSatTiles.length, 1);
+        assert.ok(nationalSatTiles[0].url.includes('LAYERS=RDPS_10km_TotalCloudCover&STYLES=CLOUD'));
+        assert.ok(nationalSatTiles[0].url.includes('WIDTH=1620&HEIGHT=1080'));
 
         const snowTiles = radarEngine.getTileDescriptors(loc, radarEngine.snowTimestamps[11], radarEngine.snowProduct);
         assert.equal(snowTiles.length, 1);
         assert.ok(snowTiles[0].url.includes('LAYERS=RADAR_1KM_RSNO'));
+        assert.ok(snowTiles[0].url.includes('STYLES=Radar-Snow_14colors'));
+        assert.ok(snowTiles[0].url.includes('WIDTH=1620&HEIGHT=1080'));
     });
 
     await t.test('newlocation.js and weather.js populate all weather structures from ECCC without calling api.weather.com', async () => {
