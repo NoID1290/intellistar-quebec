@@ -15,11 +15,13 @@ const { startBackground, logPath, tailLog, getEncodingPreset, setEncodingPreset,
 const { getSystemStats } = require('./system-stats');
 const { sleepMonitors, wakeMonitors, getDisplayStatus } = require('./display-control');
 const logger = require('./console-view');
+const { installSecurityHardening } = require('./security-guard');
 
 const app = express();
 const port = parseInt(process.env.LAUNCHER_PORT || '7080', 10);
 const obsPort = parseInt(process.env.PORT || '7070', 10);
 
+installSecurityHardening(app);
 app.use(compression());
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -28,8 +30,8 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Helper: fetch JSON from local server
 function fetchLocal(urlPath) {
@@ -550,7 +552,16 @@ function createLauncherRouter(targetObsPort = obsPort) {
         }
 
         case 'run-script': {
-          if (!script) return res.status(400).json({ error: 'Script name is required' });
+          if (!script || typeof script !== 'string') {
+            return res.status(400).json({ error: 'Script name is required' });
+          }
+          const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+          const allowedScripts = Object.keys(pkg.scripts || {}).filter(
+            name => !['launcher', 'launcher:ui', 'ui'].includes(name)
+          );
+          if (!allowedScripts.includes(script)) {
+            return res.status(400).json({ error: `Disallowed or unknown script: ${script}` });
+          }
           const child = spawn('npm', ['run', script], { cwd: __dirname, detached: true, stdio: 'ignore' });
           child.unref();
           return res.json({ success: true, message: `Started npm run ${script} in background.` });
@@ -669,10 +680,16 @@ require('./tts').installTTSAPI(app);
 // to the main app so display pages opened through port 7080 work fully.
 app.use('/api', async (req, res) => {
   try {
+    const targetUrl = new URL(`/api${req.url}`, `http://127.0.0.1:${obsPort}`);
+    if (targetUrl.hostname !== '127.0.0.1' || !targetUrl.pathname.startsWith('/api/')) {
+      return res.status(400).json({ error: 'Invalid API proxy path' });
+    }
     const hasBody = !['GET', 'HEAD'].includes(req.method);
-    const upstream = await fetch(`http://127.0.0.1:${obsPort}/api${req.url}`, {
+    const headers = { 'Accept-Encoding': 'gzip, deflate' };
+    if (hasBody) headers['Content-Type'] = 'application/json';
+    const upstream = await fetch(targetUrl.toString(), {
       method: req.method,
-      headers: hasBody ? { 'Content-Type': 'application/json' } : undefined,
+      headers,
       body: hasBody ? JSON.stringify(req.body || {}) : undefined,
     });
     res.status(upstream.status);

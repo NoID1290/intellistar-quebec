@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <poll.h>
+#include <fcntl.h>
 
 #include <Processing.NDI.Lib.h>
 #include <Processing.NDI.utilities.h>
@@ -138,36 +139,9 @@ static bool write_all(int fd, const uint8_t* data, size_t len) {
     return (written == len);
 }
 
-void recv_audio_worker(NDIlib_recv_instance_t pNDI_recv, int port, std::atomic<long long>* audio_counter) {
-    if (port <= 0) return;
-    int audio_sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (audio_sock < 0) return;
-    sockaddr_in audio_dest{};
-    audio_dest.sin_family = AF_INET;
-    audio_dest.sin_port = htons(port);
-    audio_dest.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-    while (g_running.load()) {
-        NDIlib_audio_frame_v2_t a_frame;
-        NDIlib_frame_type_e type = NDIlib_recv_capture_v2(pNDI_recv, nullptr, &a_frame, nullptr, 100);
-        if (type == NDIlib_frame_type_audio) {
-            if (a_frame.p_data) {
-                NDIlib_audio_frame_interleaved_16s_t interleaved;
-                interleaved.reference_level = 0;
-                std::vector<int16_t> pcm_buf(a_frame.no_samples * 2);
-                interleaved.p_data = pcm_buf.data();
-                NDIlib_util_audio_to_interleaved_16s_v2(&a_frame, &interleaved);
-                sendto(audio_sock, pcm_buf.data(), pcm_buf.size() * sizeof(int16_t), 0,
-                       (struct sockaddr*)&audio_dest, sizeof(audio_dest));
-                (*audio_counter)++;
-            }
-            NDIlib_recv_free_audio_v2(pNDI_recv, &a_frame);
-        }
-    }
-    close(audio_sock);
-}
 
-int run_receiver(const std::string& target_source, const std::string& extra_ips, int audio_port) {
+int run_receiver(const std::string& target_source, const std::string& extra_ips, int audio_port, const std::string& audio_fifo) {
     if (!NDIlib_initialize()) {
         std::cerr << "[NDI-Bridge] Fatal: NDIlib_initialize() failed.\n";
         return 1;
@@ -230,37 +204,47 @@ int run_receiver(const std::string& target_source, const std::string& extra_ips,
 
     int audio_sock = -1;
     sockaddr_in audio_dest{};
-    std::atomic<long long> video_frames(0);
-    std::atomic<long long> audio_packets(0);
+    int audio_fifo_fd = -1;
+    long long video_frames = 0;
+    long long audio_packets = 0;
 
-    std::thread audio_thread;
     if (audio_port > 0) {
         audio_sock = socket(AF_INET, SOCK_DGRAM, 0);
-        audio_dest.sin_family = AF_INET;
-        audio_dest.sin_port = htons(audio_port);
-        audio_dest.sin_addr.s_addr = inet_addr("127.0.0.1");
-        audio_thread = std::thread(recv_audio_worker, pNDI_recv, audio_port, &audio_packets);
+        if (audio_sock >= 0) {
+            audio_dest.sin_family = AF_INET;
+            audio_dest.sin_port = htons(audio_port);
+            audio_dest.sin_addr.s_addr = inet_addr("127.0.0.1");
+        }
     }
+
+
 
     std::cerr << "[NDI-Bridge] Streaming raw video to stdout...\n" << std::flush;
 
-    long long video_frames = 0;
-    long long audio_packets = 0;
+    int consecutive_none = 0;
 
     while (g_running.load()) {
         NDIlib_video_frame_v2_t v_frame;
         NDIlib_audio_frame_v2_t a_frame;
 
-        NDIlib_frame_type_e type = NDIlib_recv_capture_v2(pNDI_recv, &v_frame, &a_frame, nullptr, 500);
-        NDIlib_frame_type_e type = NDIlib_recv_capture_v2(pNDI_recv, &v_frame, nullptr, nullptr, 100);
+        NDIlib_frame_type_e type = NDIlib_recv_capture_v2(pNDI_recv, &v_frame, &a_frame, nullptr, 200);
+        if (type == NDIlib_frame_type_error) {
+            std::cerr << "[NDI-Bridge] Connection lost to NDI source.\n" << std::flush;
+            break;
+        } else if (type == NDIlib_frame_type_none) {
+            consecutive_none++;
+            // If stream had started and 4 seconds elapse without any frame, stop cleanly
+            if (video_frames > 0 && consecutive_none >= 20) {
+                std::cerr << "[NDI-Bridge] Broadcaster stream ended (idle timeout).\n" << std::flush;
+                break;
+            }
+            continue;
+        }
+
+        consecutive_none = 0;
+
         if (type == NDIlib_frame_type_video) {
             if (v_frame.p_data) {
-                size_t bytes = static_cast<size_t>(v_frame.yres) * v_frame.line_stride_in_bytes;
-                size_t written = 0;
-                while (written < bytes && g_running.load()) {
-                    ssize_t n = write(STDOUT_FILENO, v_frame.p_data + written, bytes - written);
-                    if (n > 0) written += n;
-                    else if (n < 0 && errno != EINTR) { g_running.store(false); break; }
                 const size_t row_bytes = static_cast<size_t>(v_frame.xres) * 2;
                 if (static_cast<size_t>(v_frame.line_stride_in_bytes) == row_bytes) {
                     if (!write_all(STDOUT_FILENO, v_frame.p_data, row_bytes * v_frame.yres)) {
@@ -288,14 +272,19 @@ int run_receiver(const std::string& target_source, const std::string& extra_ips,
             }
             NDIlib_recv_free_video_v2(pNDI_recv, &v_frame);
         } else if (type == NDIlib_frame_type_audio) {
-            if (a_frame.p_data && audio_sock >= 0) {
+            if (a_frame.p_data) {
                 NDIlib_audio_frame_interleaved_16s_t interleaved;
                 interleaved.reference_level = 0;
                 std::vector<int16_t> pcm_buf(a_frame.no_samples * 2);
                 interleaved.p_data = pcm_buf.data();
                 NDIlib_util_audio_to_interleaved_16s_v2(&a_frame, &interleaved);
-                sendto(audio_sock, pcm_buf.data(), pcm_buf.size() * sizeof(int16_t), 0,
-                       (struct sockaddr*)&audio_dest, sizeof(audio_dest));
+                if (audio_sock >= 0) {
+                    sendto(audio_sock, pcm_buf.data(), pcm_buf.size() * sizeof(int16_t), 0,
+                           (struct sockaddr*)&audio_dest, sizeof(audio_dest));
+                }
+                if (audio_fifo_fd >= 0) {
+                    write_all(audio_fifo_fd, (const uint8_t*)pcm_buf.data(), pcm_buf.size() * sizeof(int16_t));
+                }
                 audio_packets++;
             }
             NDIlib_recv_free_audio_v2(pNDI_recv, &a_frame);
@@ -303,18 +292,13 @@ int run_receiver(const std::string& target_source, const std::string& extra_ips,
     }
 
     if (audio_sock >= 0) close(audio_sock);
-    g_running.store(false);
-    if (audio_thread.joinable()) {
-        audio_thread.join();
-    }
+    if (audio_fifo_fd >= 0) close(audio_fifo_fd);
 
     NDIlib_recv_destroy(pNDI_recv);
     NDIlib_find_destroy(pFind);
     NDIlib_destroy();
 
     std::cerr << "[NDI-Bridge] Receiver stopped. Received " << video_frames << " frames, " << audio_packets << " audio packets.\n" << std::flush;
-    std::cerr << "[NDI-Bridge] Receiver stopped. Received " << video_frames.load()
-              << " frames, " << audio_packets.load() << " audio packets.\n" << std::flush;
     return 0;
 }
 
@@ -328,6 +312,7 @@ int main(int argc, char* argv[]) {
     int fps = 30;
     std::string pixfmt = "uyvy422";
     int audio_port = 18890;
+    std::string audio_fifo = "";
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -352,6 +337,8 @@ int main(int argc, char* argv[]) {
             pixfmt = argv[++i];
         } else if (arg == "--audio-port" && i + 1 < argc) {
             audio_port = std::stoi(argv[++i]);
+        } else if (arg == "--audio-fifo" && i + 1 < argc) {
+            audio_fifo = argv[++i];
         } else if (arg == "--help" || arg == "-h") {
             std::cout << "Usage: ndi-bridge [options]\n\n"
                       << "General Options:\n"
@@ -369,7 +356,8 @@ int main(int argc, char* argv[]) {
                       << "  --recv, -r           Enable receiver mode\n"
                       << "  --source <str>       NDI stream to receive (substring match, default: IntelliSTAR)\n"
                       << "  --ip <ip>            Direct IP address of broadcaster (e.g. 10.0.0.205)\n"
-                      << "  --audio-port <int>   UDP port to forward PCM audio to FFmpeg (default: 18890)\n";
+                      << "  --audio-port <int>   UDP port to forward PCM audio to FFmpeg (default: 18890)\n"
+                      << "  --audio-fifo <path>  UNIX FIFO path to stream PCM audio directly to FFmpeg\n";
             return 0;
         } else if (!arg.empty() && arg[0] != '-') {
             stream_name = arg;
@@ -385,7 +373,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (is_recv) {
-        return run_receiver(stream_name, extra_ips, audio_port);
+        return run_receiver(stream_name, extra_ips, audio_port, audio_fifo);
     }
 
     // Sender mode

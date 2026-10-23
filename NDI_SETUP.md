@@ -89,9 +89,41 @@ STREAM_MODE=ndi STREAM_NDI_NAME="WeatherStation" STREAM_FFMPEG_PATH="/usr/local/
 
 ---
 
-## 3. Raspberry Pi Receiver & HLS Transcoder
+## 3. Dedicated Server Receiver: NVIDIA NVENC HLS Transcoder (`tunarr.local`)
 
-We provide a turnkey script on the Raspberry Pi: [`scripts/raspberry-pi-ndi-to-hls.sh`](file:///home/deck/app/scripts/raspberry-pi-ndi-to-hls.sh).
+On your main server (`tunarr@tunarr.local`), the NDI receiver is installed as an automated systemd user service (`ndi-to-hls.service`).
+It receives the NDI stream over LAN, re-encodes it into H.264 using **NVIDIA NVENC hardware acceleration** (`h264_nvenc`), generates ultra-low latency HLS in RAM (`/dev/shm/hls-live`), and serves it over HTTP.
+
+### Stream URL
+```
+http://tunarr.local:8088/index.m3u8
+http://10.0.0.60:8088/index.m3u8
+```
+
+### Server Management Commands (on `tunarr.local`)
+```bash
+# Check service status and real-time transcode logs
+systemctl --user status ndi-to-hls.service
+
+# Follow live transcode logs
+journalctl --user-unit=ndi-to-hls.service -f
+
+# Restart or stop the transcoder service
+systemctl --user restart ndi-to-hls.service
+systemctl --user stop ndi-to-hls.service
+```
+
+### Manual Command-line Transcoding
+```bash
+# Run foreground transcoding with custom bitrate / parameters
+/home/tunarr/bin/ndi-to-hls.sh --source "IntelliSTAR" --bitrate 4500k --port 8088
+```
+
+---
+
+## 4. Raspberry Pi Receiver & HLS Transcoder
+
+We provide a turnkey script on the Raspberry Pi: [`scripts/raspberry-pi-ndi-to-hls.sh`](scripts/raspberry-pi-ndi-to-hls.sh).
 
 ### Quick Start on Raspberry Pi
 Copy the script to your Raspberry Pi and run:
@@ -109,31 +141,17 @@ The stream will immediately be playable on your network:
 http://<raspberry-pi-ip>:8080/index.m3u8
 ```
 
-### Command-line Options for `raspberry-pi-ndi-to-hls.sh`
-- `--source <name>`: NDI source name (default: `IntelliSTAR`).
-- `--dir <path>`: Directory where HLS `.m3u8` and `.ts` files are saved (default: `./hls-live`).
-- `--segment-time <sec>`: HLS segment duration in seconds (default: `4`).
-- `--list-size <num>`: Playlist window size (default: `8` segments, approx. 32s buffer).
-- `--bitrate <rate>`: Target video bitrate for HLS (default: `4000k`).
-- `--serve [port]`: Starts a lightweight Python HTTP server on the specified port (default: `8080`).
-
-### Hardware Acceleration Notes for Raspberry Pi:
-- **Raspberry Pi 5**: Uses `libx264` (`-preset veryfast`). The Cortex-A76 CPU effortlessly encodes 1080p30 / 720p60 in real-time with under 25% CPU utilization.
-- **Raspberry Pi 4 / 3**: Automatically uses the hardware encoder (`h264_v4l2m2m`) if available, falling back to `libx264`.
-
 ---
 
-## 4. Troubleshooting & Verification
+## 5. Troubleshooting & Verification
 
 1. **Firewall & Network Discovery**:
    - NDI relies on mDNS for discovery (UDP port `5353`) and dynamic TCP/UDP ports in range `5960-5970`.
-   - Ensure broadcaster and Raspberry Pi are on the same local subnet / VLAN.
+   - The transcoder on `tunarr.local` is pre-configured to peer directly with the Steam Deck (`10.0.0.205`), eliminating any router multicast/mDNS blocking.
 2. **Checking NDI Stream with VLC / NDI Tools**:
    - You can test playback on any PC or Mac on the network using the official NewTek **NDI Studio Monitor** / **NDI Video Monitor**.
-3. **Logs & Diagnostics**:
-   - When IntelliSTAR starts in NDI mode, the startup card will show:
-     ```
-     Target Output : NDI: "IntelliSTAR"
-     Encoder       : rawvideo (NDI)
-     ```
+3. **Playing the HLS Output**:
+   - In VLC: Open Network Stream -> `http://tunarr.local:8088/index.m3u8`
+   - In Tunarr / Plex / Jellyfin: Add Custom Channel with URL `http://127.0.0.1:8088/index.m3u8` or `http://tunarr.local:8088/index.m3u8`.
+
 

@@ -5,14 +5,21 @@ const fs = require('fs');
 const streamConfig = require('./stream-config');
 const { resolveHlsDirectory } = require('./stream-hls');
 const logger = require('./console-view');
+const { installSecurityHardening, isNodeRuntimePatched } = require('./security-guard');
 const app = express();
 const port = process.env.PORT || 7070;
 
+installSecurityHardening(app);
 app.use(compression());
 
 app.get('/api/health', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ service: 'intellistar', version: 1 });
+    res.json({
+        service: 'intellistar',
+        version: 1,
+        nodeVersion: process.versions.node,
+        securityPatched: isNodeRuntimePatched(),
+    });
 });
 
 app.all(['/api/app/stop', '/api/app/shutdown'], (req, res) => {
@@ -160,8 +167,8 @@ let currentAlertCommand = {
     timestamp: Date.now()
 };
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 app.get('/api/alert', (req, res) => {
     res.json(currentAlertCommand);

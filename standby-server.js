@@ -5,6 +5,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { resolveHlsDirectory } = require('./stream-hls');
 const streamConfig = require('./stream-config');
+const {
+  inspectIncomingRequest,
+  applySecurityHeaders,
+  resolveSafeChildPath,
+} = require('./security-guard');
 
 const DEFAULT_STANDBY_HTML = `<!DOCTYPE html>
 <html lang="fr">
@@ -122,6 +127,16 @@ function createStandbyServer(options = {}, dependencies = {}) {
     if (isListening || server) return Promise.resolve();
     return new Promise((resolve, reject) => {
       server = http.createServer((req, res) => {
+        applySecurityHeaders(res);
+        const violation = inspectIncomingRequest(req);
+        if (violation) {
+          res.writeHead(violation.status, {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+          });
+          return res.end(JSON.stringify({ error: violation.error, code: violation.code }));
+        }
+
         let pathname = '/';
         try {
           const url = new URL(req.url, `http://127.0.0.1:${port}`);
@@ -153,9 +168,12 @@ function createStandbyServer(options = {}, dependencies = {}) {
         // Serve HLS files directly from hlsDirectory (keeps IPTV playback alive without interruption)
         if (pathname.startsWith('/stream/')) {
           const relative = pathname.slice('/stream/'.length);
-          const safePath = path.normalize(relative).replace(/^(\.\.[\/\\])+/, '');
-          const filePath = path.join(hlsDir, safePath);
-          if (fs.existsSync(filePath)) {
+          const filePath = resolveSafeChildPath(hlsDir, relative);
+          if (!filePath) {
+            res.writeHead(403, { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' });
+            return res.end('Forbidden');
+          }
+          if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             const ext = path.extname(filePath).toLowerCase();
             const mime = ext === '.m3u8' ? 'application/vnd.apple.mpegurl' : (ext === '.ts' ? 'video/mp2t' : 'application/octet-stream');
             res.writeHead(200, {
