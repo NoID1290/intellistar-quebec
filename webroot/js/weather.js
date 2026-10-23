@@ -1198,40 +1198,526 @@ async function grabData() {
         isDataGrabInProgress = false;
     }
 }
-async function grabCC() {
-    return $.getJSON("https://api.weather.com/v3/wx/observations/current?geocode=" + locationConfig.mainCity.lat + "," + locationConfig.mainCity.lon + "&units=" + getUnits() + "&language=en-US&format=json&apiKey=" + api_key, function (data) {
-        var rawCond = (data.wxPhraseLong || "").replace("Showers in the Vicinity", "Showers Nearby").replace("/Wind", ", Windy").replace("Thunder in the Vicinity", "Thunder");
-        weatherInfo.currentConditions.cond = translateWeatherNarrative(rawCond);
-        weatherInfo.currentConditions.gusts = ((data.windGust != null || data.windGust != undefined) ? data.windGust : "Aucune");
-        weatherInfo.currentConditions.humidity = data.relativeHumidity + "%";
-        weatherInfo.currentConditions.icon = data.iconCodeExtend;
-        weatherInfo.currentConditions.pressure.trend = data.pressureTendencyTrend;
-        weatherInfo.currentConditions.pressure.val = data.pressureAltimeter ? (isMetric() ? (data.pressureAltimeter > 500 ? (data.pressureAltimeter / 10).toFixed(1) : data.pressureAltimeter.toFixed(1)) : data.pressureAltimeter.toFixed(2)) : "";
-        weatherInfo.currentConditions.temp = data.temperature;
-        var ccWindDir = ((data.windDirectionCardinal == "CALM" || data.windSpeed == 0 || data.windDirectionCardinal == undefined) ? "Calme" : translateWindCardinal(data.windDirectionCardinal));
-        weatherInfo.currentConditions.wind = (ccWindDir === "Calme" ? "Calme" : ccWindDir + " " + data.windSpeed);
-        weatherInfo.currentConditions.windRaw = {
-            direction: ccWindDir,
-            cardinal: data.windDirectionCardinal,
-            deg: data.windDirection != null ? Number(data.windDirection) : null,
-            speed: data.windSpeed != null ? Number(data.windSpeed) : 0
-        };
-        weatherInfo.currentConditions.visibility = data.visibility;
-        weatherInfo.currentConditions.noReport = false;
+// ============================================================================
+// Environment and Climate Change Canada (ECCC - MSC GeoMet) Default Provider
+// ============================================================================
+var ECCC_STATION_INDEX = [
+    ["on-155",45.09,-75.35,"Winchester",1], ["ab-50",53.54,-113.49,"Edmonton",1], ["qc-b6",46.13,-70.36,"Saint-Georges",1], ["qc-48",46.21,-70.78,"Beauceville",1], ["bc-27",50.26,-119.27,"Vernon",1], ["qc-138",48.45,-68.53,"Rimouski",1], ["ab-65",58.7,-113.89,"Garden Creek",1], ["qc-85",45.75,-73.6,"Mascouche",1], ["qc-137",46.02,-73.44,"Joliette",1], ["pe-1",46.87,-64.07,"North Cape",1], ["qc-78",46.76,-71.24,"Lévis",1], ["qc-a0",45.74,-73.45,"Repentigny",1], ["ns-12",45.66,-60.88,"St. Peter's",1], ["ab-37",53.74,-118.23,"Hendrickson Creek",1], ["qc-25",46.08,-73.18,"Berthierville",1], ["qc-156",45.81,-73.43,"L'Assomption",1],
+    ["qc-d3",45.7,-73.58,"Le Gardeur",1], ["qc-46",45.86,-73.24,"Contrecoeur",1], ["ab-39",52.46,-113.73,"Lacombe",1], ["qc-c2",45.25,-73.8,"Saint-Rémi",1], ["qc-142",49.82,-64.35,"Port-Menier",1], ["qc-c1",45.92,-72.74,"Saint-Nicéphore",1], ["qc-2",45.88,-72.48,"Drummondville",1], ["ab-33",57.19,-111.64,"Mildred Lake",1], ["ns-11",43.76,-65.32,"Shelburne",1], ["on-74",45.02,-75.64,"Kemptville",1], ["on-106",44.9,-76.02,"Smiths Falls",1], ["ab-42",51.08,-115.07,"Bow Valley (Parc provincial)",1], ["on-92",44.9,-75.18,"Morrisburg",1], ["on-61",44.78,-76.69,"Sharbot Lake",1], ["sk-23",51.56,-107.98,"Rosetown",1], ["nu-26",62.85,-69.87,"Kimmirut",1],
+    ["bc-97",48.78,-123.7,"Duncan",1], ["ab-45",53.89,-119.12,"Grande Cache",1], ["qc-28",45.31,-73.25,"Saint-Jean-sur-Richelieu",1], ["qc-84",45.43,-73.16,"Marieville",1], ["nb-4",46.55,-66.13,"Doaktown",1], ["ns-43",46.83,-60.8,"North Mountain (Cap-Breton)",1], ["ns-36",44.82,-62.56,"Beaver Island",1], ["ns-23",45.34,-61,"Hart Island",1], ["ns-34",45.73,-62.7,"Caribou",1], ["ns-44",45.94,-60.63,"Eskasoni",1], ["qc-56",45.36,-73.48,"Carignan",1], ["qc-c7",45.7,-73.63,"Terrebonne",1], ["nl-9",49.25,-55.07,"Lewisporte",1], ["ns-30",44.16,-64.66,"Western Head",1], ["qc-33",45.88,-74.57,"Sainte-Agathe",1], ["nl-16",48.96,-54.61,"Gander",1],
+    ["qc-c8",46.09,-71.3,"Thetford Mines",1], ["ns-4",46.1,-60.75,"Baddeck",1], ["sk-17",52.86,-102.39,"Hudson Bay",1], ["ns-1",45.59,-62.64,"New Glasgow",1], ["sk-35",51.51,-105.01,"Last Mountain Lake (Sanctuaire)",1], ["nl-22",49.96,-55.59,"La Scie",1], ["nl-2",49.29,-54.94,"Campbellton",1], ["on-109",43.15,-79.39,"Vineland",1], ["on-47",43.17,-79.48,"Lincoln",1], ["ns-39",44.04,-64.72,"Liverpool",1], ["on-79",43.46,-79.69,"Oakville",1], ["qc-167",46.12,-74.6,"Mont-Tremblant",1], ["qc-96",45.42,-74.04,"Pincourt",1], ["qc-63",45.54,-73.9,"Deux-Montagnes",1], ["pe-6",46.46,-62.07,"East Point",1], ["nt-6",62.83,-116.05,"Whati",1],
+    ["bc-55",50.81,-121.32,"Cache Creek",1], ["qc-51",46.69,-71.36,"Bernières",1], ["qc-89",47.08,-72.91,"Mauricie",1], ["qc-154",47.44,-72.78,"La Tuque",1], ["bc-32",48.41,-123.29,"Gonzales Point",1], ["qc-b8",46,-73.73,"Saint-Lin-Laurentides",1], ["qc-b7",45.4,-74.14,"Saint-Lazare",1], ["ab-22",53.53,-114.01,"Stony Plain",1], ["on-149",44.1,-78.95,"Port Perry",1], ["on-140",43.92,-80.11,"Orangeville",1], ["qc-45",48.81,-79.2,"La Sarre",1], ["qc-83",45.26,-72.15,"Magog",1], ["sk-28",49.25,-107.73,"Val Marie",1], ["qc-111",48.01,-65.33,"New Carlisle",1], ["bc-46",49.24,-124.8,"Port Alberni",1], ["ab-27",50.07,-112.11,"Vauxhall",1],
+    ["ns-42",44.39,-65.29,"Kejimkujik (Parc national)",1], ["bc-42",52.71,-124.98,"Puntzi Mountain",1], ["nt-23",63.23,-123.46,"Wrigley",1], ["qc-132",46.54,-72.75,"Shawinigan",1], ["qc-a8",49.13,-66.49,"Sainte-Anne-Des-Monts",1], ["sk-48",50.38,-102.58,"Broadview",1], ["qc-140",45.28,-72.98,"Farnham",1], ["bc-81",49.06,-122.32,"Abbotsford",1], ["sk-18",51.12,-106.6,"Elbow",1], ["nb-18",45.08,-67.05,"Saint Andrews",1], ["on-95",43.37,-79.81,"Burlington",1], ["bc-30",54.05,-128.65,"Kitimat",1], ["sk-32",50.45,-104.62,"Regina",1], ["bc-49",50.11,-120.79,"Merritt",1], ["nt-31",62.41,-110.73,"Lutselke",1], ["qc-54",48.05,-65.49,"Bonaventure",1],
+    ["qc-65",46.67,-71.74,"Donnacona",1], ["sk-37",51.49,-107.06,"Outlook",1], ["bc-62",49.03,-122.8,"White Rock",1], ["ns-14",45.71,-63.29,"Tatamagouche",1], ["qc-120",49.16,-66.38,"Cap Chat",1], ["ab-62",51.46,-112.72,"Drumheller",1], ["qc-94",48.93,-66.28,"Gaspésie (Parc national)",1], ["bc-100",49.1,-122.66,"Langley",1], ["sk-54",49.18,-105.95,"Rockglen",1], ["qc-b9",45.34,-73.51,"Saint-Luc",1], ["pe-4",46.41,-62.58,"St. Peters Bay",1], ["qc-c6",46.04,-73.11,"Sorel-Tracy",1], ["sk-42",49.11,-105.52,"Coronach",1], ["ns-25",45.36,-63.28,"Truro",1], ["on-172",42.57,-81.68,"Rodney",1], ["qc-c9",46.03,-73.14,"Tracy",1],
+    ["qc-66",45.4,-74.04,"Vaudreuil-Dorion",1], ["qc-a2",45.48,-74.3,"Rigaud",1], ["sk-51",49.63,-105.99,"Assiniboia",1], ["on-150",44.5,-80.22,"Collingwood",1], ["sk-16",49.9,-109.49,"Maple Creek",1], ["nb-24",47.16,-67.92,"St. Leonard",1], ["bc-50",49.7,-123.15,"Squamish",1], ["bc-44",54.02,-124,"Vanderhoof",1], ["ab-41",50.02,-113.58,"Willow Creek (Parc provincial)",1], ["on-114",44.15,-79.86,"Alliston",1], ["bc-67",59.57,-133.7,"Atlin",1], ["on-49",44.08,-79.77,"New Tecumseth",1], ["bc-5",48.94,-125.54,"Ucluelet",1], ["bc-23",55.69,-121.62,"Chetwynd",1], ["bc-83",58.81,-122.7,"Fort Nelson",1], ["qc-133",46.81,-71.21,"Québec",1],
+    ["ab-52",51.05,-114.06,"Calgary",1], ["qc-41",46.82,-71.27,"Vanier",1], ["ab-60",50.02,-113.58,"Claresholm",1], ["nu-12",76.42,-82.89,"Grise Fiord",1], ["qc-90",50.29,-64.04,"Mingan",1], ["nb-33",45.1,-66.47,"Point Lepreau",1], ["on-107",43.16,-79.25,"St. Catharines",1], ["on-125",43.11,-79.07,"Niagara Falls",1], ["nl-35",49.64,-54.76,"Twillingate",1], ["nu-13",68.53,-89.82,"Kugaaruk",1], ["qc-5",45.4,-72.72,"Granby",1], ["bc-16",50.32,-122.8,"Pemberton",1], ["nl-34",48.98,-56.04,"Badger",1], ["bc-39",49.04,-118.44,"Grand Forks",1], ["bc-71",49.1,-117.7,"Trail",1], ["ab-3",51.09,-115.36,"Canmore",1],
+    ["nl-6",48.94,-55.65,"Grand Falls-Windsor",1], ["nb-6",47.04,-67.75,"Grand-Sault",1], ["nb-32",47.36,-68.34,"Edmundston",1], ["sk-9",50.14,-101.67,"Moosomin",1], ["nb-16",47.51,-67.39,"Saint-Quentin",1], ["ab-49",51.18,-115.57,"Banff",1], ["sk-22",54.13,-108.43,"Meadow Lake",1], ["nl-27",48.55,-58.58,"Stephenville",1], ["nl-17",47.6,-58.88,"Channel-Port aux Basques",1], ["ab-12",51.28,-114,"Airdrie",1], ["ab-40",56.54,-115.3,"Red Earth Creek",1], ["on-84",44.16,-80.21,"Shelburne",1], ["bc-86",50.12,-122.96,"Whistler",1], ["ab-64",49.2,-113.31,"Cardston",1], ["nu-14",64.32,-96.02,"Baker Lake",1], ["nb-29",45.96,-66.65,"Fredericton",1],
+    ["qc-97",50.02,-66.88,"Port-Cartier",1], ["sk-36",59.26,-105.84,"Stony Rapids",1], ["bc-70",49.23,-121.77,"Agassiz",1], ["nt-13",68.22,-135.01,"Aklavik",1], ["qc-158",53.8,-77.61,"La Grande Rivière",1], ["qc-69",53.8,-77.61,"Baie-James",1], ["nt-24",62.45,-114.37,"Yellowknife",1], ["nt-1",62.41,-114.31,"Detah",1], ["qc-105",55.3,-77.74,"Kuujjuarapik",1], ["bc-18",52.37,-126.76,"Bella Coola",1], ["ns-18",46.33,-61,"North East Margaree",1], ["qc-141",50.21,-66.39,"Sept-Îles",1], ["on-36",44.17,-80.39,"Dundalk",1], ["on-51",43.73,-80.95,"North Perth",1], ["qc-107",48.15,-69.72,"Tadoussac",1], ["bc-24",49.17,-121.94,"Chilliwack",1],
+    ["on-89",43.98,-80.74,"Mount Forest",1], ["on-16",44.13,-81.15,"Walkerton",1], ["on-110",43.89,-81.31,"Wingham",1], ["ns-22",44.99,-62.48,"Malay Falls",1], ["sk-19",51.77,-104.18,"Wynyard",1], ["on-164",52.92,-82.43,"Attawapiskat",1], ["bc-3",49.47,-123.76,"Sechelt",1], ["bc-1",49.4,-123.51,"Gibsons",1], ["ns-10",44.92,-62.53,"Sheet Harbour",1], ["ab-18",53.02,-112.84,"Camrose",1], ["bc-79",53.91,-122.78,"Prince George",1], ["ab-9",52.97,-113.38,"Wetaskiwin",1], ["yt-14",60.17,-132.72,"Teslin",1], ["bc-20",49.17,-123.94,"Nanaimo",1], ["bc-78",56.25,-120.84,"Fort St. John",1], ["ab-67",51.68,-110.26,"Esther",1],
+    ["bc-14",58.44,-130,"Dease Lake",1], ["bc-6",59.19,-129.23,"Cassiar",1], ["qc-103",47.62,-61.52,"Îles-de-la-Madeleine",1], ["qc-71",45.41,-73.57,"La Prairie",1], ["qc-b0",45.41,-73.57,"Sainte-Catherine",1], ["yt-11",67.57,-139.83,"Old Crow",1], ["qc-109",45.51,-73.43,"Longueuil",1], ["qc-21",45.44,-73.25,"Richelieu",1], ["qc-a7",45.37,-73.57,"Saint-Constant",1], ["ns-17",45.08,-64.5,"Kentville",1], ["qc-22",45.63,-72.95,"Saint-Hyacinthe",1], ["ns-15",44.99,-64.14,"Windsor",1], ["qc-b1",45.59,-73.33,"Sainte-Julie",1], ["nb-8",45.77,-64.68,"Hopewell",1], ["nb-5",45.62,-65.03,"Fundy (Parc national)",1], ["ns-32",46.53,-61.06,"Grand Étang",1],
+    ["ns-6",44.38,-64.52,"Bridgewater",1], ["qc-146",48.46,-67.43,"Amqui",1], ["ab-19",49.16,-112.08,"Milk River",1], ["qc-151",47.98,-66.96,"Matapédia",1], ["qc-135",45.11,-72.62,"Sutton",1], ["qc-d0",47.98,-66.96,"Vallée de la Matapédia",1], ["qc-64",48.88,-72.23,"Dolbeau-Mistassini",1], ["qc-102",46.37,-75.98,"Maniwaki",1], ["qc-47",46.55,-75.5,"Mont-Laurier",1], ["nu-27",74.7,-94.83,"Resolute",1], ["qc-165",47.44,-70.51,"Baie-Saint-Paul",1], ["nt-4",61.86,-121.35,"Fort Simpson",1], ["qc-128",62.21,-75.65,"Salluit",1], ["nb-30",47.99,-66.31,"Charlo",1], ["sk-47",53.36,-104.01,"Nipawin",1], ["bc-57",54.32,-130.32,"Prince Rupert",1],
+    ["bc-84",49.48,-119.58,"Penticton",1], ["nl-26",48.93,-57.89,"Marble Mountain",1], ["bc-76",52.14,-122.14,"Williams Lake",1], ["qc-157",46.06,-71.96,"Victoriaville",1], ["bc-54",49.61,-119.67,"Summerland",1], ["nb-14",46.91,-65.2,"Rogersville",1], ["nb-13",46.68,-64.87,"Richibucto",1], ["nb-9",46.86,-64.97,"Kouchibouguac",1], ["bc-52",49.73,-114.89,"Sparwood",1], ["bc-56",54.02,-132.15,"Masset",1], ["qc-162",45.68,-73.43,"Varennes",1], ["bc-26",49.1,-116.51,"Creston",1], ["nu-9",64.14,-83.17,"Coral Harbour",1], ["qc-67",48.83,-64.57,"Forillon",1], ["nb-23",45.28,-66.08,"Saint John",1], ["on-7",44.57,-80.93,"Owen Sound",1],
+    ["nb-12",45.45,-65.94,"Quispamsis",1], ["nt-22",65.19,-123.42,"Deline",1], ["on-173",52.21,-81.68,"Fort Albany",1], ["on-113",51.28,-80.65,"Moosonee",1], ["on-137",42.98,-81.25,"London",1], ["on-18",42.96,-81.62,"Strathroy",1], ["bc-40",48.43,-123.41,"Esquimalt",1], ["qc-93",45.54,-73.22,"Otterburn Park",1], ["nl-10",49.45,-53.95,"Musgrave Harbour",1], ["nb-1",46.47,-64.74,"Grand-Bouctouche",1], ["nl-4",48.82,-56.86,"Buchans",1], ["qc-a5",45.65,-73.3,"Saint-Amable",1], ["qc-a6",45.55,-73.32,"Saint-Basile Le Grand",1], ["nl-42",49.15,-53.63,"New-Wes-Valley",1], ["nb-36",46.09,-64.79,"Moncton",1], ["nt-17",60.01,-111.88,"Fort Smith",1],
+    ["bc-41",49.45,-120.51,"Princeton",1], ["nl-23",53.3,-60.32,"Happy Valley-Goose Bay",1], ["qc-61",45.2,-72.74,"Cowansville",1], ["nb-26",48.06,-66.37,"Dalhousie",1], ["ns-21",44.38,-64.32,"Lunenburg",1], ["on-143",43.65,-79.38,"Toronto",1], ["nl-3",47.17,-55.16,"Marystown",1], ["nl-5",47.1,-55.76,"Grand Bank",1], ["on-116",43.37,-80.98,"Stratford",1], ["nb-10",47.38,-66.83,"Mont Carleton (Parc provincial)",1], ["bc-89",50.72,-127.51,"Port Hardy",1], ["qc-20",48.1,-66.12,"Pointe-à-la-Croix",1], ["ab-1",51.19,-114.48,"Cochrane",1], ["on-15",43.13,-80.75,"Woodstock",1], ["ab-72",53.59,-116.44,"Edson",1], ["on-98",42.78,-81.19,"St. Thomas",1],
+    ["qc-101",48.83,-64.57,"Gaspé",1], ["qc-95",48.9,-64.35,"Forillon ( Parc national)",1], ["qc-62",45.38,-73.54,"Delson",1], ["on-68",43.63,-79.95,"Halton Hills",1], ["on-147",42.99,-82.38,"Sarnia",1], ["on-46",43.18,-81.9,"Lambton Shores",1], ["nl-48",52.97,-61.45,"Gull Island Rapids (Rte Trans-Labrador)",1], ["qc-104",50.25,-63.6,"Havre St-Pierre",1], ["on-141",42.3,-81.89,"Rondeau (Parc provincial)",1], ["ns-3",45.62,-61.99,"Antigonish",1], ["ns-41",45.86,-61.92,"Cape George",1], ["nt-5",66.26,-128.64,"Fort Good Hope",1], ["qc-152",50.47,-59.61,"Chevery",1], ["nb-17",46.22,-64.54,"Shédiac",1], ["on-55",51.81,-93.99,"Pikangikum",1], ["sk-21",51.47,-109.16,"Kindersley",1],
+    ["on-62",44.73,-81.27,"South Bruce Peninsula",1], ["on-60",44.41,-81.47,"Saugeen Shores",1], ["ns-28",45.62,-61.67,"Tracadie",1], ["nb-2",48,-66.67,"Campbellton",1], ["qc-92",45.55,-73.32,"Mont-Saint-Hilaire",1], ["nl-41",48.95,-57.95,"Corner Brook",1], ["on-19",44.44,-81.39,"Port Elgin",1], ["on-130",44.74,-81.14,"Wiarton",1], ["bc-17",49.15,-125.91,"Tofino",1], ["bc-58",49.87,-124.55,"Powell River",1], ["nu-15",69.12,-105.05,"Cambridge Bay",1], ["qc-58",45.45,-73.29,"Chambly",1], ["ab-46",49.49,-113.95,"Pincher Creek",1], ["on-69",44.24,-76.5,"Kingston",1], ["on-63",44.48,-76.7,"Sydenham",1], ["nl-15",48.53,-53.93,"Terra Nova (Parc national)",1],
+    ["ab-59",52.09,-111.45,"Coronation",1], ["on-39",44.25,-76.95,"Greater Napanee",1], ["yt-8",61.98,-132.45,"Ross River",1], ["on-23",42.05,-82.6,"Leamington",1], ["yt-12",62.23,-133.35,"Faro",1], ["nt-29",60.23,-123.47,"Fort Liard",1], ["bc-65",51,-118.2,"Revelstoke",1], ["sk-13",56.49,-109.43,"La Loche",1], ["qc-150",58.11,-68.4,"Kuujjuaq",1], ["on-128",43.63,-79.39,"Toronto Island",1], ["ab-28",58.71,-111.16,"Fort Chipewyan",1], ["sk-34",52.78,-108.29,"North Battleford",1], ["on-122",45.31,-74.63,"Alexandria",1], ["nl-40",56.54,-61.7,"Nain",1], ["on-4",43.69,-79.76,"Brampton",1], ["ab-29",52.27,-113.81,"Red Deer",1],
+    ["on-11",42.43,-82.13,"Chatham-Kent",1], ["on-24",43.59,-79.66,"Mississauga",1], ["bc-48",49.88,-119.48,"Kelowna",1], ["qc-57",48.1,-66.12,"Carleton-sur-Mer",1], ["nu-29",56.54,-79.22,"Sanikiluaq",1], ["on-9",45.05,-79.31,"Bracebridge",1], ["yt-6",64.06,-139.43,"Dawson",1], ["qc-145",58.69,-69.94,"Tasiujaq",1], ["nl-1",48.16,-53.97,"Clarenville",1], ["on-85",43.88,-79.26,"Markham",1], ["nb-20",47.74,-64.64,"Tracadie-Sheila",1], ["on-31",45.62,-79.4,"Burk's Falls",1], ["on-54",43.83,-79.11,"Pickering",1], ["nb-22",47.8,-64.83,"Bas-Caraquet",1], ["on-38",44.92,-79.37,"Gravenhurst",1], ["on-88",45.33,-79.22,"Huntsville",1],
+    ["on-94",42.29,-83.05,"Windsor",1], ["on-56",45.11,-79.58,"Port Carling",1], ["sk-41",50.28,-107.79,"Swift Current",1], ["on-119",43.9,-78.94,"Whitby",1], ["nl-19",47.16,-55.3,"Winterland",1], ["on-117",43.9,-78.86,"Oshawa",1], ["on-66",44.68,-76.4,"Westport",1], ["qc-125",50.19,-61.82,"Natashquan",1], ["ab-30",49.69,-112.84,"Lethbridge",1], ["bc-25",55.76,-120.23,"Dawson Creek",1], ["ns-8",45.39,-61.5,"Guysborough",1], ["qc-c4",45.18,-74.24,"Saint-Timothée",1], ["qc-143",45.26,-74.13,"Salaberry-de-Valleyfield",1], ["qc-110",46.23,-72.62,"Nicolet",1], ["bc-37",49.5,-117.28,"Nelson",1], ["nu-17",63.35,-90.71,"Chesterfield",1],
+    ["sk-29",49.57,-109.88,"Cypress Hills (Parc provincial)",1], ["qc-148",48.24,-79.02,"Rouyn-Noranda",1], ["sk-45",49.52,-108.82,"Eastend",1], ["qc-122",56.55,-76.55,"Umiujaq",1], ["on-32",43.87,-79.86,"Caledon",1], ["nt-3",61.17,-113.67,"Fort Resolution",1], ["bc-88",53.25,-131.81,"Sandspit",1], ["qc-147",45.51,-73.55,"Montréal",1], ["on-93",44.91,-79.37,"Muskoka",1], ["qc-76",45.6,-73.67,"Laval",1], ["qc-55",45.39,-73.52,"Candiac",1], ["bc-45",50.68,-120.35,"Kamloops",1], ["bc-94",52.16,-128.14,"Bella Bella",1], ["qc-136",45.4,-71.89,"Sherbrooke",1], ["qc-49",45.31,-73.88,"Beauharnois",1], ["nt-9",64.19,-114.18,"Wekweeti",1],
+    ["nl-38",55.46,-60.21,"Hopedale",1], ["ns-27",44.36,-66.1,"Brier Island",1], ["nu-25",72.7,-77.96,"Pond Inlet",1], ["qc-129",49.76,-77.62,"Matagami",1], ["ab-55",52.84,-110.85,"Wainwright",1], ["ab-32",54.77,-111.98,"Lac La Biche",1], ["ns-38",46.64,-60.97,"Chéticamp",1], ["ns-35",44.97,-64.93,"Greenwood",1], ["nb-28",47.61,-65.65,"Bathurst",1], ["on-152",45.03,-74.73,"Cornwall",1], ["qc-155",61.6,-71.95,"Kangiqsujuaq",1], ["qc-38",45.6,-71.96,"Val-des-Sources",1], ["nt-7",70.73,-117.78,"Ulukhaktok",1], ["on-44",44.54,-78.74,"Kawartha Lakes (Fenelon Falls)",1], ["qc-74",46.44,-73.17,"Lanaudière",1], ["qc-d2",46.26,-72.94,"Louiseville",1],
+    ["qc-130",46.34,-72.54,"Trois-Rivières",1], ["on-14",42.99,-79.25,"Welland",1], ["yt-17",62.09,-136.28,"Carmacks",1], ["nt-30",68.36,-133.72,"Inuvik",1], ["sk-7",51.56,-101.9,"Kamsack",1], ["sk-8",50.93,-102.8,"Melville",1], ["bc-73",55.94,-129.98,"Stewart",1], ["bc-36",49.38,-121.43,"Hope",1], ["bc-33",50.23,-121.58,"Lytton",1], ["bc-19",50.02,-125.24,"Campbell River",1], ["on-99",54.99,-85.43,"Peawanuck",1], ["on-120",51.47,-90.19,"Pickle Lake",1], ["on-168",44.3,-78.56,"Kawartha Lakes (Lindsay)",1], ["qc-160",49.22,-68.15,"Baie-Comeau",1], ["qc-27",48.74,-69.08,"Forestville",1], ["bc-91",51.09,-121.59,"Clinton",1],
+    ["qc-50",46.35,-72.43,"Bécancour",1], ["on-35",45.65,-79.85,"Dunchurch",1], ["ns-16",46.69,-60.37,"Ingonish",1], ["on-103",45.35,-80.03,"Parry Sound",1], ["qc-18",48.5,-64.16,"Percé",1], ["nl-18",47.76,-59.27,"Wreckhouse",1], ["qc-68",45.09,-74.18,"Huntingdon",1], ["nl-37",51.37,-55.59,"St. Anthony",1], ["bc-22",52.11,-119.31,"Blue River",1], ["on-82",43.59,-80.48,"Kitchener-Waterloo",1], ["on-121",44.3,-78.33,"Peterborough",1], ["nu-23",69.38,-81.8,"Igloolik",1], ["bc-7",51.64,-121.29,"100 Mile House",1], ["sk-33",51.21,-102.45,"Yorkton",1], ["sk-3",51.63,-102.43,"Canora",1], ["bc-34",51.29,-116.96,"Golden",1],
+    ["nl-7",49.69,-57.74,"Gros Morne",1], ["nt-16",69.35,-124.07,"Paulatuk",1], ["qc-100",53.86,-73.49,"La Grande-Quatre",1], ["on-87",52.21,-87.89,"Lansdowne House",1], ["sk-2",52.06,-107.98,"Biggar",1], ["on-29",45.58,-78.48,"Parc Algonquin (Lake of Two Rivers)",1], ["on-129",53.06,-93.33,"Sandy Lake",1], ["bc-92",49.69,-125,"Courtenay",1], ["ns-40",44.67,-63.56,"Halifax (Shearwater)",1], ["bc-61",49.67,-124.93,"Comox",1], ["nu-2",64.23,-76.54,"Kinngait",1], ["bc-35",49.22,-122.69,"Pitt Meadows",1], ["ns-37",43.47,-65.57,"Cap Baccaro",1], ["nl-31",47.62,-57.62,"Burgeo",1], ["qc-60",45.13,-71.8,"Coaticook",1], ["on-75",43.96,-78.16,"Cobourg",1],
+    ["ab-58",50.57,-111.89,"Brooks",1], ["bc-69",49.03,-119.46,"Osoyoos",1], ["on-151",44.45,-79.73,"Barrie",1], ["bc-10",49.06,-119,"Rock Creek",1], ["nl-30",47.24,-53.96,"Placentia",1], ["on-43",44.65,-77.12,"Kaladar",1], ["on-165",45.07,-78.09,"Haliburton",1], ["on-30",44.76,-78.09,"Apsley",1], ["qc-112",62.42,-77.92,"Ivujivik",1], ["bc-59",48.57,-123.46,"Victoria (Hartland)",1], ["qc-15",48.84,-67.53,"Matane",1], ["bc-29",48.55,-123.57,"Malahat",1], ["nt-10",67.44,-134.86,"Fort McPherson",1], ["qc-d4",48.35,-64.68,"Chandler",1], ["ns-2",44.74,-65.51,"Annapolis Royal",1], ["on-52",45.24,-75.47,"Ottawa (Richmond - Metcalfe)",1],
+    ["pe-3",46.39,-63.79,"Summerside",1], ["on-118",45.4,-75.69,"Ottawa (Kanata - Orléans)",1], ["ns-5",44.84,-65.29,"Bridgetown",1], ["on-81",43.59,-80.48,"Cambridge",1], ["qc-35",47.67,-68.98,"Témiscouata",1], ["ns-19",44.65,-63.6,"Halifax",1], ["qc-108",47.84,-69.54,"Rivière-du-Loup",1], ["ns-20",44.62,-65.76,"Digby",1], ["nb-31",47.9,-64.58,"Miscou Island",1], ["bc-15",49.38,-126.53,"Estevan Point",1], ["qc-24",48.13,-69.18,"Trois-Pistoles",1], ["sk-11",49.65,-108.42,"Shaunavon",1], ["qc-121",49.91,-74.37,"Chibougamau",1], ["sk-25",53.37,-107.52,"Spiritwood",1], ["nb-15",45.9,-64.36,"Sackville",1], ["nl-29",52.3,-55.83,"Mary's Harbour",1],
+    ["qc-118",58.7,-65.96,"Kangiqsualujjuaq",1], ["on-53",45.38,-78.93,"Oxtongue Lake",1], ["qc-169",49.25,-65.57,"Grande-Vallée",1], ["nl-21",53.53,-64.01,"Churchill Falls",1], ["on-1",45.49,-78.07,"Parc Algonquin (Brent)",1], ["on-50",42.94,-80.44,"Norfolk",1], ["ab-14",53.4,-117.57,"Hinton",1], ["ns-7",45.38,-63.92,"Economy",1], ["on-5",43.54,-80.24,"Guelph",1], ["ab-70",52.87,-118.09,"Jasper",1], ["on-169",44.75,-79.88,"Midland",1], ["on-13",44.61,-79.42,"Orillia",1], ["on-101",51.63,-85.94,"Ogoki",1], ["ns-13",45.41,-64.33,"Parrsboro",1], ["sk-4",49.63,-102.27,"Carlyle",1], ["sk-52",50.89,-109.54,"Leader",1],
+    ["bc-77",49.52,-115.76,"Cranbrook",1], ["sk-20",57.36,-106.83,"Key Lake",1], ["sk-53",49.13,-102.98,"Estevan",1], ["sk-10",49.23,-102.17,"Oxbow",1], ["nb-19",45.72,-65.52,"Sussex",1], ["sk-49",51.68,-105.46,"Watrous",1], ["nl-13",49.59,-57.92,"Rocky Harbour",1], ["nl-32",53.7,-56.99,"Cartwright",1], ["ab-26",53.5,-112.05,"Vegreville",1], ["qc-115",54.8,-66.82,"Schefferville",1], ["qc-77",47.1,-70.35,"L'Islet",1], ["bc-95",52.1,-118.05,"Cummins Lakes Park",1], ["yt-5",60.75,-137.51,"Haines Junction",1], ["ns-33",45.83,-64.21,"Amherst",1], ["nt-26",67.03,-126.12,"Colville Lake",1], ["sk-26",52.37,-108.83,"Scott",1],
+    ["on-8",44.6,-75.69,"Brockville",1], ["ab-53",51.8,-114.64,"Sundre",1], ["ab-16",52.38,-114.92,"Rocky Mountain House",1], ["on-161",42.94,-80.44,"Simcoe",1], ["on-17",42.87,-80.73,"Tillsonburg",1], ["bc-12",51.65,-120.03,"Clearwater",1], ["on-102",45.06,-77.85,"Bancroft",1], ["on-133",45.49,-77.68,"Barry's Bay",1], ["on-132",52.97,-87.37,"Webequie",1], ["nl-47",53.07,-57.51,"Cartwright Junction (Rte Trans-Labrador)",1], ["qc-11",47.65,-70.15,"La Malbaie",1], ["qc-70",47.57,-69.87,"Kamouraska",1], ["qc-124",46.98,-70.56,"Montmagny",1], ["qc-127",48.59,-68.19,"Mont-Joli",1], ["bc-75",48.42,-123.39,"Victoria Harbour",1], ["qc-a1",48.46,-73.68,"Gouin (Réservoir)",1],
+    ["sk-46",52.86,-104.61,"Melfort",1], ["on-86",43.15,-80.26,"Brantford",1], ["nl-8",47.88,-55.84,"St. Alban's",1], ["bc-90",55.34,-123.1,"Mackenzie",1], ["qc-114",47.92,-74.62,"Parent",1], ["sk-12",52.85,-104.05,"Tisdale",1], ["on-115",44.3,-77.55,"Stirling",1], ["on-126",44.11,-77.58,"Trenton",1], ["sk-14",50.98,-107.13,"Lucky Lake",1], ["nb-27",44.7,-66.82,"Grand Manan",1], ["ab-43",49.87,-111.38,"Bow Island",1], ["bc-38",50.24,-117.8,"Nakusp",1], ["nl-36",46.93,-55.41,"St. Lawrence",1], ["nt-27",61.35,-117.65,"Fort Providence",1], ["ab-66",49.05,-113.91,"Parc Waterton",1], ["ab-57",55.21,-119.42,"Beaverlodge",1],
+    ["qc-b5",48.63,-72.32,"Saint-Félicien",1], ["qc-134",48.52,-72.22,"Roberval",1], ["sk-31",49.67,-103.85,"Weyburn",1], ["sk-27",53.2,-105.76,"Prince Albert",1], ["nu-21",63.75,-68.52,"Iqaluit",1], ["nu-18",70.47,-68.59,"Clyde River",1], ["bc-85",48.43,-123.36,"Victoria",1], ["yt-16",60.72,-135.06,"Whitehorse",1], ["yt-2",60.17,-134.7,"Carcross",1], ["bc-80",54.52,-128.6,"Terrace",1], ["sk-43",50.53,-103.67,"Indian Head",1], ["bc-21",49.43,-117.53,"Castlegar",1], ["ns-29",43.84,-66.12,"Yarmouth",1], ["on-57",44.2,-77.58,"Quinte Ouest",1], ["on-27",44.02,-77.26,"Prince Edward (Picton)",1], ["qc-73",48.63,-72.32,"Lac-Saint-Jean",1],
+    ["bc-98",49.35,-124.44,"Qualicum Beach",1], ["sk-5",50.77,-103.79,"Fort Qu'Appelle",1], ["on-3",44.17,-77.38,"Belleville",1], ["on-64",43.85,-79.54,"Vaughan",1], ["ns-24",45.72,-60.26,"Cap Fourchu",1], ["on-59",43.87,-79.43,"Richmond Hill",1], ["nl-28",46.66,-53.07,"Cape Race",1], ["yt-1",61.25,-138.81,"Lac Kluane",1], ["on-28",44.17,-81.63,"Kincardine",1], ["qc-161",48.33,-70.89,"Bagotville",1], ["on-160",43.74,-81.7,"Goderich",1], ["on-25",44.06,-79.46,"Newmarket",1], ["ab-61",51.09,-114.18,"Calgary (Parc Olympique)",1], ["nl-14",48.65,-53.12,"Bonavista",1], ["sk-50",56.33,-103.24,"Southend Reindeer",1], ["qc-72",45.57,-70.88,"Lac-Mégantic",1],
+    ["on-157",45.25,-81.67,"Tobermory",1], ["yt-7",61.35,-138.99,"Burwash Landing",1], ["qc-b4",45.56,-73.89,"Saint-Eustache",1], ["ab-38",52.47,-116.08,"Nordegg",1], ["qc-53",45.61,-73.84,"Boisbriand",1], ["qc-52",45.68,-73.87,"Blainville",1], ["qc-14",45.66,-74.34,"Lachute",1], ["qc-81",45.67,-73.79,"Lorraine",1], ["qc-123",45.65,-74.08,"Mirabel",1], ["qc-b2",45.82,-73.96,"Sainte-Sophie",1], ["on-71",45.61,-74.6,"Hawkesbury",1], ["qc-13",45.82,-73.96,"Saint-Jérôme",1], ["qc-113",47.75,-71.25,"Laurentides (Réserve faunique)",1], ["sk-6",52.2,-105.12,"Humboldt",1], ["ab-63",53.61,-112.87,"Elk Island (Parc national)",1], ["ab-34",51.04,-115.26,"Kananaskis (Nakiska Ridgetop)",1],
+    ["bc-28",50.69,-121.93,"Lillooet",1], ["nb-3",46.18,-65.87,"Chipman",1], ["qc-98",46.01,-73.92,"Prévost",1], ["qc-c3",46.01,-73.92,"Saint-Sauveur",1], ["qc-a3",45.58,-73.93,"Rosemère",1], ["qc-b3",45.58,-73.93,"Sainte-Thérèse",1], ["qc-a9",45.76,-73.82,"Sainte-Anne-Des-Plaines",1], ["bc-66",48.47,-123.3,"Victoria (Université de)",1], ["bc-31",49.32,-121.28,"Hope Slide",1], ["qc-26",48.35,-69.41,"Escoumins",1], ["nt-15",60.44,-121.24,"Sambaa K'e",1], ["nb-21",46.16,-67.58,"Woodstock",1], ["ab-44",50.16,-113.64,"Stavely",1], ["ab-2",54.12,-114.4,"Barrhead",1], ["nb-25",47,-65.47,"Miramichi",1], ["qc-163",51.43,-57.13,"Blanc-Sablon",1],
+    ["nl-45",51.6,-56.71,"L'Anse-au-Loup",1], ["qc-159",60.02,-70.03,"Kangirsuk",1], ["qc-168",48.47,-78.14,"Amos",1], ["on-42",42.99,-79.85,"Haldimand County",1], ["qc-119",47.43,-70.47,"Charlevoix",1], ["bc-99",49.33,-123.16,"West Vancouver",1], ["nb-11",45.85,-66.49,"Oromocto",1], ["nu-1",73.03,-84.54,"Nanisivik",1], ["qc-17",45.7,-74.98,"Papineau",1], ["qc-59",45.5,-75.8,"Chelsea",1], ["nu-10",73.04,-85.15,"Arctic Bay",1], ["bc-51",50.7,-119.27,"Salmon Arm",1], ["sk-30",58.1,-103.15,"Collins Bay",1], ["qc-139",47.39,-78.7,"Témiscamingue",1], ["nt-18",64.11,-117.36,"Gameti",1], ["qc-126",45.49,-75.66,"Gatineau",1],
+    ["nu-3",66.52,-86.24,"Naujaat",1], ["qc-42",45.66,-75.64,"Val-des-Monts",1], ["ab-17",49.63,-114.69,"Crowsnest",1], ["nt-28",64.11,-117.36,"Indin River",1], ["nb-34",47.07,-65.1,"Point Escuminac",1], ["nu-16",67.83,-115.1,"Kugluktuk",1], ["qc-149",48.1,-77.79,"Val-d'Or",1], ["qc-153",50.64,-68.73,"Manicouagan",0], ["nl-11",50.71,-57.36,"Port-au-Choix",1], ["bc-53",58.66,-124.64,"Tetsa River (Parc provincial)",1], ["nl-44",50.73,-56.1,"Englee",1], ["nt-14",64.5,-110.5,"Ekati (Lac de Gras)",0], ["pe-2",46.32,-63.65,"Maple Plains",1], ["on-80",42.9,-79.25,"Port Colborne",0], ["on-124",53.52,-88.6,"Big Trout Lake",1], ["ab-48",53.22,-114.97,"Drayton Valley",0],
+    ["on-158",52.94,-89.3,"Wunnummin Lake",1], ["nt-20",69.44,-133.03,"Tuktoyaktuk",1], ["on-90",44.33,-76.16,"Gananoque",1], ["nu-22",82.5,-62.37,"Alert",1], ["nu-4",68.79,-81.24,"Sanirajak",1], ["ab-31",55.17,-118.8,"Grande Prairie",1], ["bc-87",59.42,-126.08,"Liard River",1], ["nl-33",50.24,-57.59,"Daniel's Harbour",1], ["ab-47",50.22,-111.16,"Suffield",1], ["nu-19",61.13,-100.88,"Ennadai",1], ["on-77",43.26,-79.87,"Hamilton",1], ["nu-11",79.99,-85.89,"Eureka",1], ["bc-63",58.93,-125.77,"Muncho Lake",1], ["qc-30",47.33,-77,"La Vérendrye (Réserve faunique)",1], ["nl-46",54.18,-58.42,"Rigolet",0], ["qc-16",48.96,-65.5,"Murdochville",0],
+    ["bc-13",53.3,-120.17,"Valemount",0], ["on-105",53.87,-92.17,"Sachigo Lake",1], ["bc-8",53.75,-121.03,"Dome Creek",0], ["yt-4",66.16,-137.15,"Dempster (Route)",0], ["bc-72",50.5,-116.04,"Invermere",0], ["qc-116",51.47,-78.76,"Waskaganish",1], ["bc-47",53.3,-120.17,"McBride",0], ["on-12",42.91,-78.92,"Fort Erie",0], ["sk-1",52.67,-106.33,"Rosthern",1], ["qc-36",60.81,-78.19,"Akulivik",1], ["nu-6",62.17,-92.58,"Whale Cove",1], ["qc-131",58.45,-78.11,"Inukjuak",1], ["qc-106",61.05,-69.63,"Quaqtaq",1], ["sk-40",52.13,-106.66,"Saskatoon",1], ["yt-13",60.06,-128.71,"Watson Lake",1], ["qc-29",52.8,-67.09,"Fermont",1],
+    ["nt-19",71.99,-125.25,"Sachs Harbour",1], ["nl-20",52.94,-66.91,"Labrador City",1], ["nl-43",47.59,-53.27,"Bay Roberts",1], ["nl-39",49.18,-57.42,"Deer Lake",1], ["nl-25",55.09,-59.17,"Makkovik",1], ["yt-15",62.38,-140.89,"Beaver Creek",1], ["nu-5",67.56,-64.02,"Qikiqtarjuaqq",1], ["yt-3",60.09,-130.6,"Rancheria",1], ["bc-9",59.29,-129.29,"Good Hope Lake",1], ["qc-117",59.3,-69.6,"Aupaluk",1], ["nu-28",62.82,-92.08,"Rankin Inlet",1], ["bc-96",49.15,-123.16,"Richmond",1], ["yt-10",63.59,-135.9,"Mayo",1], ["bc-74",49.24,-123.12,"Vancouver",1], ["nu-24",68.63,-95.87,"Gjoa Haven",1], ["nl-24",47.56,-52.72,"St. John's",1],
+    ["nl-12",52.88,-67.02,"Wabush Lake",1], ["nt-2",60.56,-116.15,"Enterprise",1], ["ab-21",58.5,-119.4,"Rainbow Lake",1], ["ab-24",58.52,-117.14,"High Level",1], ["ab-35",49.12,-110.47,"Onefour",1], ["sk-44",59.57,-108.61,"Uranium City",1], ["nt-8",60.81,-115.78,"Hay River",1], ["nu-20",61.11,-94.06,"Arviat",1], ["bc-60",51.72,-124.43,"Tatlayoko Lake",1], ["bc-43",54.23,-125.76,"Burns Lake",1], ["bc-82",54.78,-127.17,"Smithers",1], ["ab-11",50.73,-113.98,"Okotoks",1], ["ab-10",54.72,-113.28,"Athabasca",1], ["ab-36",53.11,-114.47,"Breton",1], ["bc-93",48.78,-123.05,"Gulf Islands (Secteur sud)",1], ["ab-8",54.16,-113.86,"Westlock",1],
+    ["qc-c0",46.68,-73.92,"Saint-Michel-des-Saints",1], ["ab-7",49.78,-112.15,"Taber",1], ["nb-35",45.2,-67.28,"St. Stephen",1], ["ab-4",50.58,-113.87,"High River",1], ["bc-11",51.39,-116.49,"Kootenay (Parc national)",1], ["qc-99",61.3,-73.67,"Lac Raglan",1], ["ab-5",52.32,-112.7,"Stettler",1], ["ab-69",51.7,-113.27,"Three Hills",1], ["ab-68",53.56,-114.49,"Highvale",1], ["ab-6",51.05,-113.39,"Strathmore",1], ["nt-12",61.03,-123.38,"Nahanni Butte",1], ["qc-166",48.43,-71.06,"Saguenay",1], ["qc-40",60.04,-77.27,"Puvirnituq",1], ["nt-21",65.28,-126.83,"Norman Wells",1], ["bc-68",51.39,-116.49,"Yoho (Parc national)",1], ["pe-5",46.24,-63.13,"Charlottetown",1],
+    ["qc-19",45.91,-77.07,"Pontiac",1], ["on-131",45.82,-77.11,"Pembroke",1], ["on-83",46.1,-77.49,"Deep River",1], ["on-58",45.47,-76.68,"Renfrew",1], ["ab-54",55.28,-114.77,"Slave Lake",1], ["nu-8",69.54,-93.53,"Taloyoak",1], ["nt-11",64.9,-125.57,"Tulita",1], ["on-112",45.89,-77.27,"Petawawa",1], ["mb-17",49.19,-98.1,"Morden",1], ["mb-52",49.85,-99.95,"Brandon",1], ["mb-16",49.62,-100.26,"Souris",1], ["mb-7",49.13,-96.56,"Vita",1], ["mb-3",49.1,-97.56,"Altona",1], ["mb-21",50.8,-97,"Arnes",1], ["mb-11",49.35,-97.36,"Morris",1], ["mb-20",49.85,-100.93,"Virden",1],
+    ["mb-13",49.53,-96.68,"Steinbach",1], ["mb-47",49.01,-97.21,"Emerson",1], ["mb-2",49.14,-97.16,"Dominion City",1], ["mb-36",49.89,-97.13,"Winnipeg (La Fourche)",1], ["mb-9",50.55,-96.63,"Grand Beach",1], ["mb-31",50.66,-99.97,"Wasagaming",1], ["mb-23",49.04,-95.64,"Sprague",1], ["mb-35",49.87,-99.36,"Carberry",1], ["mb-61",50.23,-99.47,"Shilo",1], ["mb-48",49.01,-97.56,"Gretna",1], ["mb-26",49.18,-97.94,"Winkler",1], ["mb-29",49.97,-98.29,"Portage la Prairie",1], ["mb-19",49.2,-98.89,"Pilot Mound",1], ["mb-62",50.63,-96.99,"Gimli",1], ["mb-44",50.15,-95.88,"Pinawa",1], ["mb-33",51.02,-95.68,"Bissett",1],
+    ["mb-65",49.5,-98,"Carman",1], ["mb-66",49.05,-100.25,"Turtle Mountain (Parc provincial)",1], ["mb-6",49.66,-96.46,"Richer",1], ["mb-38",49.89,-97.13,"Winnipeg",1], ["mb-32",51.53,-101.35,"Roblin",1], ["mb-4",50.57,-96.56,"Pine Falls",1], ["mb-58",51.15,-100.05,"Dauphin",1], ["mb-45",49.27,-100.99,"Melita",1], ["mb-40",50.19,-98.32,"Delta",1], ["mb-8",49.99,-95.52,"Whiteshell",1], ["mb-28",50.44,-100.59,"Shoal Lake",1], ["mb-54",52.35,-97.02,"Berens River",1], ["mb-43",51.65,-99.93,"Bachelors Island",1], ["mb-49",49.4,-98.39,"Deerwood",1], ["mb-14",50.51,-98.03,"Oak Point",1], ["mb-55",50.71,-96.56,"Victoria Beach",1],
+    ["mb-10",50.25,-99.84,"Minnedosa",1], ["mb-46",52.11,-101.26,"Swan River",1], ["mb-18",52.04,-95.46,"Little Grand Rapids",0], ["mb-5",52.99,-97.28,"Poplar River",1], ["mb-24",51.08,-97.62,"Fisher Branch",1], ["ab-25",56.15,-117.72,"Peace River",1], ["ab-51",50.04,-110.68,"Medicine Hat",1], ["ns-31",46.13,-60.18,"Sydney",1], ["ns-26",45.62,-61.36,"Port Hawkesbury",1], ["mb-57",53.18,-99.28,"Grand Rapids",1], ["mb-37",51.79,-96.7,"Bloodvein",1], ["mb-15",50.77,-99.49,"McCreary",1], ["nu-7",66.14,-65.71,"Pangnirtung",1], ["qc-144",48.55,-71.65,"Alma",1], ["ab-20",56.7,-111.36,"Fort McMurray",1], ["yt-9",66.37,-136.72,"Rock River",1],
+    ["mb-34",55.74,-97.86,"Thompson",1], ["mb-12",54.88,-100.02,"Snow Lake",1], ["mb-30",53.82,-101.25,"The Pas",1], ["mb-50",53.14,-101.09,"Hunters Point",1], ["mb-60",54.77,-101.86,"Flin Flon",1], ["bc-64",52.98,-122.5,"Quesnel",1], ["mb-64",56.35,-94.73,"Gillam",1], ["mb-42",58.76,-94.13,"Churchill",1], ["mb-67",55.74,-101.3,"Pukatawagan",1], ["mb-59",53.86,-94.66,"Island Lake",1], ["mb-39",55.87,-92.1,"Shamattawa",0], ["mb-22",56.46,-100.01,"Leaf Rapids",1], ["on-159",48.61,-93.39,"Fort Frances",1], ["mb-56",57,-92.31,"York Factory",0], ["mb-53",57.89,-101.67,"Brochet",1], ["mb-63",54.67,-94.15,"Gods Lake",1],
+    ["mb-51",58.72,-98.48,"Tadoule Lake",1], ["mb-27",54.95,-95.25,"Oxford House",0], ["mb-25",53.98,-97.83,"Norway House",1], ["mb-41",56.85,-101.05,"Lynn Lake",1], ["sk-24",50.4,-105.53,"Moose Jaw",1], ["on-108",48.76,-86.58,"Marathon",1], ["on-162",46.52,-84.33,"Sault Ste. Marie",1], ["on-26",49.01,-88.27,"Nipigon",1], ["on-72",49.78,-92.83,"Dryden",1], ["on-166",49.41,-94.1,"Sioux Narrows",1], ["on-67",48.59,-85.28,"White River",1], ["on-41",49.8,-89.11,"Gull Bay",1], ["on-123",48.78,-87.1,"Terrace Bay",1], ["on-70",49.78,-86.53,"Greenstone (Geraldton)",1], ["on-100",48.41,-89.24,"Thunder Bay",1], ["on-156",49.41,-91.66,"Ignace",1],
+    ["on-153",49.6,-87.96,"Greenstone (Beardmore)",1], ["on-148",48.76,-91.62,"Atikokan",1], ["on-145",48.4,-89.62,"Kakabeka Falls",1], ["on-142",49.45,-82.15,"Kapuskasing",1], ["on-163",47.24,-84.64,"Montreal River Harbour",1], ["on-34",48.79,-88.54,"Dorion",1], ["on-48",48.77,-92.62,"Mine Centre",1], ["on-104",51.02,-93.83,"Red Lake",1], ["on-73",49.64,-83.4,"Hearst",1], ["on-97",50.23,-86.96,"Greenstone (Nakina)",1], ["on-154",49.05,-90.47,"Upsala",1], ["on-96",49.73,-94.32,"Kenora",1], ["on-78",49.22,-84.78,"Hornepayne",1], ["on-139",46.32,-79.47,"North Bay",1], ["on-174",46.57,-81.19,"Sudbury (Grand)",1], ["on-144",45.92,-82.46,"Gore Bay",1],
+    ["on-138",47.99,-84.77,"Wawa",1], ["on-111",50.62,-89.62,"Armstrong",1], ["on-33",48.48,-81.21,"Cochrane",1], ["on-134",50.24,-90.71,"Savant Lake",1], ["on-91",47.84,-83.4,"Chapleau",1], ["on-170",46.38,-82.66,"Elliot Lake",1], ["on-135",50.1,-91.92,"Sioux Lookout",1], ["on-37",47.67,-81.73,"Gogama",0], ["on-146",45.97,-81.51,"Killarney",0], ["on-21",46.19,-82.96,"Blind River",1], ["on-167",50.64,-93.24,"Ear Falls",1], ["on-40",46.49,-81,"Grand Sudbury",1], ["on-136",47.71,-79.82,"Earlton",1], ["on-65",46.41,-80.13,"Nipissing Ouest",1], ["on-76",48.15,-80.03,"Kirkland Lake",1], ["on-22",47.49,-79.72,"Temiskaming Shores",1],
+    ["on-127",48.48,-81.21,"Timmins",1], ["on-45",47.6,-84.74,"Lac Supérieur (Parc provincial)",1], ["sk-39",55.86,-108.48,"Buffalo Narrows",1], ["sk-15",53.92,-106.08,"Waskesiu Lake",1], ["sk-38",55.11,-105.28,"La Ronge",1], ["sk-55",55.17,-102.94,"Pelican Narrows",1], ["sk-56",53.28,-109.98,"Lloydminster",1], ["ab-15",53.28,-110.03,"Lloydminster",1], ["ab-23",54.47,-110.19,"Cold Lake",1], ["ab-71",53.27,-113.55,"Edmonton (Aprt int.)",1], ["ab-56",54.14,-115.68,"Whitecourt",1], ["on-171",55.99,-87.63,"Fort Severn",1]
+];
 
-        if (data.temperatureFeelsLike != null && data.temperatureFeelsLike !== undefined) {
-            weatherInfo.currentConditions.feelslike.type = "Ressenti";
-            weatherInfo.currentConditions.feelslike.val = data.temperatureFeelsLike;
-        } else if (data.temperatureHeatIndex > data.temperature + 3) {
-            weatherInfo.currentConditions.feelslike.type = "Indice humidex";
-            weatherInfo.currentConditions.feelslike.val = data.temperatureHeatIndex;
-        } else if (data.temperatureWindChill < data.temperature - 3) {
-            weatherInfo.currentConditions.feelslike.type = "Refroid. éolien";
-            weatherInfo.currentConditions.feelslike.val = data.temperatureWindChill;
-        } else {
-            weatherInfo.currentConditions.feelslike.type = "Ressenti";
-            weatherInfo.currentConditions.feelslike.val = data.temperature;
+var ecccStationCache = new Map();
+var ecccInFlightPromises = new Map();
+var ECCC_CACHE_TTL_MS = 3 * 60 * 1000;
+
+function resolveEcccStation(lat, lon) {
+    lat = Number(lat);
+    lon = Number(lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    var best = null;
+    var bestScore = Infinity;
+    var cosLat = Math.cos(lat * Math.PI / 180);
+    for (var i = 0; i < ECCC_STATION_INDEX.length; i++) {
+        var row = ECCC_STATION_INDEX[i];
+        var dLat = row[1] - lat;
+        var dLon = (row[2] - lon) * cosLat;
+        var dist = Math.sqrt(dLat * dLat + dLon * dLon);
+        var score = dist + (row[4] ? 0 : 0.25);
+        if (score < bestScore) {
+            bestScore = score;
+            best = { id: row[0], lat: row[1], lon: row[2], nameFr: row[3], hasTemp: !!row[4], distanceDeg: dist };
         }
+    }
+    return best;
+}
+window.resolveEcccStation = resolveEcccStation;
+
+function mapEcccIconToTwc(ecccCode, isNight) {
+    if (ecccCode == null || ecccCode === "") {
+        return isNight ? 2900 : 3000;
+    }
+    var c = parseInt(ecccCode, 10);
+    if (isNaN(c)) return isNight ? 2900 : 3000;
+    var map = {
+        0: 3200,  // Sunny
+        1: 3400,  // Mainly sunny
+        2: 3000,  // A mix of sun and cloud
+        3: 2800,  // Mainly cloudy
+        4: 2800,  // Increasing cloudiness
+        5: 3000,  // Clearing
+        6: 1100,  // Chance of showers
+        7: 500,   // Chance of flurries or rain showers
+        8: 1400,  // Chance of flurries
+        9: 400,   // Chance of showers / risk of thunderstorms
+        10: 2600, // Overcast / Cloudy
+        11: 900,  // Light precipitation / Drizzle
+        12: 1100, // Showers
+        13: 1200, // Rain
+        14: 1000, // Freezing rain
+        15: 500,  // Rain or snow
+        16: 1601, // Light snow / Flurries
+        17: 1600, // Snow
+        18: 1600, // Heavy snow
+        19: 400,  // Thunderstorms
+        20: 2100, // Haze
+        21: 2000, // Fog
+        22: 3000, // Partly cloudy
+        23: 2100, // Haze
+        24: 2000, // Fog / Mist
+        25: 1600, // Drifting snow
+        26: 700,  // Ice crystals
+        27: 1800, // Hail / Ice pellets
+        28: 900,  // Drizzle
+        30: 3100, // Clear (night)
+        31: 3300, // A few clouds (night)
+        32: 2900, // Partly cloudy (night)
+        33: 2700, // Mainly cloudy (night)
+        34: 2700, // Increasing cloudiness (night)
+        35: 2900, // Clearing (night)
+        36: 1100, // Chance of showers (night)
+        37: 500,  // Chance of rain showers or flurries (night)
+        38: 1400, // Chance of flurries (night)
+        39: 400,  // Chance of showers / thunderstorms (night)
+        40: 1600, // Blowing snow / Near blizzard
+        41: 402,  // Funnel cloud
+        42: 402,  // Tornado
+        43: 2600, // Windy
+        44: 2100, // Smoke
+        45: 2100, // Blowing dust
+        46: 402,  // Thunderstorm with hail
+        47: 402,  // Thunderstorm with gusty winds
+        48: 400   // Waterspout
+    };
+    return map[c] !== undefined ? map[c] : (isNight ? 2900 : 3000);
+}
+window.mapEcccIconToTwc = mapEcccIconToTwc;
+
+function convertTempFromC(valC) {
+    if (valC == null || valC === "" || isNaN(Number(valC))) return null;
+    var n = Number(valC);
+    if (typeof isMetric === "function" && !isMetric()) {
+        return Math.round(n * 9 / 5 + 32);
+    }
+    return Math.round(n);
+}
+
+function convertSpeedFromKmh(valKmh) {
+    if (valKmh == null || valKmh === "" || isNaN(Number(valKmh))) return 0;
+    var n = Number(valKmh);
+    if (typeof isMetric === "function" && !isMetric()) {
+        return Math.round(n * 0.621371);
+    }
+    return Math.round(n);
+}
+
+function fetchEcccCityPageById(stationId) {
+    if (!stationId) return Promise.resolve(null);
+    var now = Date.now();
+    var cached = ecccStationCache.get(stationId);
+    if (cached && (now - cached.ts < ECCC_CACHE_TTL_MS)) {
+        return Promise.resolve(cached.data);
+    }
+    if (ecccInFlightPromises.has(stationId)) {
+        return ecccInFlightPromises.get(stationId);
+    }
+    var url = "https://api.weather.gc.ca/collections/citypageweather-realtime/items/" + encodeURIComponent(stationId) + "?f=json";
+    var p = new Promise((resolve) => {
+        $.getJSON(url, function (data) {
+            if (data && data.properties) {
+                ecccStationCache.set(stationId, { ts: Date.now(), data: data });
+                ecccInFlightPromises.delete(stationId);
+                resolve(data);
+            } else {
+                ecccInFlightPromises.delete(stationId);
+                resolve(null);
+            }
+        }).fail(function () {
+            ecccInFlightPromises.delete(stationId);
+            resolve(null);
+        });
+    });
+    ecccInFlightPromises.set(stationId, p);
+    return p;
+}
+
+async function fetchEcccCityPage(lat, lon) {
+    var st = resolveEcccStation(lat, lon);
+    if (!st) return null;
+    return fetchEcccCityPageById(st.id);
+}
+
+async function fetchEcccCityPageForGeocode(geocodeStr) {
+    if (!geocodeStr || typeof geocodeStr !== "string" || !geocodeStr.includes(",")) return null;
+    var parts = geocodeStr.split(",");
+    return fetchEcccCityPage(parseFloat(parts[0]), parseFloat(parts[1]));
+}
+
+function extractEcccObservation(feature) {
+    var p = (feature && feature.properties) || {};
+    var cc = p.currentConditions || {};
+    var hf0 = (p.hourlyForecastGroup && Array.isArray(p.hourlyForecastGroup.hourlyForecasts) && p.hourlyForecastGroup.hourlyForecasts[0]) || {};
+    var fc0 = (p.forecastGroup && Array.isArray(p.forecastGroup.forecasts) && p.forecastGroup.forecasts[0]) || {};
+
+    var rawTempC = (cc.temperature && cc.temperature.value) ? (cc.temperature.value.fr ?? cc.temperature.value.en) : null;
+    if (rawTempC == null && hf0.temperature && hf0.temperature.value) {
+        rawTempC = hf0.temperature.value.fr ?? hf0.temperature.value.en;
+    }
+    var temp = convertTempFromC(rawTempC);
+
+    var rawDewC = (cc.dewpoint && cc.dewpoint.value) ? (cc.dewpoint.value.fr ?? cc.dewpoint.value.en) : null;
+    var dewpoint = convertTempFromC(rawDewC);
+
+    var humidity = (cc.relativeHumidity && cc.relativeHumidity.value) ? (cc.relativeHumidity.value.fr ?? cc.relativeHumidity.value.en) : "";
+
+    var rawWindSpeed = (cc.wind && cc.wind.speed && cc.wind.speed.value) ? (cc.wind.speed.value.fr ?? cc.wind.speed.value.en) : null;
+    if (rawWindSpeed == null && hf0.wind && hf0.wind.speed && hf0.wind.speed.value) {
+        rawWindSpeed = hf0.wind.speed.value.fr ?? hf0.wind.speed.value.en;
+    }
+    var windSpeed = convertSpeedFromKmh(rawWindSpeed);
+
+    var rawGust = (cc.wind && cc.wind.gust && cc.wind.gust.value) ? (cc.wind.gust.value.fr ?? cc.wind.gust.value.en) : null;
+    var windGust = (rawGust != null && Number(rawGust) > 0) ? convertSpeedFromKmh(rawGust) : null;
+
+    var windDirCard = (cc.wind && cc.wind.direction && cc.wind.direction.value)
+        ? (cc.wind.direction.value.fr || cc.wind.direction.value.en)
+        : ((hf0.wind && hf0.wind.direction && hf0.wind.direction.value) ? (hf0.wind.direction.value.fr || hf0.wind.direction.value.en) : "CALM");
+    if (windDirCard === "VR") windDirCard = "VAR";
+
+    var windDeg = (cc.wind && cc.wind.bearing && cc.wind.bearing.value)
+        ? Number(cc.wind.bearing.value.fr ?? cc.wind.bearing.value.en)
+        : null;
+
+    var pressureKpa = (cc.pressure && cc.pressure.value) ? Number(cc.pressure.value.fr ?? cc.pressure.value.en) : null;
+    var pressureTrend = (cc.pressure && cc.pressure.tendency) ? (cc.pressure.tendency.fr || cc.pressure.tendency.en || "") : "";
+
+    var visKm = (cc.visibility && cc.visibility.value) ? Number(cc.visibility.value.fr ?? cc.visibility.value.en) : 24;
+    var visibility = (typeof isMetric === "function" && !isMetric()) ? Math.round(visKm * 0.621371) : Math.round(visKm);
+
+    var rawHumidex = (cc.humidex && cc.humidex.value) ? (cc.humidex.value.fr ?? cc.humidex.value.en) : null;
+    var rawWindChill = (cc.windChill && cc.windChill.value) ? (cc.windChill.value.fr ?? cc.windChill.value.en) : null;
+    var heatIndex = convertTempFromC(rawHumidex);
+    var windChill = convertTempFromC(rawWindChill);
+    var feelsLike = heatIndex != null ? heatIndex : (windChill != null ? windChill : temp);
+
+    var ecccIcon = (cc.iconCode && cc.iconCode.value != null)
+        ? cc.iconCode.value
+        : ((hf0.iconCode && hf0.iconCode.value != null)
+            ? hf0.iconCode.value
+            : (fc0.abbreviatedForecast && fc0.abbreviatedForecast.icon ? fc0.abbreviatedForecast.icon.value : 2));
+    var isNightNow = new Date().getHours() >= 19 || new Date().getHours() < 6;
+    var iconCode = mapEcccIconToTwc(ecccIcon, isNightNow);
+
+    var condFr = (cc.condition && (cc.condition.fr || cc.condition.en))
+        || (hf0.condition && (hf0.condition.fr || hf0.condition.en))
+        || (fc0.abbreviatedForecast && fc0.abbreviatedForecast.textSummary && (fc0.abbreviatedForecast.textSummary.fr || fc0.abbreviatedForecast.textSummary.en))
+        || "Partiellement nuageux";
+
+    return {
+        temperature: temp != null ? temp : "",
+        temperatureDewPoint: dewpoint != null ? dewpoint : "",
+        relativeHumidity: humidity !== "" && humidity != null ? humidity : "",
+        windSpeed: windSpeed,
+        windGust: windGust,
+        windDirectionCardinal: windDirCard,
+        windDirection: Number.isFinite(windDeg) ? windDeg : null,
+        pressureAltimeter: Number.isFinite(pressureKpa) ? pressureKpa : null,
+        pressureTendencyTrend: pressureTrend,
+        visibility: Number.isFinite(visibility) ? visibility : 24,
+        temperatureHeatIndex: heatIndex,
+        temperatureWindChill: windChill,
+        temperatureFeelsLike: feelsLike,
+        iconCodeExtend: iconCode,
+        iconCode: iconCode,
+        wxPhraseLong: condFr,
+        wxPhraseShort: condFr
+    };
+}
+
+function parseEcccForecastDays(feature) {
+    var p = (feature && feature.properties) || {};
+    var forecasts = (p.forecastGroup && Array.isArray(p.forecastGroup.forecasts)) ? p.forecastGroup.forecasts : [];
+    var normals = (p.forecastGroup && p.forecastGroup.regionalNormals && Array.isArray(p.forecastGroup.regionalNormals.temperature))
+        ? p.forecastGroup.regionalNormals.temperature
+        : [];
+    var normalHigh = null, normalLow = null;
+    normals.forEach(t => {
+        var cls = t && t.class && (t.class.en || t.class.fr);
+        var val = t && t.value && (t.value.fr ?? t.value.en);
+        if (cls === "high") normalHigh = convertTempFromC(val);
+        if (cls === "low") normalLow = convertTempFromC(val);
+    });
+
+    var dayPairs = [];
+    var i = 0;
+    while (i < forecasts.length) {
+        var fc = forecasts[i];
+        var nameEn = String((fc.period && fc.period.textForecastName && fc.period.textForecastName.en) || "");
+        var nameFr = String((fc.period && fc.period.textForecastName && fc.period.textForecastName.fr) || "");
+        var isNight = /night|tonight|soir|nuit/i.test(nameEn + " " + nameFr);
+
+        if (i === 0 && isNight) {
+            // Evening issuance: Tonight is standalone night period for today; 7-day starts at index 1
+            i++;
+            continue;
+        }
+
+        var dayFc = fc;
+        var nightFc = (i + 1 < forecasts.length) ? forecasts[i + 1] : null;
+        var nextNameEn = nightFc ? String((nightFc.period && nightFc.period.textForecastName && nightFc.period.textForecastName.en) || "") : "";
+        var nextIsNight = /night|tonight|soir|nuit/i.test(nextNameEn);
+        if (nextIsNight) {
+            i += 2;
+        } else {
+            nightFc = null;
+            i += 1;
+        }
+
+        var highVal = null;
+        var lowVal = null;
+        if (dayFc.temperatures && Array.isArray(dayFc.temperatures.temperature)) {
+            dayFc.temperatures.temperature.forEach(t => {
+                var cls = t && t.class && (t.class.en || t.class.fr);
+                var v = convertTempFromC(t && t.value && (t.value.fr ?? t.value.en));
+                if (cls === "high" || highVal == null) highVal = v;
+            });
+        }
+        if (nightFc && nightFc.temperatures && Array.isArray(nightFc.temperatures.temperature)) {
+            nightFc.temperatures.temperature.forEach(t => {
+                var cls = t && t.class && (t.class.en || t.class.fr);
+                var v = convertTempFromC(t && t.value && (t.value.fr ?? t.value.en));
+                if (cls === "low" || lowVal == null) lowVal = v;
+            });
+        }
+        if (lowVal == null && normalLow != null) lowVal = normalLow;
+        if (highVal == null && normalHigh != null) highVal = normalHigh;
+
+        var ecccIcon = dayFc.abbreviatedForecast && dayFc.abbreviatedForecast.icon ? dayFc.abbreviatedForecast.icon.value : 2;
+        var condFr = (dayFc.abbreviatedForecast && dayFc.abbreviatedForecast.textSummary && (dayFc.abbreviatedForecast.textSummary.fr || dayFc.abbreviatedForecast.textSummary.en)) || "Partiellement nuageux";
+
+        dayPairs.push({
+            nameEn: nameEn,
+            nameFr: nameFr,
+            high: highVal != null ? highVal : "",
+            low: lowVal != null ? lowVal : "",
+            icon: mapEcccIconToTwc(ecccIcon, false),
+            cond: condFr
+        });
+    }
+
+    var enWeekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    var frShortDays = ["DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"];
+    var firstIsTonight = forecasts.length > 0 && /night|tonight|soir|nuit/i.test(String(forecasts[0].period?.textForecastName?.en || ""));
+    var startDow = (new Date().getDay() + (firstIsTonight ? 1 : 0)) % 7;
+
+    var sevenDays = [];
+    for (var d = 0; d < 7; d++) {
+        var dow = (startDow + d) % 7;
+        var src = dayPairs[d] || dayPairs[dayPairs.length - 1] || {
+            high: normalHigh != null ? normalHigh : 10,
+            low: normalLow != null ? normalLow : 2,
+            icon: 3000,
+            cond: "Partiellement nuageux"
+        };
+        sevenDays.push({
+            dayOfWeekEn: enWeekdays[dow],
+            dayShortFr: frShortDays[dow],
+            high: src.high,
+            low: src.low,
+            icon: src.icon,
+            cond: src.cond
+        });
+    }
+
+    return { sevenDays: sevenDays, normalHigh: normalHigh, normalLow: normalLow, forecasts: forecasts };
+}
+
+function buildTwcCompatibleFromEccc(feature) {
+    var obs = extractEcccObservation(feature);
+    var parsed = parseEcccForecastDays(feature);
+    var sevenDays = parsed.sevenDays;
+
+    var calMax = sevenDays.map(d => d.high);
+    var calMin = sevenDays.map(d => d.low);
+    var dayOfWeek = sevenDays.map(d => d.dayOfWeekEn);
+    var dpTemp = [];
+    var dpIcon = [];
+    var dpPhrase = [];
+    var dpName = [];
+
+    // Populate daypart arrays for 3-day / 5-day / 7-day compatibility
+    var rawFc = parsed.forecasts;
+    for (var k = 0; k < 14; k++) {
+        var dayIdx = Math.floor(k / 2);
+        var dItem = sevenDays[dayIdx] || sevenDays[sevenDays.length - 1];
+        if (k % 2 === 0) {
+            dpTemp.push(dItem ? dItem.high : null);
+            dpIcon.push(dItem ? dItem.icon : 3000);
+            dpPhrase.push(dItem ? dItem.cond : "");
+            dpName.push(rawFc[k] && rawFc[k].period && rawFc[k].period.textForecastName ? rawFc[k].period.textForecastName.fr : (dItem ? dItem.dayShortFr : ""));
+        } else {
+            dpTemp.push(dItem ? dItem.low : null);
+            dpIcon.push(dItem ? dItem.icon : 2900);
+            dpPhrase.push(dItem ? dItem.cond : "");
+            dpName.push(rawFc[k] && rawFc[k].period && rawFc[k].period.textForecastName ? rawFc[k].period.textForecastName.fr : (dItem ? dItem.dayShortFr : ""));
+        }
+    }
+
+    // Also compute today's high/low specifically for extractAggWeatherItem
+    var todayHigh = calMax[0];
+    var todayLow = calMin[0];
+    if (rawFc.length > 0) {
+        var f0 = rawFc[0];
+        var f1 = rawFc[1];
+        var t0 = f0.temperatures && f0.temperatures.temperature && f0.temperatures.temperature[0];
+        var t1 = f1 && f1.temperatures && f1.temperatures.temperature && f1.temperatures.temperature[0];
+        if (t0 && (t0.class?.en === "low" || t0.class?.fr === "low")) {
+            todayLow = convertTempFromC(t0.value?.fr ?? t0.value?.en);
+            if (t1) todayHigh = convertTempFromC(t1.value?.fr ?? t1.value?.en);
+        } else if (t0) {
+            todayHigh = convertTempFromC(t0.value?.fr ?? t0.value?.en);
+            if (t1) todayLow = convertTempFromC(t1.value?.fr ?? t1.value?.en);
+        }
+    }
+
+    var fcst5 = {
+        calendarDayTemperatureMax: [todayHigh, ...calMax.slice(1)],
+        calendarDayTemperatureMin: [todayLow, ...calMin.slice(1)],
+        temperatureMax: [todayHigh, ...calMax.slice(1)],
+        temperatureMin: [todayLow, ...calMin.slice(1)],
+        dayOfWeek: dayOfWeek,
+        daypart: [{
+            temperature: dpTemp,
+            iconCodeExtend: dpIcon,
+            iconCode: dpIcon,
+            wxPhraseLong: dpPhrase,
+            wxPhraseShort: dpPhrase,
+            daypartName: dpName
+        }]
+    };
+
+    return {
+        "v3-wx-observations-current": obs,
+        "v3-wx-forecast-daily-5day": fcst5,
+        "v3-wx-forecast-daily-7day": fcst5,
+        "v3-wx-forecast-daily-3day": fcst5
+    };
+}
+if (typeof window !== "undefined") {
+    window.ECCC_STATION_INDEX = ECCC_STATION_INDEX;
+    window.resolveEcccStation = resolveEcccStation;
+    window.mapEcccIconToTwc = mapEcccIconToTwc;
+    window.fetchEcccCityPage = fetchEcccCityPage;
+    window.extractEcccObservation = extractEcccObservation;
+    window.parseEcccForecastDays = parseEcccForecastDays;
+    window.buildTwcCompatibleFromEccc = buildTwcCompatibleFromEccc;
+}
+
+function applyObservationToCurrentConditions(data) {
+    var rawCond = (data.wxPhraseLong || "").replace("Showers in the Vicinity", "Showers Nearby").replace("/Wind", ", Windy").replace("Thunder in the Vicinity", "Thunder");
+    weatherInfo.currentConditions.cond = translateWeatherNarrative(rawCond);
+    weatherInfo.currentConditions.gusts = ((data.windGust != null || data.windGust != undefined) ? data.windGust : "Aucune");
+    weatherInfo.currentConditions.humidity = data.relativeHumidity + "%";
+    weatherInfo.currentConditions.icon = data.iconCodeExtend;
+    weatherInfo.currentConditions.pressure.trend = data.pressureTendencyTrend;
+    weatherInfo.currentConditions.pressure.val = data.pressureAltimeter ? (isMetric() ? (data.pressureAltimeter > 500 ? (data.pressureAltimeter / 10).toFixed(1) : data.pressureAltimeter.toFixed(1)) : data.pressureAltimeter.toFixed(2)) : "";
+    weatherInfo.currentConditions.temp = data.temperature;
+    var ccWindDir = ((data.windDirectionCardinal == "CALM" || data.windSpeed == 0 || data.windDirectionCardinal == undefined) ? "Calme" : translateWindCardinal(data.windDirectionCardinal));
+    weatherInfo.currentConditions.wind = (ccWindDir === "Calme" ? "Calme" : ccWindDir + " " + data.windSpeed);
+    weatherInfo.currentConditions.windRaw = {
+        direction: ccWindDir,
+        cardinal: data.windDirectionCardinal,
+        deg: data.windDirection != null ? Number(data.windDirection) : null,
+        speed: data.windSpeed != null ? Number(data.windSpeed) : 0
+    };
+    weatherInfo.currentConditions.dewpoint = data.temperatureDewPoint != null ? data.temperatureDewPoint : "";
+    weatherInfo.currentConditions.visibility = data.visibility;
+    weatherInfo.currentConditions.noReport = false;
+
+    if (data.temperatureHeatIndex != null && data.temperature != null && data.temperatureHeatIndex > data.temperature + 2) {
+        weatherInfo.currentConditions.feelslike.type = "Indice humidex";
+        weatherInfo.currentConditions.feelslike.val = data.temperatureHeatIndex;
+    } else if (data.temperatureWindChill != null && data.temperature != null && data.temperatureWindChill < data.temperature - 2) {
+        weatherInfo.currentConditions.feelslike.type = "Refroid. éolien";
+        weatherInfo.currentConditions.feelslike.val = data.temperatureWindChill;
+    } else if (data.temperatureFeelsLike != null && data.temperatureFeelsLike !== undefined) {
+        weatherInfo.currentConditions.feelslike.type = "Ressenti";
+        weatherInfo.currentConditions.feelslike.val = data.temperatureFeelsLike;
+    } else {
+        weatherInfo.currentConditions.feelslike.type = "Ressenti";
+        weatherInfo.currentConditions.feelslike.val = data.temperature;
+    }
+}
+
+async function grabCC() {
+    // 1. Default to ECCC MSC GeoMet
+    try {
+        var ecccFeature = await fetchEcccCityPage(locationConfig.mainCity.lat, locationConfig.mainCity.lon);
+        if (ecccFeature && ecccFeature.properties) {
+            var obs = extractEcccObservation(ecccFeature);
+            if (obs && obs.temperature !== "") {
+                applyObservationToCurrentConditions(obs);
+                markFeedSuccess("forecast");
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabCC failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
+    return $.getJSON("https://api.weather.com/v3/wx/observations/current?geocode=" + locationConfig.mainCity.lat + "," + locationConfig.mainCity.lon + "&units=" + getUnits() + "&language=en-US&format=json&apiKey=" + api_key, function (data) {
+        applyObservationToCurrentConditions(data);
     }).fail(function () {
         weatherInfo.currentConditions.noReport = true;
     })
@@ -1297,6 +1783,27 @@ function extractAggWeatherItem(configItem, ajaxedLoc) {
 async function fetchAggCommonBatch(items, mappingFn) {
     if (!items || items.length === 0) return [];
     var results = [];
+
+    // 1. Default to ECCC MSC GeoMet
+    try {
+        var ecccFeatures = await Promise.all(items.map(item => fetchEcccCityPageForGeocode(item && item.val)));
+        if (ecccFeatures.some(Boolean)) {
+            for (var k = 0; k < items.length; k++) {
+                var item = items[k];
+                var feat = ecccFeatures[k];
+                if (item && feat) {
+                    results.push(mappingFn(item, buildTwcCompatibleFromEccc(feat)));
+                }
+            }
+            if (results.length > 0) {
+                return results;
+            }
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC batch fetch failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var chunkSize = 15;
     for (var i = 0; i < items.length; i += chunkSize) {
         var chunk = items.slice(i, i + chunkSize);
@@ -1435,6 +1942,23 @@ async function grabQuebecWeekAhead() {
     try {
         var items = locationConfig.quebecCities;
         var results = [];
+
+        // 1. Default to ECCC MSC GeoMet
+        var ecccFeatures = await Promise.all(items.map(item => fetchEcccCityPageForGeocode(item && item.val)));
+        if (ecccFeatures.some(Boolean)) {
+            for (var k = 0; k < items.length; k++) {
+                if (items[k] && ecccFeatures[k]) {
+                    results.push(extract7DayOutlookItem(items[k], buildTwcCompatibleFromEccc(ecccFeatures[k])));
+                }
+            }
+            if (results.length > 0) {
+                weatherInfo.quebecWeekAhead.cities = results;
+                weatherInfo.quebecWeekAhead.noReport = false;
+                return;
+            }
+        }
+
+        // 2. Fallback to TWC
         var chunkSize = 15;
         for (var i = 0; i < items.length; i += chunkSize) {
             var chunk = items.slice(i, i + chunkSize);
@@ -1481,6 +2005,56 @@ async function grabNearbyCC() {
     }
     weatherInfo.eightCities.noReport = false;
     weatherInfo.eightCities.cities = [];
+
+    function pushNearbyObs(i, obsCurr) {
+        var rawCond = (obsCurr.wxPhraseLong || "").replace("Showers in the Vicinity", "Showers Nearby").replace("/Wind", ", Windy").replace("Thunder in the Vicinity", "Thunder");
+        var windDir = (obsCurr.windDirectionCardinal == "CALM" || obsCurr.windSpeed === 0 || !obsCurr.windDirectionCardinal) ? "Calme" : translateWindCardinal(obsCurr.windDirectionCardinal);
+        var windStr = (windDir === "Calme" || obsCurr.windSpeed === 0 || obsCurr.windSpeed == null) ? "Calme" : `${windDir} ${obsCurr.windSpeed}`.trim();
+        var feelsVal = obsCurr.temperatureFeelsLike != null ? obsCurr.temperatureFeelsLike : (obsCurr.temperatureHeatIndex != null ? obsCurr.temperatureHeatIndex : (obsCurr.temperatureWindChill != null ? obsCurr.temperatureWindChill : obsCurr.temperature));
+        var feelsType = "Ressenti";
+        if (obsCurr.temperatureHeatIndex != null && obsCurr.temperature != null && obsCurr.temperatureHeatIndex > obsCurr.temperature + 2) {
+            feelsType = "Indice humidex";
+        } else if (obsCurr.temperatureWindChill != null && obsCurr.temperature != null && obsCurr.temperatureWindChill < obsCurr.temperature - 2) {
+            feelsType = "Refroid. éolien";
+        }
+        var pressureVal = obsCurr.pressureAltimeter ? (isMetric() ? (obsCurr.pressureAltimeter > 500 ? (obsCurr.pressureAltimeter / 10).toFixed(1) : obsCurr.pressureAltimeter.toFixed(1)) : obsCurr.pressureAltimeter.toFixed(2)) : "";
+
+        var eightslideloc = {
+            name: (locationConfig.eightCities.cities[i] && locationConfig.eightCities.cities[i].displayname) || "",
+            temp: obsCurr.temperature != null ? obsCurr.temperature : "",
+            icon: obsCurr.iconCodeExtend != null ? obsCurr.iconCodeExtend : (obsCurr.iconCode != null ? obsCurr.iconCode : 4400),
+            cond: translateWeatherNarrative(rawCond),
+            wind: {
+                direction: windDir,
+                speed: obsCurr.windSpeed
+            },
+            windStr: windStr,
+            gusts: (obsCurr.windGust != null && obsCurr.windGust !== 0 && obsCurr.windGust !== "None" && obsCurr.windGust !== "Aucune") ? obsCurr.windGust : "",
+            humidity: (obsCurr.relativeHumidity != null && obsCurr.relativeHumidity !== "") ? (String(obsCurr.relativeHumidity).replace("%", "") + "%") : "",
+            feelslike: { type: feelsType, val: (feelsVal != null && feelsVal !== "") ? feelsVal : "" },
+            dewpoint: (obsCurr.temperatureDewPoint != null && obsCurr.temperatureDewPoint !== "") ? obsCurr.temperatureDewPoint : "",
+            pressure: { val: pressureVal, trend: obsCurr.pressureTendencyTrend || "" },
+            visibility: (obsCurr.visibility != null && obsCurr.visibility !== "") ? obsCurr.visibility : ""
+        };
+        weatherInfo.eightCities.cities.push(eightslideloc);
+    }
+
+    // 1. Default to ECCC MSC GeoMet
+    try {
+        var slice8 = locationConfig.eightCities.cities.slice(0, 8);
+        var ecccList = await Promise.all(slice8.map(c => fetchEcccCityPage(c.lat, c.lon)));
+        if (ecccList.some(Boolean)) {
+            ecccList.forEach((feat, idx) => {
+                var obsCurr = feat ? extractEcccObservation(feat) : {};
+                pushNearbyObs(idx, obsCurr);
+            });
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabNearbyCC failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = "https://api.weather.com/v3/aggcommon/v3-wx-observations-current?geocodes="
     for (var l = 0; l < 8; l++) {
         if (locationConfig.eightCities.cities[l]) {
@@ -1492,41 +2066,12 @@ async function grabNearbyCC() {
     return $.getJSON(url, function (data) {
         data.forEach((ajaxedLoc, i) => {
             var obsCurr = (ajaxedLoc && ajaxedLoc["v3-wx-observations-current"]) || {};
-            var rawCond = (obsCurr.wxPhraseLong || "").replace("Showers in the Vicinity", "Showers Nearby").replace("/Wind", ", Windy").replace("Thunder in the Vicinity", "Thunder");
-            var windDir = (obsCurr.windDirectionCardinal == "CALM" || obsCurr.windSpeed === 0 || !obsCurr.windDirectionCardinal) ? "Calme" : translateWindCardinal(obsCurr.windDirectionCardinal);
-            var windStr = (windDir === "Calme" || obsCurr.windSpeed === 0 || obsCurr.windSpeed == null) ? "Calme" : `${windDir} ${obsCurr.windSpeed}`.trim();
-            var feelsVal = obsCurr.temperatureFeelsLike != null ? obsCurr.temperatureFeelsLike : (obsCurr.temperatureHeatIndex != null ? obsCurr.temperatureHeatIndex : (obsCurr.temperatureWindChill != null ? obsCurr.temperatureWindChill : obsCurr.temperature));
-            var feelsType = "Ressenti";
-            if (obsCurr.temperatureHeatIndex != null && obsCurr.temperature != null && obsCurr.temperatureHeatIndex > obsCurr.temperature + 2) {
-                feelsType = "Indice humidex";
-            } else if (obsCurr.temperatureWindChill != null && obsCurr.temperature != null && obsCurr.temperatureWindChill < obsCurr.temperature - 2) {
-                feelsType = "Refroid. éolien";
-            }
-            var pressureVal = obsCurr.pressureAltimeter ? (isMetric() ? (obsCurr.pressureAltimeter > 500 ? (obsCurr.pressureAltimeter / 10).toFixed(1) : obsCurr.pressureAltimeter.toFixed(1)) : obsCurr.pressureAltimeter.toFixed(2)) : "";
-
-            var eightslideloc = {
-                name: (locationConfig.eightCities.cities[i] && locationConfig.eightCities.cities[i].displayname) || "",
-                temp: obsCurr.temperature != null ? obsCurr.temperature : "",
-                icon: obsCurr.iconCodeExtend != null ? obsCurr.iconCodeExtend : (obsCurr.iconCode != null ? obsCurr.iconCode : 4400),
-                cond: translateWeatherNarrative(rawCond),
-                wind: {
-                    direction: windDir,
-                    speed: obsCurr.windSpeed
-                },
-                windStr: windStr,
-                gusts: (obsCurr.windGust != null && obsCurr.windGust !== 0 && obsCurr.windGust !== "None" && obsCurr.windGust !== "Aucune") ? obsCurr.windGust : "",
-                humidity: (obsCurr.relativeHumidity != null && obsCurr.relativeHumidity !== "") ? (String(obsCurr.relativeHumidity).replace("%", "") + "%") : "",
-                feelslike: { type: feelsType, val: (feelsVal != null && feelsVal !== "") ? feelsVal : "" },
-                dewpoint: (obsCurr.temperatureDewPoint != null && obsCurr.temperatureDewPoint !== "") ? obsCurr.temperatureDewPoint : "",
-                pressure: { val: pressureVal, trend: obsCurr.pressureTendencyTrend || "" },
-                visibility: (obsCurr.visibility != null && obsCurr.visibility !== "") ? obsCurr.visibility : ""
-            };
-            weatherInfo.eightCities.cities.push(eightslideloc);
+            pushNearbyObs(i, obsCurr);
         })
     }).fail(function () {
         weatherInfo.eightCities.noReport = true;
         for (var i = 0; i < 8; i++) {
-            var eightslideNR = { name: !(locationConfig.eightCities.cities[i].displayname) ? "" : locationConfig.eightCities.cities[i].displayname, temp: "", icon: 4400, wind: "", windspeed: "" }
+            var eightslideNR = { name: !(locationConfig.eightCities.cities[i] && locationConfig.eightCities.cities[i].displayname) ? "" : locationConfig.eightCities.cities[i].displayname, temp: "", icon: 4400, wind: "", windspeed: "" }
             weatherInfo.eightCities.cities.push(eightslideNR)
         }
     })
@@ -3297,11 +3842,102 @@ async function grabLocalForecast() {
     weatherInfo.dayDesc.days = [];
     weatherInfo.weekAhead.days = [];
     weatherInfo.almanac.days = [];
+    var dayOfWeek = { 0: "Dimanche", 1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi" };
+    var dayShort = { "SUN": "DIM", "MON": "LUN", "TUE": "MAR", "WED": "MER", "THU": "JEU", "FRI": "VEN", "SAT": "SAM" };
+    var almFr = { "SUNDAY": "DIMANCHE", "MONDAY": "LUNDI", "TUESDAY": "MARDI", "WEDNESDAY": "MERCREDI", "THURSDAY": "JEUDI", "FRIDAY": "VENDREDI", "SATURDAY": "SAMEDI" };
+
+    // 1. Default to ECCC MSC GeoMet
+    try {
+        var ecccFeature = await fetchEcccCityPage(locationConfig.mainCity.lat, locationConfig.mainCity.lon);
+        if (ecccFeature && ecccFeature.properties && ecccFeature.properties.forecastGroup) {
+            markFeedSuccess("forecast");
+            var parsed = parseEcccForecastDays(ecccFeature);
+            var forecasts = parsed.forecasts || [];
+
+            // 36 HOUR (4 periods)
+            for (var k = 0; k < Math.min(4, forecasts.length); k++) {
+                var fc = forecasts[k];
+                var rawNameEn = String((fc.period && fc.period.textForecastName && fc.period.textForecastName.en) || "Today").trim();
+                var rawNameFr = String((fc.period && fc.period.textForecastName && fc.period.textForecastName.fr) || "Aujourd'hui").trim();
+                var isNight = /night|tonight|soir|nuit/i.test(rawNameEn + " " + rawNameFr);
+
+                var cleanNameFr = rawNameFr
+                    .replace(/^Ce soir et cette nuit$/i, "Ce soir")
+                    .replace(/\s+soir et nuit$/i, " Soir")
+                    .replace(/\s+nuit$/i, " Soir");
+
+                var descFr = String((fc.textSummary && (fc.textSummary.fr || fc.textSummary.en)) || "").trim();
+                var descEn = String((fc.textSummary && (fc.textSummary.en || fc.textSummary.fr)) || "").trim();
+
+                var tempObj = fc.temperatures && Array.isArray(fc.temperatures.temperature) ? fc.temperatures.temperature[0] : null;
+                var tempVal = tempObj ? convertTempFromC(tempObj.value && (tempObj.value.fr ?? tempObj.value.en)) : null;
+                var isLow = tempObj && (tempObj.class?.en === "low" || tempObj.class?.fr === "low" || isNight);
+                if (tempVal != null) {
+                    var hlSentence = (isLow ? "Low " : "High ") + tempVal + ".";
+                    if (!/(?:High|Low)\s+-?\d+/i.test(descEn)) {
+                        descEn = (descEn ? descEn + " " : "") + hlSentence;
+                    }
+                }
+
+                var ecccIcon = fc.abbreviatedForecast && fc.abbreviatedForecast.icon ? fc.abbreviatedForecast.icon.value : (isNight ? 32 : 2);
+                var twcIcon = mapEcccIconToTwc(ecccIcon, isNight);
+                var movName = (typeof codetoFcst !== "undefined" && codetoFcst[twcIcon]) ? codetoFcst[twcIcon].mov : "partlycloudy";
+
+                weatherInfo.dayDesc.days.push({
+                    name: capitalizeFirst(cleanNameFr),
+                    desc: descFr,
+                    rawName: rawNameEn,
+                    rawDesc: descEn,
+                    narrQualiCode: "",
+                    iconCode: twcIcon,
+                    high: !isLow && tempVal != null ? tempVal : (parsed.sevenDays[0] ? parsed.sevenDays[0].high : ""),
+                    low: isLow && tempVal != null ? tempVal : (parsed.sevenDays[0] ? parsed.sevenDays[0].low : ""),
+                    cond: { name: movName, time: isNight ? "_night" : "_day" }
+                });
+            }
+
+            // 7 DAY
+            for (var d = 0; d < 7; d++) {
+                var dItem = parsed.sevenDays[d];
+                weatherInfo.weekAhead.days.push({
+                    name: dItem ? dItem.dayShortFr : "",
+                    cond: dItem ? dItem.cond : "",
+                    icon: dItem ? dItem.icon : 3000,
+                    high: dItem ? dItem.high : "",
+                    low: dItem ? dItem.low : "",
+                    windspeed: ""
+                });
+            }
+
+            // ALMANAC SUNRISE / SUNSET
+            var rs = ecccFeature.properties.riseSet || {};
+            var srIso = (rs.sunrise && (rs.sunrise.fr || rs.sunrise.en)) || "";
+            var ssIso = (rs.sunset && (rs.sunset.fr || rs.sunset.en)) || "";
+            var d0Name = parsed.sevenDays[0] ? parsed.sevenDays[0].dayOfWeekEn.toUpperCase() : "TODAY";
+            var d1Name = parsed.sevenDays[1] ? parsed.sevenDays[1].dayOfWeekEn.toUpperCase() : "TOMORROW";
+            weatherInfo.almanac.days.push({
+                day: almFr[d0Name] || d0Name,
+                sunrise: formatSunTime(srIso),
+                sunset: formatSunTime(ssIso)
+            });
+            weatherInfo.almanac.days.push({
+                day: almFr[d1Name] || d1Name,
+                sunrise: formatSunTime(srIso ? Date.parse(srIso) + 86400000 : ""),
+                sunset: formatSunTime(ssIso ? Date.parse(ssIso) + 86400000 : "")
+            });
+            weatherInfo.dayDesc.noReport = false;
+            weatherInfo.weekAhead.noReport = false;
+            weatherInfo.almanac.noReport = false;
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabLocalForecast failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = "https://api.weather.com/v3/wx/forecast/daily/7day?geocode=" + locationConfig.mainCity.lat + "," + locationConfig.mainCity.lon + "&format=json&units=" + getUnits() + "&language=en-US&apiKey=" + api_key;
     return $.getJSON(url, function (data) {
         markFeedSuccess("forecast");
-        var dayOfWeek = { 0: "Dimanche", 1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi" };
-        var dayShort = { "SUN": "DIM", "MON": "LUN", "TUE": "MAR", "WED": "MER", "THU": "JEU", "FRI": "VEN", "SAT": "SAM" };
         //36 HOUR
         for (var i = (data.daypart[0].daypartName[0] === null ? 1 : 0); i < (data.daypart[0].daypartName[0] === null ? 5 : 4); i++) {
             var rawName = data.daypart[0].daypartName[i] || "";
@@ -3355,7 +3991,6 @@ async function grabLocalForecast() {
         var almOffset = data.dayOfWeek[0] === null ? 1 : 0;
         var rawAlmDay1 = (data.dayOfWeek[almOffset] || "").toUpperCase();
         var rawAlmDay2 = (data.dayOfWeek[almOffset + 1] || "").toUpperCase();
-        var almFr = { "SUNDAY": "DIMANCHE", "MONDAY": "LUNDI", "TUESDAY": "MARDI", "WEDNESDAY": "MERCREDI", "THURSDAY": "JEUDI", "FRIDAY": "VENDREDI", "SATURDAY": "SAMEDI" };
         var almanacDayOne = {
             day: almFr[rawAlmDay1] || rawAlmDay1,
             sunrise: formatSunTime(data.sunriseTimeLocal[almOffset]),
@@ -3386,7 +4021,50 @@ async function grabLocalForecast() {
         weatherInfo.almanac.days.push({ day: "", sunrise: "", sunset: "" });
     })
 }
-function grabMonthlyPrecip() {
+
+async function grabMonthlyPrecip() {
+    // 1. Default to ECCC climate-daily collection
+    try {
+        var now = new Date();
+        var lat = Number(locationConfig.mainCity.lat);
+        var lon = Number(locationConfig.mainCity.lon);
+        if (!isNaN(lat) && !isNaN(lon)) {
+            var ecccClimUrl = `https://api.weather.gc.ca/collections/climate-daily/items?f=json&bbox=${lon - 0.35},${lat - 0.25},${lon + 0.35},${lat + 0.25}&LOCAL_YEAR=${now.getFullYear()}&LOCAL_MONTH=${now.getMonth() + 1}&sortby=-LOCAL_DAY&limit=60`;
+            var climData = await new Promise((resolve) => {
+                $.getJSON(ecccClimUrl, resolve).fail(() => resolve(null));
+            });
+            if (climData && Array.isArray(climData.features) && climData.features.length > 0) {
+                var byStation = {};
+                climData.features.forEach(f => {
+                    var p = f && f.properties;
+                    if (!p || !p.CLIMATE_IDENTIFIER || p.TOTAL_PRECIPITATION == null) return;
+                    if (!byStation[p.CLIMATE_IDENTIFIER]) byStation[p.CLIMATE_IDENTIFIER] = {};
+                    byStation[p.CLIMATE_IDENTIFIER][p.LOCAL_DAY] = Number(p.TOTAL_PRECIPITATION) || 0;
+                });
+                var bestStationDays = null;
+                var bestCount = 0;
+                Object.values(byStation).forEach(dayMap => {
+                    var cnt = Object.keys(dayMap).length;
+                    if (cnt > bestCount) {
+                        bestCount = cnt;
+                        bestStationDays = dayMap;
+                    }
+                });
+                if (bestStationDays && bestCount > 0) {
+                    var totalMm = Object.values(bestStationDays).reduce((a, b) => a + b, 0);
+                    weatherInfo.monthlyPrecip = isMetric() ? totalMm.toFixed(1) : (totalMm / 25.4).toFixed(2);
+                    return;
+                }
+            }
+            // If current month has no daily climate reports yet (e.g. 1st of month), default to "0.0"
+            weatherInfo.monthlyPrecip = isMetric() ? "0.0" : "0.00";
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabMonthlyPrecip failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = "https://api.weather.com/v1/geocode/" + locationConfig.mainCity.lat + "/" + locationConfig.mainCity.lon + "/observations/current.json?language=en-US&units=" + getUnits() + "&apiKey=" + api_key;
     return $.getJSON(url, function (data) {
         try {
@@ -3398,8 +4076,55 @@ function grabMonthlyPrecip() {
         weatherInfo.monthlyPrecip = ""
     })
 }
+
 async function grabAirQuality() {
     weatherInfo.airQuality.pollutants = [];
+    // 1. Default to ECCC AQHI (Indice cote air santé)
+    try {
+        var lat = Number(locationConfig.mainCity.lat);
+        var lon = Number(locationConfig.mainCity.lon);
+        if (!isNaN(lat) && !isNaN(lon)) {
+            var aqUrl = `https://api.weather.gc.ca/collections/aqhi-observations-realtime/items?f=json&bbox=${lon - 0.6},${lat - 0.5},${lon + 0.6},${lat + 0.5}&sortby=-observation_datetime&limit=1`;
+            var aqData = await new Promise((resolve) => {
+                $.getJSON(aqUrl, resolve).fail(() => resolve(null));
+            });
+            if (!aqData || !Array.isArray(aqData.features) || aqData.features.length === 0) {
+                var aqFcUrl = `https://api.weather.gc.ca/collections/aqhi-forecasts-realtime/items?f=json&bbox=${lon - 0.6},${lat - 0.5},${lon + 0.6},${lat + 0.5}&sortby=-publication_datetime&limit=1`;
+                aqData = await new Promise((resolve) => {
+                    $.getJSON(aqFcUrl, resolve).fail(() => resolve(null));
+                });
+            }
+            if (aqData && Array.isArray(aqData.features)) {
+                var aqVal = (aqData.features[0] && aqData.features[0].properties && Number(aqData.features[0].properties.aqhi)) || 2;
+                if (aqVal <= 3) {
+                    weatherInfo.airQuality.categoryIndex = 1;
+                    weatherInfo.airQuality.category = "BON";
+                    weatherInfo.airQuality.pollutants = ["Aucun"];
+                } else if (aqVal <= 6) {
+                    weatherInfo.airQuality.categoryIndex = 2;
+                    weatherInfo.airQuality.category = "MODÉRÉ";
+                    weatherInfo.airQuality.pollutants = ["Particules fines (PM2.5)", "Ozone (O3)"];
+                } else if (aqVal <= 8) {
+                    weatherInfo.airQuality.categoryIndex = 3;
+                    weatherInfo.airQuality.category = "GROUPES SENSIBLES";
+                    weatherInfo.airQuality.pollutants = ["Particules fines (PM2.5)", "Ozone (O3)", "Dioxyde d'azote (NO2)"];
+                } else if (aqVal <= 10) {
+                    weatherInfo.airQuality.categoryIndex = 4;
+                    weatherInfo.airQuality.category = "DANGEREUX";
+                    weatherInfo.airQuality.pollutants = ["Particules fines (PM2.5)", "Ozone (O3)"];
+                } else {
+                    weatherInfo.airQuality.categoryIndex = 5;
+                    weatherInfo.airQuality.category = "EXTRÊME";
+                    weatherInfo.airQuality.pollutants = ["Particules fines (PM2.5)", "Ozone (O3)"];
+                }
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabAirQuality failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var pollutantCount = 0;
     return $.getJSON(`https://api.weather.com/v3/wx/globalAirQuality?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&scale=EPA&format=json&apiKey=${api_key}`, function (data) {
         var catMap = {
@@ -3444,6 +4169,62 @@ async function grabAirQuality() {
 async function grabAlmanac() {
     var date = new Date();
     date.setDate(date.getDate() - 1);
+
+    // 1. Default to ECCC MSC GeoMet (citypage regionalNormals + ltce-temperature records + climate-daily yesterday)
+    try {
+        var lat = Number(locationConfig.mainCity.lat);
+        var lon = Number(locationConfig.mainCity.lon);
+        var ecccFeature = await fetchEcccCityPage(lat, lon);
+        if (ecccFeature && ecccFeature.properties) {
+            weatherInfo.almanac.stationname = (locationConfig.mainCity.displayname || "MONTRÉAL").toUpperCase();
+            var parsed = parseEcccForecastDays(ecccFeature);
+            var normHigh = parsed.normalHigh != null ? parsed.normalHigh : (parsed.sevenDays[0] ? parsed.sevenDays[0].high : 10);
+            var normLow = parsed.normalLow != null ? parsed.normalLow : (parsed.sevenDays[0] ? parsed.sevenDays[0].low : 2);
+            weatherInfo.almanac.average.high = normHigh;
+            weatherInfo.almanac.average.low = normLow;
+
+            var now = new Date();
+            var ltceUrl = `https://api.weather.gc.ca/collections/ltce-temperature/items?f=json&bbox=${lon - 0.6},${lat - 0.5},${lon + 0.6},${lat + 0.5}&LOCAL_MONTH=${now.getMonth() + 1}&LOCAL_DAY=${now.getDate()}&limit=1`;
+            var climUrl = `https://api.weather.gc.ca/collections/climate-daily/items?f=json&bbox=${lon - 0.35},${lat - 0.25},${lon + 0.35},${lat + 0.25}&LOCAL_YEAR=${date.getFullYear()}&LOCAL_MONTH=${date.getMonth() + 1}&sortby=-LOCAL_DAY&limit=20`;
+
+            var [ltceData, climData] = await Promise.all([
+                new Promise(res => $.getJSON(ltceUrl, res).fail(() => res(null))),
+                new Promise(res => $.getJSON(climUrl, res).fail(() => res(null)))
+            ]);
+
+            if (ltceData && Array.isArray(ltceData.features) && ltceData.features[0] && ltceData.features[0].properties) {
+                var lp = ltceData.features[0].properties;
+                weatherInfo.almanac.record.high = lp.RECORD_HIGH_MAX_TEMP != null ? convertTempFromC(lp.RECORD_HIGH_MAX_TEMP) : (normHigh + 10);
+                weatherInfo.almanac.record.recordYearHigh = lp.RECORD_HIGH_MAX_TEMP_YR || "N/A";
+                weatherInfo.almanac.record.low = lp.RECORD_LOW_MIN_TEMP != null ? convertTempFromC(lp.RECORD_LOW_MIN_TEMP) : (normLow - 10);
+                weatherInfo.almanac.record.recordYearLow = lp.RECORD_LOW_MIN_TEMP_YR || "N/A";
+            } else {
+                weatherInfo.almanac.record.high = normHigh !== "" ? normHigh + 10 : "";
+                weatherInfo.almanac.record.recordYearHigh = "N/A";
+                weatherInfo.almanac.record.low = normLow !== "" ? normLow - 10 : "";
+                weatherInfo.almanac.record.recordYearLow = "N/A";
+            }
+
+            var foundYesterday = false;
+            if (climData && Array.isArray(climData.features)) {
+                var validObs = climData.features.find(f => f && f.properties && f.properties.MAX_TEMPERATURE != null && f.properties.MIN_TEMPERATURE != null);
+                if (validObs) {
+                    weatherInfo.almanac.yesterday.high = convertTempFromC(validObs.properties.MAX_TEMPERATURE);
+                    weatherInfo.almanac.yesterday.low = convertTempFromC(validObs.properties.MIN_TEMPERATURE);
+                    foundYesterday = true;
+                }
+            }
+            if (!foundYesterday) {
+                weatherInfo.almanac.yesterday.high = normHigh;
+                weatherInfo.almanac.yesterday.low = normLow;
+            }
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabAlmanac failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var yidx = new Date().getHours() >= 15 ? 1 : 0;
     return $.getJSON(`https://api.weather.com/v3/aggcommon/v3-wx-conditions-historical-dailysummary-30day;v3-wx-almanac-daily-5day?geocode=${locationConfig.mainCity.lat},${locationConfig.mainCity.lon}&language=en-US&format=json&units=${getUnits()}&startDay=${date.getDate()}&startMonth=${date.getMonth() + 1}&apiKey=${api_key}`, function (data) {
         weatherInfo.almanac.stationname = locationConfig.mainCity.displayname.toUpperCase();
@@ -3508,6 +4289,49 @@ async function grabDaypartForecast() {
         weatherInfo.daypartForecast.dayName = dayOfWeek[new Date().getDay()][2];
         dpHours = [6, 12, 15, 17];
     }
+
+    // 1. Default to ECCC hourlyForecastGroup
+    try {
+        var ecccFeature = await fetchEcccCityPage(locationConfig.mainCity.lat, locationConfig.mainCity.lon);
+        var hourlyList = ecccFeature && ecccFeature.properties && ecccFeature.properties.hourlyForecastGroup && ecccFeature.properties.hourlyForecastGroup.hourlyForecasts;
+        if (Array.isArray(hourlyList) && hourlyList.length > 0) {
+            var firstLop = hourlyList[0].lop && hourlyList[0].lop.value ? (hourlyList[0].lop.value.fr ?? hourlyList[0].lop.value.en) : 0;
+            if (Number(firstLop) > 15) {
+                weatherInfo.specialModes.precip = true;
+            }
+            var byHour = {};
+            hourlyList.forEach(hf => {
+                if (!hf || !hf.timestamp) return;
+                var h = dateFns.getHours(new Date(hf.timestamp));
+                if (byHour[h] === undefined) byHour[h] = hf;
+            });
+            for (var k = 0; k < dpHours.length; k++) {
+                var targetH = dpHours[k];
+                var hf = byHour[targetH] || byHour[(targetH + 1) % 24] || byHour[(targetH + 23) % 24] || hourlyList[Math.min(k * 4, hourlyList.length - 1)];
+                var ecccIcon = hf && hf.iconCode ? hf.iconCode.value : 2;
+                var isNight = ecccIcon >= 30 || targetH >= 20 || targetH < 6;
+                var tempVal = hf && hf.temperature && hf.temperature.value ? convertTempFromC(hf.temperature.value.fr ?? hf.temperature.value.en) : "";
+                var condFr = (hf && hf.condition && (hf.condition.fr || hf.condition.en)) || "";
+                var wSpd = hf && hf.wind && hf.wind.speed && hf.wind.speed.value ? convertSpeedFromKmh(hf.wind.speed.value.fr ?? hf.wind.speed.value.en) : 0;
+                var wDirRaw = (hf && hf.wind && hf.wind.direction && hf.wind.direction.value && (hf.wind.direction.value.fr || hf.wind.direction.value.en)) || "";
+                var wDir = (wSpd === 0 || !wDirRaw) ? "Calme" : (wDirRaw === "VR" ? "Var" : translateWindCardinal(wDirRaw));
+                weatherInfo.daypartForecast.times.push({
+                    name: { "0": "Minuit", "6": "06h00", "12": "Midi", "15": "15h00", "17": "17h00", "20": "20h00" }[targetH] || `${targetH}h00`,
+                    cond: condFr,
+                    icon: mapEcccIconToTwc(ecccIcon, isNight),
+                    temp: tempVal,
+                    wind: (wSpd === 0 || wDir === "Calme") ? "Calme" : `${wDir} ${wSpd}`,
+                    windspeed: wSpd
+                });
+            }
+            weatherInfo.daypartForecast.noReport = false;
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabDaypartForecast failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = "https://api.weather.com/v3/wx/forecast/hourly/2day?geocode=" + locationConfig.mainCity.lat + "," + locationConfig.mainCity.lon + "&format=json&units=" + getUnits() + "&language=en-US&apiKey=" + api_key;
     return $.getJSON(url, function (data) {
         if(data.precipChance[0] > 15){weatherInfo.specialModes.precip = true}
@@ -3564,6 +4388,47 @@ function translateMapDayName(dayName) {
 async function grabMapCityData(){
     weatherInfo.map.mapCities = [];
     if (!locationConfig.regionalMap.map || locationConfig.regionalMap.map.length === 0) return;
+
+    // 1. Default to ECCC MSC GeoMet
+    try {
+        var mapItems = locationConfig.regionalMap.map;
+        var ecccFeatures = await Promise.all(mapItems.map(c => fetchEcccCityPage(c.lat, c.lon)));
+        if (ecccFeatures.some(Boolean)) {
+            var firstCompat = buildTwcCompatibleFromEccc(ecccFeatures.find(Boolean));
+            var fc0 = firstCompat["v3-wx-forecast-daily-3day"];
+            weatherInfo.map.days = [
+                translateMapDayName(fc0.daypart[0].daypartName[0] || "Aujourd'hui"),
+                translateMapDayName(fc0.daypart[0].daypartName[2] || "Demain")
+            ];
+            mapItems.forEach((loc, i) => {
+                var compat = ecccFeatures[i] ? buildTwcCompatibleFromEccc(ecccFeatures[i]) : firstCompat;
+                var obs = compat["v3-wx-observations-current"];
+                var fc = compat["v3-wx-forecast-daily-3day"];
+                weatherInfo.map.mapCities.push({
+                    name: loc.name,
+                    current: {
+                        temp: obs.temperature,
+                        icon: obs.iconCodeExtend
+                    },
+                    forecasts: [
+                        {
+                            temp: fc.daypart[0].temperature[0],
+                            icon: fc.daypart[0].iconCodeExtend[0]
+                        },
+                        {
+                            temp: fc.daypart[0].temperature[2],
+                            icon: fc.daypart[0].iconCodeExtend[2]
+                        }
+                    ]
+                });
+            });
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabMapCityData failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = 'https://api.weather.com/v3/aggcommon/v3-wx-observations-current;v3-wx-forecast-daily-3day?geocodes='
     for(let i = 0; i < locationConfig.regionalMap.map.length; i++){
         url = url + `${locationConfig.regionalMap.map[i].lat},${locationConfig.regionalMap.map[i].lon};`
@@ -3629,7 +4494,8 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
     });
 
     var responses = await Promise.all(requests);
-    if (responses.length === 0 || responses.some((r) => !r.ok)) {
+    var okResponses = responses.filter((r) => r && r.ok);
+    if (okResponses.length === 0) {
         return false;
     }
 
@@ -3637,7 +4503,7 @@ async function grabAlertsEccc(geocodes, geocodeCityMap) {
 
     var now = Date.now();
     var grouped = {};
-    responses.forEach((resp) => {
+    okResponses.forEach((resp) => {
         resp.features.forEach((feature) => {
             var p = feature && feature.properties;
             if (!p || !p.alert_name_fr) {
@@ -4190,6 +5056,50 @@ async function grabOutdoorActivityData(){
         return 9;
     }
     var dayOfWeekFr = { 0: "Dimanche", 1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi", 6: "Samedi" };
+
+    // 1. Default to ECCC hourlyForecastGroup
+    try {
+        var ecccFeature = await fetchEcccCityPage(locationConfig.mainCity.lat, locationConfig.mainCity.lon);
+        var hourlyList = ecccFeature && ecccFeature.properties && ecccFeature.properties.hourlyForecastGroup && ecccFeature.properties.hourlyForecastGroup.hourlyForecasts;
+        if (Array.isArray(hourlyList) && hourlyList.length > 0) {
+            var targetHr = oaCurrent();
+            var matched = hourlyList.find(hf => hf && hf.timestamp && dateFns.getHours(new Date(hf.timestamp)) === targetHr) || hourlyList[0];
+            var dt = new Date(matched.timestamp);
+            var hr = dateFns.getHours(dt);
+            var dayName = dayOfWeekFr[dt.getDay()] || "";
+            var tempVal = matched.temperature && matched.temperature.value ? convertTempFromC(matched.temperature.value.fr ?? matched.temperature.value.en) : "";
+            var condFr = (matched.condition && (matched.condition.fr || matched.condition.en)) || "";
+            var ecccIcon = matched.iconCode ? matched.iconCode.value : 2;
+            var isNight = ecccIcon >= 30 || hr >= 20 || hr < 6;
+            var wSpd = matched.wind && matched.wind.speed && matched.wind.speed.value ? convertSpeedFromKmh(matched.wind.speed.value.fr ?? matched.wind.speed.value.en) : 0;
+            var wDirRaw = (matched.wind && matched.wind.direction && matched.wind.direction.value && (matched.wind.direction.value.fr || matched.wind.direction.value.en)) || "";
+            var wDir = (wSpd === 0 || !wDirRaw) ? "Calme" : (wDirRaw === "VR" ? "Var" : translateWindCardinal(wDirRaw));
+            var humidexVal = matched.humidex && matched.humidex.value ? convertTempFromC(matched.humidex.value.fr ?? matched.humidex.value.en) : null;
+            var windChillVal = matched.windChill && matched.windChill.value ? convertTempFromC(matched.windChill.value.fr ?? matched.windChill.value.en) : null;
+
+            weatherInfo.outdoorActivity.time = `${hr}h00 ${dayName}`;
+            weatherInfo.outdoorActivity.temp = tempVal;
+            weatherInfo.outdoorActivity.cond = condFr;
+            weatherInfo.outdoorActivity.icon = mapEcccIconToTwc(ecccIcon, isNight);
+            weatherInfo.outdoorActivity.wind = (wSpd === 0 || wDir === "Calme") ? "Calme" : `${wDir} ${wSpd}`;
+            if (humidexVal != null && tempVal !== "" && humidexVal > tempVal + 3) {
+                weatherInfo.outdoorActivity.feelslike.type = "Indice humidex";
+                weatherInfo.outdoorActivity.feelslike.val = humidexVal;
+            } else if (windChillVal != null && tempVal !== "" && windChillVal < tempVal - 3) {
+                weatherInfo.outdoorActivity.feelslike.type = "Refroid. éolien";
+                weatherInfo.outdoorActivity.feelslike.val = windChillVal;
+            } else {
+                weatherInfo.outdoorActivity.feelslike.type = "Ressenti";
+                weatherInfo.outdoorActivity.feelslike.val = tempVal;
+            }
+            weatherInfo.outdoorActivity.noReport = false;
+            return;
+        }
+    } catch (e) {
+        console.warn("[Weather] ECCC grabOutdoorActivityData failed, falling back to TWC:", e);
+    }
+
+    // 2. Fallback to TWC
     var url = "https://api.weather.com/v3/wx/forecast/hourly/1day?geocode=" + locationConfig.mainCity.lat + "," + locationConfig.mainCity.lon + "&format=json&units=" + getUnits() + "&language=en-US&apiKey=" + api_key;
     return $.getJSON(url, function(data){
         try {

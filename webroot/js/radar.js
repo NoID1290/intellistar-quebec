@@ -57,6 +57,7 @@ const radarEngine = {
   lastTimestampsKey: '',
   lastSatTimestampsKey: '',
   lastSnowTimestampsKey: '',
+  useEcccWms: true,
 
   // Reusable offscreen canvas for atomic double-buffering (completely eliminates tearing and compositor flicker)
   getRenderBuffer(width = 1620, height = 1080) {
@@ -317,8 +318,33 @@ const radarEngine = {
     }
   },
 
-  // Fetch the latest radar and satellite cloud timestamps from Weather.com TileServer
+  // Fetch the latest radar and satellite cloud timestamps (defaults to ECCC GeoMet WMS, falls back to Weather.com TileServer)
   async fetchAllTimestamps(count = 12) {
+    if (this.useEcccWms !== false) {
+      const latestRadarTs = Math.floor((Date.now() / 1000 - 420) / 360) * 360;
+      const radarTs = [];
+      for (let i = count - 1; i >= 0; i--) {
+        radarTs.push(latestRadarTs - i * 360);
+      }
+      const currHourTs = Math.floor((Date.now() / 1000) / 3600) * 3600;
+      const satCount = Math.min(6, count);
+      const satTs = [];
+      for (let j = 0; j < satCount; j++) {
+        satTs.push(currHourTs + (j - 3) * 3600);
+      }
+      this.timestamps = radarTs;
+      this.satProduct = 'HRDPS.CONTINENTAL_NT';
+      this.satTimestamps = satTs;
+      this.snowProduct = 'RADAR_1KM_RSNO';
+      this.snowTimestamps = radarTs.slice();
+      if (typeof window !== 'undefined' && typeof window.markFeedSuccess === 'function') {
+        window.markFeedSuccess('radar');
+        window.markFeedSuccess('satellite');
+        window.markFeedSuccess('snow');
+      }
+      return;
+    }
+
     if (typeof api_key === 'undefined' || !api_key) return;
     try {
       const response = await fetch(
@@ -619,6 +645,30 @@ const radarEngine = {
   getTileDescriptors(loc, timestamp, mapType = 'twcRadarMosaic') {
     const bounds = this.getTileBounds(loc.lon, loc.lat, loc.zoom);
     const prod = mapType || 'twcRadarMosaic';
+
+    if (this.useEcccWms !== false) {
+      const ORIGIN = 20037508.342789244;
+      const totalPx = 256 * Math.pow(2, bounds.baseZoom);
+      const rightPixel = bounds.leftPixel + bounds.width / bounds.scale;
+      const bottomPixel = bounds.topPixel + bounds.height / bounds.scale;
+      const minX = ((bounds.leftPixel / totalPx) * (2 * ORIGIN) - ORIGIN).toFixed(2);
+      const maxX = ((rightPixel / totalPx) * (2 * ORIGIN) - ORIGIN).toFixed(2);
+      const maxY = (ORIGIN - (bounds.topPixel / totalPx) * (2 * ORIGIN)).toFixed(2);
+      const minY = (ORIGIN - (bottomPixel / totalPx) * (2 * ORIGIN)).toFixed(2);
+
+      let layerParam = 'LAYERS=RADAR_1KM_RRAI';
+      if (prod === 'ussat' || prod === 'sat' || prod === 'HRDPS.CONTINENTAL_NT') {
+        layerParam = 'LAYERS=HRDPS.CONTINENTAL_NT&STYLES=CLOUD';
+      } else if (prod === 'snow24hr' || prod === 'snowCoverageConus1hr' || prod === 'snow1hr' || prod === 'RADAR_1KM_RSNO') {
+        layerParam = 'LAYERS=RADAR_1KM_RSNO';
+      }
+
+      const tsNum = Number(timestamp) || Math.floor(Date.now() / 1000);
+      const isoTime = new Date(tsNum * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z');
+      const url = `https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX=${minX},${minY},${maxX},${maxY}&CRS=EPSG:3857&WIDTH=810&HEIGHT=540&${layerParam}&FORMAT=image/png&TRANSPARENT=TRUE&TIME=${isoTime}&ts=${timestamp}`;
+      return [{ url, dx: 0, dy: 0, dw: bounds.width, dh: bounds.height }];
+    }
+
     const key = (typeof api_key !== 'undefined') ? api_key : '';
     const tiles = [];
     for (let ty = bounds.minTileY; ty <= bounds.maxTileY; ty++) {
@@ -2069,9 +2119,27 @@ async function fetchWindDataForCities(cities) {
   }
 
   // Identify any cities that still need wind observations
-  const needed = valid.filter(c => !results[(c.name || '').toLowerCase()]);
+  let needed = valid.filter(c => !results[(c.name || '').toLowerCase()]);
 
-  // 2. Fetch from The Weather Channel API (api.weather.com)
+  // 2. Default to ECCC MSC GeoMet citypage observations
+  if (needed.length > 0 && typeof window !== 'undefined' && typeof window.fetchEcccCityPage === 'function' && typeof window.extractEcccObservation === 'function') {
+    try {
+      const ecccFeatures = await Promise.all(needed.map(c => window.fetchEcccCityPage(c.lat, c.lon)));
+      ecccFeatures.forEach((feat, idx) => {
+        const city = needed[idx];
+        if (!city || !feat) return;
+        const obs = window.extractEcccObservation(feat);
+        if (!obs || obs.windSpeed == null) return;
+        const speed = Math.round(Number(obs.windSpeed) || 0);
+        const dirDeg = (obs.windDirection != null) ? Math.round(Number(obs.windDirection)) : cardinalToDegrees(obs.windDirectionCardinal);
+        const gusts = Math.round(Number(obs.windGust) || 0);
+        recordCityData(city, { speedKmH: speed, dirDeg: dirDeg, gustsKmH: gusts });
+      });
+    } catch (e) {}
+    needed = valid.filter(c => !results[(c.name || '').toLowerCase()]);
+  }
+
+  // 3. Fallback to The Weather Channel API (api.weather.com)
   const apiKey = (typeof api_key !== 'undefined' && api_key) ? api_key : 'e1f10a1e78da46f5b10a1e78da96f525';
   if (needed.length > 0 && apiKey) {
     try {

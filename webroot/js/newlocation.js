@@ -182,28 +182,93 @@ async function grabLocation() {
     mainquery = undefined;
 }
 
+var ECCC_PROVINCE_MAP = {
+    qc: { code: "QC", name: "Québec" },
+    on: { code: "ON", name: "Ontario" },
+    bc: { code: "BC", name: "Colombie-Britannique" },
+    ab: { code: "AB", name: "Alberta" },
+    mb: { code: "MB", name: "Manitoba" },
+    sk: { code: "SK", name: "Saskatchewan" },
+    nb: { code: "NB", name: "Nouveau-Brunswick" },
+    ns: { code: "NS", name: "Nouvelle-Écosse" },
+    pe: { code: "PE", name: "Île-du-Prince-Édouard" },
+    nl: { code: "NL", name: "Terre-Neuve-et-Labrador" },
+    yt: { code: "YT", name: "Yukon" },
+    nt: { code: "NT", name: "Territoires du Nord-Ouest" },
+    nu: { code: "NU", name: "Nunavut" }
+};
+
+function resolveEcccGeocodeMeta(val, fallbackName) {
+    if (typeof val !== "string" || !val.includes(",")) return null;
+    const parts = val.split(",");
+    const lat = parseFloat(parts[0]);
+    const lon = parseFloat(parts[1]);
+    if (isNaN(lat) || isNaN(lon)) return null;
+
+    let station = null;
+    if (typeof window !== "undefined" && typeof window.resolveEcccStation === "function") {
+        station = window.resolveEcccStation(lat, lon);
+    }
+    const provPrefix = station && station.id ? String(station.id).split("-")[0].toLowerCase() : "qc";
+    const provInfo = ECCC_PROVINCE_MAP[provPrefix] || ECCC_PROVINCE_MAP.qc;
+    const displayName = fallbackName || (station && station.nameFr) || "Montréal";
+
+    return {
+        displayName: displayName,
+        latitude: lat,
+        longitude: lon,
+        country: "CA",
+        adminDistrictCode: provInfo.code,
+        adminDistrict: provInfo.name
+    };
+}
+
 async function getMainCity() {
     try {
         locationConfig.mainCity.displayname = locationSettings.mainCity.displayname || "";
         locationConfig.mainCity.extraname = locationSettings.mainCity.extraname || locationSettings.mainCity.displayname || "";
         if (locationSettings.eightCities && locationSettings.eightCities.cities) {
-            locationConfig.eightCities.cities = locationSettings.eightCities.cities.map(c => ({
-                displayname: c.displayname,
-                lat: "",
-                lon: "",
-                state: "",
-                stateFull: ""
-            }));
+            locationConfig.eightCities.cities = locationSettings.eightCities.cities.map(c => {
+                const meta = resolveEcccGeocodeMeta(c && c.val, c && c.displayname);
+                return {
+                    displayname: (c && c.displayname) || (meta && meta.displayName) || "",
+                    lat: meta ? meta.latitude : "",
+                    lon: meta ? meta.longitude : "",
+                    val: (c && c.val) || "",
+                    state: meta ? meta.adminDistrictCode : "",
+                    stateFull: meta ? meta.adminDistrict : ""
+                };
+            });
         }
-        const data = await getJSONPromise("https://api.weather.com/v3/location/point?" + locationSettings.mainCity.type + "=" + locationSettings.mainCity.val + "&language=en-US&format=json&apiKey=" + api_key);
-        var cCountry = data.location.country || "US";
-        getMapStyle(cCountry, data.location.adminDistrictCode);
-        locationConfig.mainCity.displayname = locationSettings.mainCity.displayname || data.location.displayName;
-        locationConfig.mainCity.extraname = locationSettings.mainCity.extraname || data.location.displayName;
-        locationConfig.mainCity.lat = data.location.latitude;
-        locationConfig.mainCity.lon = data.location.longitude;
-        locationConfig.mainCity.state = data.location.adminDistrictCode;
-        locationConfig.mainCity.stateFull = data.location.adminDistrict;
+
+        // ECCC Default: resolve geocode coordinates directly using ECCC station metadata
+        let locMeta = null;
+        if (locationSettings.mainCity.type === "geocode") {
+            locMeta = resolveEcccGeocodeMeta(locationSettings.mainCity.val, locationSettings.mainCity.displayname);
+        }
+
+        // Fallback to TWC location point only if not a direct geocode
+        if (!locMeta) {
+            const data = await getJSONPromise("https://api.weather.com/v3/location/point?" + locationSettings.mainCity.type + "=" + locationSettings.mainCity.val + "&language=en-US&format=json&apiKey=" + api_key);
+            locMeta = {
+                displayName: data.location.displayName,
+                latitude: data.location.latitude,
+                longitude: data.location.longitude,
+                country: data.location.country || "CA",
+                adminDistrictCode: data.location.adminDistrictCode,
+                adminDistrict: data.location.adminDistrict
+            };
+        }
+
+        var cCountry = locMeta.country || "CA";
+        getMapStyle(cCountry, locMeta.adminDistrictCode);
+        locationConfig.mainCity.displayname = locationSettings.mainCity.displayname || locMeta.displayName;
+        locationConfig.mainCity.extraname = locationSettings.mainCity.extraname || locMeta.displayName;
+        locationConfig.mainCity.lat = locMeta.latitude;
+        locationConfig.mainCity.lon = locMeta.longitude;
+        locationConfig.mainCity.val = locationSettings.mainCity.val || `${locMeta.latitude},${locMeta.longitude}`;
+        locationConfig.mainCity.state = locMeta.adminDistrictCode;
+        locationConfig.mainCity.stateFull = locMeta.adminDistrict;
         locationConfig.mainCity.country = cCountry;
 
         if (locationSettings.radarCities && Array.isArray(locationSettings.radarCities.local)) {
@@ -250,6 +315,27 @@ async function getNearbyCities() {
     locationConfig.eightCities.cities = newCities.filter(c => c !== undefined && c !== null);
 }
 function createNewCity(type, val, i, manual) {
+    // ECCC Default: resolve geocode coordinates directly without needing Weather.com
+    if (type === "geocode") {
+        const cfgEntry = locationSettings.eightCities && locationSettings.eightCities.cities && locationSettings.eightCities.cities[i];
+        const meta = resolveEcccGeocodeMeta(val, cfgEntry && cfgEntry.displayname);
+        if (meta) {
+            const cityObj = {
+                displayname: (cfgEntry && cfgEntry.displayname) ? cfgEntry.displayname : meta.displayName,
+                lat: meta.latitude,
+                lon: meta.longitude,
+                val: val,
+                state: meta.adminDistrictCode,
+                stateFull: meta.adminDistrict
+            };
+            if (manual === true) {
+                newCities[i] = cityObj;
+            } else {
+                newCities.push(cityObj);
+            }
+            return Promise.resolve(cityObj);
+        }
+    }
     return new Promise((resolve) => {
         $.getJSON(`https://api.weather.com/v3/location/point?${type}=${val}&language=en-US&format=json&apiKey=${api_key}`, function (data) {
             var cityObj = {

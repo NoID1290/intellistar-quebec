@@ -1509,7 +1509,24 @@ async function removeMapCity(){
     await grabMapCityData();
 }
 async function searchMapCity(){
-    $.getJSON("https://api.weather.com/v3/location/search?query=" + document.getElementById("searchcityvalue").value + "&language=en-US&format=json&apiKey=" + api_key, function(data){
+    var q = (document.getElementById("searchcityvalue").value || "").trim();
+    if (q && typeof window !== "undefined" && Array.isArray(window.ECCC_STATION_INDEX)) {
+        var normQ = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        var match = window.ECCC_STATION_INDEX.find(st => String(st[3] || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === normQ)
+            || window.ECCC_STATION_INDEX.find(st => String(st[3] || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normQ));
+        if (match) {
+            locationConfig.regionalMap.map[currentMapIdx].name = match[3];
+            locationConfig.regionalMap.map[currentMapIdx].lat = match[1];
+            locationConfig.regionalMap.map[currentMapIdx].lon = match[2];
+            $(".city-properties .city-name").text(match[3] + ":");
+            $(".map-cities .city." + mapDivs[currentMapIdx] + " .city-name").text(match[3]);
+            $("#citydropvalue").html("<option value=\"N\"> </option>");
+            loadMapCityDropbox();
+            await grabMapCityData();
+            return;
+        }
+    }
+    $.getJSON("https://api.weather.com/v3/location/search?query=" + q + "&language=en-US&format=json&apiKey=" + api_key, function(data){
         console.log(data);
         locationConfig.regionalMap.map[currentMapIdx].name = data.location.displayName[0];
         locationConfig.regionalMap.map[currentMapIdx].lat = data.location.latitude[0];
