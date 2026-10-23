@@ -1,12 +1,12 @@
 {
 	"fetchIntervalMinutes": 5,
-	"smoothRadar": true,
+	"smoothRadar": false,
 	"vocalLanguage": "fr",
 	"vocallocal": true,
 	"appearanceSettings": {
 		"units": "metric",
 		"vocalLanguage": "fr",
-		"smoothRadar": true
+		"smoothRadar": false
 	},
 	"audioSettings": {
 		"narrations": true,
